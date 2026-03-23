@@ -55,8 +55,11 @@ export default function NoteCard({ note }) {
             <Link to={`/user/${note.user_id}`} className="text-sm font-semibold no-underline hover:underline" style={{ color: 'var(--text-primary)' }} onClick={(e) => e.stopPropagation()}>
               {note.display_name}
             </Link>
-            <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>
-              {time}
+            {note.handle && (
+              <span className="text-xs ml-1.5" style={{ color: 'var(--text-muted)' }}>@{note.handle}</span>
+            )}
+            <span className="text-xs ml-1.5" style={{ color: 'var(--text-muted)' }}>
+              · {time}
             </span>
           </div>
           <TierBadge tier={note.visibility} />

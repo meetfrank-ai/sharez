@@ -45,6 +45,7 @@ export default function UserProfile() {
           {profile.display_name?.charAt(0).toUpperCase()}
         </div>
         <h2 className="text-lg font-semibold m-0" style={{ color: 'var(--text-primary)' }}>{profile.display_name}</h2>
+        {profile.handle && <p className="text-xs m-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>@{profile.handle}</p>}
         {profile.bio && <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{profile.bio}</p>}
         <div className="flex justify-center gap-5 mt-3 mb-3">
           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>

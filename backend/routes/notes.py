@@ -19,6 +19,7 @@ def _note_to_out(note: Note, current_user_id: int, db: Session) -> NoteOut:
         id=note.id,
         user_id=note.user_id,
         display_name=note.user.display_name,
+        handle=note.user.handle,
         avatar_url=note.user.avatar_url,
         body=note.body,
         visibility=note.visibility.value,

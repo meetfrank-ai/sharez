@@ -6,6 +6,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [handle, setHandle] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, register } = useAuth();
@@ -16,7 +17,7 @@ export default function Login() {
     setLoading(true);
     try {
       if (isRegister) {
-        await register(email, password, displayName);
+        await register(email, password, displayName, handle);
       } else {
         await login(email, password);
       }
@@ -67,20 +68,41 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-3">
             {isRegister && (
-              <div>
-                <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--text-secondary)' }}>
-                  Display name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Thabo M"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  required
-                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
-                  style={inputStyle}
-                />
-              </div>
+              <>
+                <div>
+                  <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--text-secondary)' }}>
+                    Full name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Thabo Mokoena"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    required
+                    className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--text-secondary)' }}>
+                    Handle
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: 'var(--text-muted)' }}>@</span>
+                    <input
+                      type="text"
+                      placeholder="yourhandle"
+                      value={handle}
+                      onChange={(e) => setHandle(e.target.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase())}
+                      required
+                      minLength={3}
+                      maxLength={20}
+                      className="w-full pl-7 pr-3 py-2.5 rounded-lg text-sm outline-none"
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+              </>
             )}
             <div>
               <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--text-secondary)' }}>Email</label>

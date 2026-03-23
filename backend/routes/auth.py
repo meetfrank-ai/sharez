@@ -1,3 +1,5 @@
+import re
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -8,21 +10,35 @@ from auth import hash_password, verify_password, create_access_token, get_curren
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+HANDLE_PATTERN = re.compile(r'^[a-zA-Z0-9_]{3,20}$')
+
+
+def _validate_handle(handle: str, db: Session, exclude_user_id: int = None):
+    if not HANDLE_PATTERN.match(handle):
+        raise HTTPException(status_code=400, detail="Handle must be 3-20 characters (letters, numbers, underscores)")
+    query = db.query(User).filter(User.handle == handle.lower())
+    if exclude_user_id:
+        query = query.filter(User.id != exclude_user_id)
+    if query.first():
+        raise HTTPException(status_code=400, detail="Handle already taken")
+
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register(data: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == data.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    _validate_handle(data.handle, db)
+
     user = User(
         email=data.email,
         password_hash=hash_password(data.password),
         display_name=data.display_name,
+        handle=data.handle.lower(),
     )
     db.add(user)
     db.flush()
 
-    # Create default tier config
     tier_config = UserTierConfig(user_id=user.id)
     db.add(tier_config)
 
@@ -64,6 +80,9 @@ def update_profile(
 ):
     if data.display_name is not None:
         user.display_name = data.display_name
+    if data.handle is not None:
+        _validate_handle(data.handle, db, exclude_user_id=user.id)
+        user.handle = data.handle.lower()
     if data.bio is not None:
         user.bio = data.bio
     if data.linkedin_url is not None:

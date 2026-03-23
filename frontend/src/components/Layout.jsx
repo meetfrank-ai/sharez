@@ -60,7 +60,7 @@ export default function Layout({ children }) {
                 {user?.display_name}
               </p>
               <p className="text-xs m-0 truncate" style={{ color: 'var(--text-muted)' }}>
-                {user?.email}
+                {user?.handle ? `@${user.handle}` : user?.email}
               </p>
             </div>
           </div>

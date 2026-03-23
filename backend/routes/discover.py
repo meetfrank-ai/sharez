@@ -22,7 +22,9 @@ def discover_users(
     query = db.query(User).filter(User.id != current_user.id)
 
     if q:
-        query = query.filter(User.display_name.ilike(f"%{q}%"))
+        query = query.filter(
+            (User.display_name.ilike(f"%{q}%")) | (User.handle.ilike(f"%{q}%"))
+        )
 
     users = query.order_by(User.created_at.desc()).offset(offset).limit(limit).all()
 

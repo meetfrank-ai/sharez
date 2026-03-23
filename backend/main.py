@@ -12,6 +12,22 @@ from routes import auth, portfolio, follow, theses, comments, feed, notes, disco
 # Create all tables
 Base.metadata.create_all(bind=engine)
 
+# Migrate: add new columns if missing (SQLite doesn't auto-add on create_all)
+try:
+    import sqlite3
+    _conn = engine.raw_connection()
+    _cursor = _conn.cursor()
+    _cursor.execute("PRAGMA table_info(users)")
+    _cols = [col[1] for col in _cursor.fetchall()]
+    for col_name, col_type in [("handle", "VARCHAR"), ("linkedin_url", "VARCHAR"), ("twitter_url", "VARCHAR"), ("website_url", "VARCHAR")]:
+        if col_name not in _cols:
+            _cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
+            print(f"Migrated: added {col_name} column to users")
+    _conn.commit()
+    _conn.close()
+except Exception as e:
+    print(f"Migration check: {e}")
+
 # Seed database if empty (runs once on first deploy)
 try:
     from database import SessionLocal

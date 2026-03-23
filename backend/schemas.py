@@ -10,6 +10,7 @@ class UserCreate(BaseModel):
     email: str
     password: str
     display_name: str
+    handle: str
 
 
 class UserLogin(BaseModel):
@@ -26,6 +27,7 @@ class UserOut(BaseModel):
     id: int
     email: str
     display_name: str
+    handle: Optional[str] = None
     avatar_url: Optional[str] = None
     bio: Optional[str] = None
     linkedin_url: Optional[str] = None
@@ -39,6 +41,7 @@ class UserOut(BaseModel):
 
 class UserProfileUpdate(BaseModel):
     display_name: Optional[str] = None
+    handle: Optional[str] = None
     bio: Optional[str] = None
     linkedin_url: Optional[str] = None
     twitter_url: Optional[str] = None
@@ -48,6 +51,7 @@ class UserProfileUpdate(BaseModel):
 class UserProfile(BaseModel):
     id: int
     display_name: str
+    handle: Optional[str] = None
     avatar_url: Optional[str] = None
     bio: Optional[str] = None
     linkedin_url: Optional[str] = None
@@ -56,7 +60,10 @@ class UserProfile(BaseModel):
     follower_count: int = 0
     following_count: int = 0
     your_tier: Optional[str] = None
+    follow_status: Optional[str] = None
     vault_price_cents: int = 0
+    auto_accept_followers: Optional[bool] = None
+    vault_shows: Optional[list[str]] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -137,6 +144,7 @@ class NoteOut(BaseModel):
     id: int
     user_id: int
     display_name: Optional[str] = None
+    handle: Optional[str] = None
     avatar_url: Optional[str] = None
     body: str
     visibility: str

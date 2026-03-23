@@ -58,6 +58,7 @@ class User(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
     display_name = Column(String, nullable=False)
+    handle = Column(String, unique=True, nullable=True, index=True)
     avatar_url = Column(String, nullable=True)
     bio = Column(Text, nullable=True)
 

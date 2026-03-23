@@ -194,11 +194,21 @@ def get_user_profile(
     ).count()
 
     access = get_access_tier(db, current_user.id, user_id)
-    vault_price = target.tier_config.vault_price_cents if target.tier_config else 0
+    config = target.tier_config
+    vault_price = config.vault_price_cents if config else 0
+
+    # Get follow status
+    follow = (
+        db.query(Follow)
+        .filter(Follow.follower_id == current_user.id, Follow.following_id == user_id)
+        .first()
+    )
+    follow_status = follow.status.value if follow else "none"
 
     return UserProfile(
         id=target.id,
         display_name=target.display_name,
+        handle=target.handle,
         avatar_url=target.avatar_url,
         bio=target.bio,
         linkedin_url=target.linkedin_url,
@@ -207,7 +217,10 @@ def get_user_profile(
         follower_count=follower_count,
         following_count=following_count,
         your_tier=access.value,
+        follow_status=follow_status,
         vault_price_cents=vault_price,
+        auto_accept_followers=config.auto_accept_followers if config else True,
+        vault_shows=config.vault_shows if config else [],
         created_at=target.created_at,
     )
 

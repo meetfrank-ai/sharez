@@ -26,11 +26,12 @@ export function AuthProvider({ children }) {
     setUser(me.data);
   };
 
-  const register = async (email, password, displayName) => {
+  const register = async (email, password, displayName, handle) => {
     const res = await api.post('/auth/register', {
       email,
       password,
       display_name: displayName,
+      handle,
     });
     localStorage.setItem('sharez_token', res.data.access_token);
     const me = await api.get('/auth/me');
