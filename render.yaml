@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: sharez
+    runtime: python
+    buildCommand: bash build.sh
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SHAREZ_SECRET_KEY
+        generateValue: true
+      - key: SHAREZ_FERNET_KEY
+        generateValue: true
+      - key: DATA_DIR
+        value: "/data"
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: NODE_VERSION
+        value: "20"
+    disk:
+      name: sharez-data
+      mountPath: /data
+      sizeGB: 1

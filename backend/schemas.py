@@ -1,0 +1,225 @@
+from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel
+
+
+# --- Auth ---
+
+class UserCreate(BaseModel):
+    email: str
+    password: str
+    display_name: str
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class UserOut(BaseModel):
+    id: int
+    email: str
+    display_name: str
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    twitter_url: Optional[str] = None
+    website_url: Optional[str] = None
+    has_onboarded: bool = False
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class UserProfileUpdate(BaseModel):
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    twitter_url: Optional[str] = None
+    website_url: Optional[str] = None
+
+
+class UserProfile(BaseModel):
+    id: int
+    display_name: str
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    twitter_url: Optional[str] = None
+    website_url: Optional[str] = None
+    follower_count: int = 0
+    following_count: int = 0
+    your_tier: Optional[str] = None
+    vault_price_cents: int = 0
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# --- EasyEquities ---
+
+class EECredentials(BaseModel):
+    ee_username: str
+    ee_password: str
+
+
+# --- Holdings ---
+
+class HoldingOut(BaseModel):
+    id: int
+    account_type: str
+    stock_name: str
+    contract_code: str
+    isin: Optional[str] = None
+    purchase_value: Optional[float] = None
+    current_value: Optional[float] = None
+    current_price: Optional[float] = None
+    shares: Optional[float] = None
+    logo_url: Optional[str] = None
+    last_synced_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+# --- Tier Config ---
+
+class TierConfigUpdate(BaseModel):
+    public_shows: Optional[list[str]] = None
+    inner_circle_shows: Optional[list[str]] = None
+    vault_shows: Optional[list[str]] = None
+    vault_price_cents: Optional[int] = None
+    auto_accept_followers: Optional[bool] = None
+
+
+class TierConfigOut(BaseModel):
+    public_shows: list[str]
+    inner_circle_shows: list[str]
+    vault_shows: list[str]
+    vault_price_cents: int
+    auto_accept_followers: bool
+
+    model_config = {"from_attributes": True}
+
+
+# --- Follow ---
+
+class FollowOut(BaseModel):
+    id: int
+    follower_id: int
+    following_id: int
+    tier: str
+    status: str
+    is_vip: bool
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# --- Notes ---
+
+class NoteCreate(BaseModel):
+    body: str
+    visibility: str = "public"
+    stock_tag: Optional[str] = None
+    stock_name: Optional[str] = None
+    parent_note_id: Optional[int] = None
+
+
+class NoteOut(BaseModel):
+    id: int
+    user_id: int
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    body: str
+    visibility: str
+    stock_tag: Optional[str] = None
+    stock_name: Optional[str] = None
+    parent_note_id: Optional[int] = None
+    like_count: int = 0
+    reply_count: int = 0
+    liked_by_me: bool = False
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# --- Theses ---
+
+class ThesisCreate(BaseModel):
+    contract_code: str
+    stock_name: str
+    body: str
+    visibility: str = "inner_circle"
+
+
+class ThesisUpdate(BaseModel):
+    body: Optional[str] = None
+    visibility: Optional[str] = None
+
+
+class ThesisOut(BaseModel):
+    id: int
+    user_id: int
+    display_name: Optional[str] = None
+    contract_code: str
+    stock_name: str
+    body: str
+    visibility: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# --- Comments ---
+
+class CommentCreate(BaseModel):
+    body: str
+
+
+class CommentOut(BaseModel):
+    id: int
+    thesis_id: int
+    user_id: int
+    display_name: Optional[str] = None
+    body: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# --- Feed ---
+
+class FeedEventOut(BaseModel):
+    id: int
+    user_id: int
+    display_name: Optional[str] = None
+    event_type: str
+    visibility: str = "public"
+    note_id: Optional[int] = None
+    metadata: Optional[dict] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# --- Subscription ---
+
+class SubscriptionOut(BaseModel):
+    id: int
+    subscriber_id: int
+    creator_id: int
+    amount_cents: int
+    status: str
+    started_at: datetime
+    expires_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}

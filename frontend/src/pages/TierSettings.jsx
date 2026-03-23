@@ -1,0 +1,224 @@
+import { useState, useEffect } from 'react';
+import { Sliders, ChevronDown, ChevronRight, Eye, Users, Lock } from 'lucide-react';
+import api from '../utils/api';
+
+const SHOW_OPTIONS = [
+  { key: 'sectors', label: 'Sector allocation' },
+  { key: 'return_pct', label: 'Overall return %' },
+  { key: 'stock_names', label: 'Stock names' },
+  { key: 'allocation_pct', label: 'Allocation %' },
+  { key: 'amounts', label: 'Rand amounts' },
+  { key: 'buy_sell_history', label: 'Buy/sell history' },
+  { key: 'realtime_changes', label: 'Real-time changes' },
+  { key: 'all_theses', label: 'All theses' },
+  { key: 'free_theses', label: 'Free theses' },
+  { key: 'exclusive_theses', label: 'Exclusive theses' },
+  { key: 'all_notes', label: 'All notes' },
+  { key: 'free_notes', label: 'Free notes' },
+  { key: 'exclusive_notes', label: 'Exclusive notes' },
+  { key: 'comments', label: 'Comments' },
+];
+
+const TIERS = [
+  { key: 'public_shows', label: 'Public', desc: 'Anyone on the platform', Icon: Eye, color: 'var(--text-muted)', bg: '#F3F4F6' },
+  { key: 'inner_circle_shows', label: 'Inner Circle', desc: 'Approved followers (free)', Icon: Users, color: 'var(--tier-inner)', bg: '#EFF6FF' },
+  { key: 'vault_shows', label: 'Vault', desc: 'Paid subscribers or invited VIPs', Icon: Lock, color: 'var(--tier-vault)', bg: '#FFFBEB' },
+];
+
+export default function TierSettings() {
+  const [config, setConfig] = useState(null);
+  const [vaultPrice, setVaultPrice] = useState('');
+  const [autoAccept, setAutoAccept] = useState(true);
+  const [vaultManualApproval, setVaultManualApproval] = useState(true);
+  const [openTier, setOpenTier] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    api.get('/portfolio/tier-config').then((res) => {
+      setConfig(res.data);
+      setVaultPrice(String(res.data.vault_price_cents / 100));
+      setAutoAccept(res.data.auto_accept_followers);
+    }).catch(() => {});
+  }, []);
+
+  const toggleOption = (tier, key) => {
+    setConfig((prev) => {
+      const list = [...prev[tier]];
+      const idx = list.indexOf(key);
+      if (idx >= 0) list.splice(idx, 1);
+      else list.push(key);
+      return { ...prev, [tier]: list };
+    });
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage('');
+    try {
+      await api.put('/portfolio/tier-config', {
+        public_shows: config.public_shows,
+        inner_circle_shows: config.inner_circle_shows,
+        vault_shows: config.vault_shows,
+        vault_price_cents: Math.round(parseFloat(vaultPrice || '0') * 100),
+        auto_accept_followers: autoAccept,
+      });
+      setMessage('Settings saved!');
+      setTimeout(() => setMessage(''), 3000);
+    } catch { setMessage('Failed to save'); }
+    finally { setSaving(false); }
+  };
+
+  if (!config) {
+    return <div className="flex items-center justify-center h-64">
+      <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--border)', borderTopColor: 'transparent' }} />
+    </div>;
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 md:px-6 py-6">
+      <div className="flex items-center gap-2 mb-5">
+        <Sliders size={20} style={{ color: 'var(--accent)' }} />
+        <h1 className="text-2xl font-semibold m-0" style={{ color: 'var(--text-primary)' }}>Tier Settings</h1>
+      </div>
+
+      <p className="text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
+        Configure what each tier of followers can see. Tap a tier to expand its settings.
+      </p>
+
+      {/* Tier accordions */}
+      {TIERS.map((tier) => {
+        const isOpen = openTier === tier.key;
+        const TierIcon = tier.Icon;
+        const count = config[tier.key]?.length || 0;
+
+        return (
+          <div
+            key={tier.key}
+            className="rounded-xl mb-3 overflow-hidden transition-all"
+            style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}
+          >
+            {/* Accordion header */}
+            <button
+              onClick={() => setOpenTier(isOpen ? null : tier.key)}
+              className="w-full flex items-center gap-3 px-5 py-4 bg-transparent border-none cursor-pointer text-left"
+            >
+              <div
+                className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                style={{ backgroundColor: tier.bg }}
+              >
+                <TierIcon size={18} style={{ color: tier.color }} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold m-0" style={{ color: 'var(--text-primary)' }}>
+                  {tier.label}
+                </p>
+                <p className="text-xs m-0" style={{ color: 'var(--text-muted)' }}>
+                  {tier.desc} · {count} item{count !== 1 ? 's' : ''} visible
+                </p>
+              </div>
+              {isOpen
+                ? <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />
+                : <ChevronRight size={18} style={{ color: 'var(--text-muted)' }} />
+              }
+            </button>
+
+            {/* Accordion body */}
+            {isOpen && (
+              <div className="px-5 pb-4 pt-0" style={{ borderTop: '1px solid var(--border)' }}>
+                <div className="pt-3 space-y-2.5">
+                  {SHOW_OPTIONS.map((opt) => (
+                    <label key={opt.key} className="flex items-center gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={config[tier.key]?.includes(opt.key) || false}
+                        onChange={() => toggleOption(tier.key, opt.key)}
+                        className="w-4 h-4 rounded"
+                        style={{ accentColor: 'var(--accent)' }}
+                      />
+                      <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Per-tier settings */}
+                {tier.key === 'inner_circle_shows' && (
+                  <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+                    <label className="flex items-center gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={autoAccept}
+                        onChange={(e) => setAutoAccept(e.target.checked)}
+                        className="w-4 h-4 rounded"
+                        style={{ accentColor: 'var(--accent)' }}
+                      />
+                      <div>
+                        <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Auto-accept followers</span>
+                        <p className="text-xs m-0" style={{ color: 'var(--text-muted)' }}>
+                          New followers are automatically approved to Inner Circle
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                )}
+
+                {tier.key === 'vault_shows' && (
+                  <div className="mt-4 pt-3 space-y-3" style={{ borderTop: '1px solid var(--border)' }}>
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>
+                        Vault price (ZAR/month)
+                      </label>
+                      <input
+                        type="number"
+                        value={vaultPrice}
+                        onChange={(e) => setVaultPrice(e.target.value)}
+                        placeholder="0 = invite-only"
+                        className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+                        style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                      />
+                      <p className="text-xs mt-1 m-0" style={{ color: 'var(--text-muted)' }}>
+                        Set to 0 for invite-only (you manually grant VIP access)
+                      </p>
+                    </div>
+
+                    <label className="flex items-center gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={vaultManualApproval}
+                        onChange={(e) => setVaultManualApproval(e.target.checked)}
+                        className="w-4 h-4 rounded"
+                        style={{ accentColor: 'var(--accent)' }}
+                      />
+                      <div>
+                        <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Manual vault approval</span>
+                        <p className="text-xs m-0" style={{ color: 'var(--text-muted)' }}>
+                          Confirm payment before granting vault access (recommended for v1)
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Save */}
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="w-full py-2.5 rounded-lg font-semibold text-sm transition-opacity hover:opacity-90 disabled:opacity-50 border-none cursor-pointer mt-2"
+        style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF' }}
+      >
+        {saving ? 'Saving...' : 'Save Settings'}
+      </button>
+
+      {message && (
+        <div className="mt-3 rounded-lg px-3 py-2 text-center" style={{ backgroundColor: '#D1FAE5' }}>
+          <p className="text-xs m-0" style={{ color: 'var(--success)' }}>{message}</p>
+        </div>
+      )}
+    </div>
+  );
+}
