@@ -12,6 +12,21 @@ from routes import auth, portfolio, follow, theses, comments, feed, notes, disco
 # Create all tables
 Base.metadata.create_all(bind=engine)
 
+# Seed database if empty (runs once on first deploy)
+try:
+    from database import SessionLocal
+    from models import User
+    _db = SessionLocal()
+    if not _db.query(User).first():
+        _db.close()
+        print("Empty database — running seed...")
+        import subprocess, sys
+        subprocess.run([sys.executable, "seed.py"], check=True)
+    else:
+        _db.close()
+except Exception as e:
+    print(f"Seed check skipped: {e}")
+
 app = FastAPI(title="Sharez", description="Social investing for friends")
 
 # CORS — allow the React frontend in dev

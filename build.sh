@@ -17,8 +17,4 @@ echo "=== Copying frontend build to backend/static ==="
 rm -rf ../backend/static
 cp -r dist ../backend/static
 
-echo "=== Seeding database if empty ==="
-cd ../backend
-python start.py
-
 echo "=== Build complete ==="
