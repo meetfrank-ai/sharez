@@ -9,13 +9,7 @@ services:
         generateValue: true
       - key: SHAREZ_FERNET_KEY
         generateValue: true
-      - key: DATA_DIR
-        value: "/data"
       - key: PYTHON_VERSION
-        value: "3.11"
+        value: "3.11.11"
       - key: NODE_VERSION
         value: "20"
-    disk:
-      name: sharez-data
-      mountPath: /data
-      sizeGB: 1
