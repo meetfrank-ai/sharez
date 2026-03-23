@@ -1,25 +1,31 @@
 import { useState, useEffect } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
-import { Send } from 'lucide-react';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { Send, AlertTriangle, Sparkles, TrendingUp, TrendingDown } from 'lucide-react';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 import NoteCard from '../components/NoteCard';
 import NoteComposer from '../components/NoteComposer';
 import TierBadge from '../components/TierBadge';
+import ThesisCard from '../components/ThesisCard';
+
+const PILL_COLORS = {
+  positive: { bg: '#E1F5EE', text: '#0F6E56' },
+  caution: { bg: '#FAEEDA', text: '#854F0B' },
+  neutral: { bg: '#E6F1FB', text: '#185FA5' },
+};
 
 export default function StockDetail() {
   const { contractCode } = useParams();
   const [searchParams] = useSearchParams();
   const stockName = searchParams.get('name') || contractCode;
-  const viewingUserId = searchParams.get('user'); // set when coming from someone's profile
+  const viewingUserId = searchParams.get('user');
   const { user: currentUser } = useAuth();
-
   const isOwnStock = !viewingUserId || viewingUserId === String(currentUser?.id);
 
-  const [summary, setSummary] = useState('');
+  const [summary, setSummary] = useState(null);
   const [theses, setTheses] = useState([]);
   const [notes, setNotes] = useState([]);
-  const [tab, setTab] = useState('theses');
+  const [tab, setTab] = useState('summary');
   const [newThesis, setNewThesis] = useState('');
   const [thesisVisibility, setThesisVisibility] = useState('inner_circle');
   const [loadingSummary, setLoadingSummary] = useState(true);
@@ -45,10 +51,9 @@ export default function StockDetail() {
 
   useEffect(() => {
     api.get(`/feed/stock-summary?contract_code=${contractCode}&stock_name=${encodeURIComponent(stockName)}`)
-      .then((res) => setSummary(res.data.summary))
-      .catch(() => setSummary('AI summary unavailable'))
+      .then((res) => setSummary(res.data))
+      .catch(() => setSummary(null))
       .finally(() => setLoadingSummary(false));
-
     fetchContent();
   }, [contractCode, stockName, viewingUserId]);
 
@@ -67,21 +72,84 @@ export default function StockDetail() {
     finally { setPosting(false); }
   };
 
+  const priceData = summary?.market_data || {};
+  const changePositive = (priceData.change_pct || 0) >= 0;
+
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-6 py-6">
-      <div className="mb-5">
-        <h1 className="text-2xl font-semibold mb-1 m-0" style={{ color: 'var(--text-primary)' }}>{stockName}</h1>
-        <p className="text-xs m-0" style={{ color: 'var(--text-muted)' }}>{contractCode}</p>
+
+      {/* Stock Header */}
+      <div className="rounded-xl p-5 mb-4" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xs font-semibold"
+            style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF' }}>
+            {stockName?.slice(0, 3).toUpperCase()}
+          </div>
+          <div className="flex-1">
+            <h1 className="text-base font-semibold m-0" style={{ color: 'var(--text-primary)' }}>{stockName}</h1>
+            <p className="text-xs m-0" style={{ color: 'var(--text-muted)' }}>
+              {priceData.ticker || 'JSE'} · {summary?.key_metrics?.[0]?.label === 'Sector' ? summary.key_metrics[0].value : 'Equities'}
+            </p>
+          </div>
+          {priceData.price && (
+            <div className="text-right">
+              <p className="text-base font-semibold m-0" style={{ color: 'var(--text-primary)' }}>
+                R{typeof priceData.price === 'number' ? priceData.price.toLocaleString() : priceData.price}
+              </p>
+              <p className="text-xs m-0" style={{ color: changePositive ? 'var(--success)' : 'var(--danger)' }}>
+                {changePositive ? '+' : ''}{priceData.change_pct ? `${(priceData.change_pct * (Math.abs(priceData.change_pct) < 1 ? 100 : 1)).toFixed(2)}%` : ''}
+              </p>
+            </div>
+          )}
+        </div>
+
         {viewingUser && (
-          <p className="text-xs mt-1 m-0" style={{ color: 'var(--accent)' }}>
+          <p className="text-xs m-0" style={{ color: 'var(--accent)' }}>
             Viewing {viewingUser.display_name}'s activity on this stock
           </p>
         )}
       </div>
 
+      {/* Community Bar */}
+      {summary?.community && summary.community.total_holders > 0 && (
+        <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Community</span>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {summary.community.total_holders} holding
+              {summary.community.avg_allocation_pct > 0 && ` · avg ${summary.community.avg_allocation_pct}% allocation`}
+            </span>
+          </div>
+          {summary.community.following_holders?.length > 0 && (
+            <div className="flex items-center gap-1">
+              <div className="flex -space-x-1.5">
+                {summary.community.following_holders.slice(0, 4).map((h, i) => (
+                  <Link key={h.id} to={`/user/${h.id}`} className="no-underline" style={{ zIndex: 5 - i }}>
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold"
+                      style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)', border: '2px solid var(--bg-card)' }}>
+                      {h.display_name?.charAt(0).toUpperCase()}
+                    </div>
+                  </Link>
+                ))}
+                {summary.community.following_holders.length > 4 && (
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-medium"
+                    style={{ backgroundColor: 'var(--bg-hover)', color: 'var(--text-muted)', border: '2px solid var(--bg-card)' }}>
+                    +{summary.community.following_holders.length - 4}
+                  </div>
+                )}
+              </div>
+              <span className="text-xs ml-2" style={{ color: 'var(--text-secondary)' }}>
+                {summary.community.following_holders.map(h => h.display_name?.split(' ')[0]).slice(0, 2).join(', ')}
+                {summary.community.following_holders.length > 2 && ` +${summary.community.following_holders.length - 2}`}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Tabs */}
-      <div className="flex gap-1.5 mb-5">
-        {['theses', 'notes', 'summary'].map((t) => (
+      <div className="flex gap-1.5 mb-4">
+        {['summary', 'theses', 'notes'].map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className="flex-1 py-2 rounded-lg text-xs font-medium capitalize border-none cursor-pointer"
             style={{
@@ -94,17 +162,14 @@ export default function StockDetail() {
         ))}
       </div>
 
-      {/* Sort/Filter bar — community view only */}
+      {/* Sort/Filter bar */}
       {!viewingUserId && tab !== 'summary' && (
         <div className="flex items-center gap-3 mb-4">
           <div className="flex gap-1">
             {['recent', 'oldest'].map((s) => (
               <button key={s} onClick={() => handleSortChange(s)}
                 className="px-2.5 py-1 rounded-md text-xs font-medium capitalize border-none cursor-pointer"
-                style={{
-                  backgroundColor: sort === s ? 'var(--accent-light)' : 'transparent',
-                  color: sort === s ? 'var(--accent)' : 'var(--text-muted)',
-                }}>
+                style={{ backgroundColor: sort === s ? 'var(--accent-light)' : 'transparent', color: sort === s ? 'var(--accent)' : 'var(--text-muted)' }}>
                 {s}
               </button>
             ))}
@@ -114,10 +179,7 @@ export default function StockDetail() {
             {[{ key: 'everyone', label: 'Everyone' }, { key: 'following', label: 'Following' }].map((p) => (
               <button key={p.key} onClick={() => handlePeopleChange(p.key)}
                 className="px-2.5 py-1 rounded-md text-xs font-medium border-none cursor-pointer"
-                style={{
-                  backgroundColor: people === p.key ? 'var(--accent-light)' : 'transparent',
-                  color: people === p.key ? 'var(--accent)' : 'var(--text-muted)',
-                }}>
+                style={{ backgroundColor: people === p.key ? 'var(--accent-light)' : 'transparent', color: people === p.key ? 'var(--accent)' : 'var(--text-muted)' }}>
                 {p.label}
               </button>
             ))}
@@ -125,20 +187,116 @@ export default function StockDetail() {
         </div>
       )}
 
-      {/* AI Summary */}
+      {/* === AI SUMMARY TAB === */}
       {tab === 'summary' && (
         <div className="rounded-xl p-5" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-          {loadingSummary
-            ? <div className="flex items-center justify-center h-20"><div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--border)', borderTopColor: 'transparent' }} /></div>
-            : <p className="text-sm leading-relaxed whitespace-pre-line m-0" style={{ color: 'var(--text-primary)' }}>{summary}</p>
-          }
+          {loadingSummary ? (
+            <div className="flex items-center justify-center h-20">
+              <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--border)', borderTopColor: 'transparent' }} />
+            </div>
+          ) : !summary ? (
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Summary unavailable</p>
+          ) : (
+            <>
+              {/* AI badge */}
+              <div className="flex items-center gap-1.5 mb-3">
+                <div className="w-5 h-5 rounded-md flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #7F77DD, #378ADD)' }}>
+                  <Sparkles size={11} color="#fff" />
+                </div>
+                <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>AI Summary</span>
+              </div>
+
+              {/* Quick take */}
+              <p className="text-sm leading-relaxed mb-4 m-0" style={{ color: 'var(--text-primary)' }}>
+                {summary.quick_take}
+              </p>
+
+              {/* Sentiment pills */}
+              {summary.sentiment_tags?.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {summary.sentiment_tags.map((tag, i) => {
+                    const colors = PILL_COLORS[tag.type] || PILL_COLORS.neutral;
+                    return (
+                      <span key={i} className="text-[11px] font-medium px-2.5 py-1 rounded-full"
+                        style={{ backgroundColor: colors.bg, color: colors.text }}>
+                        {tag.label}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Why people invest */}
+              {summary.why_people_invest?.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-[11px] font-medium uppercase tracking-wider mb-2 m-0" style={{ color: 'var(--text-muted)' }}>
+                    Why people invest
+                  </p>
+                  <div className="space-y-1.5">
+                    {summary.why_people_invest.map((r, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <div className="w-full max-w-[140px] h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-hover)' }}>
+                          <div className="h-full rounded-full" style={{
+                            width: `${r.pct}%`,
+                            backgroundColor: i === 0 ? 'var(--success)' : i === 1 ? 'var(--accent)' : '#7F77DD',
+                          }} />
+                        </div>
+                        <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{r.reason}</span>
+                        <span className="text-[11px] ml-auto" style={{ color: 'var(--text-muted)' }}>{r.pct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Key metrics */}
+              {summary.key_metrics?.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {summary.key_metrics.slice(0, 3).map((m, i) => (
+                    <div key={i} className="rounded-lg p-2.5 text-center" style={{ backgroundColor: 'var(--bg-page)' }}>
+                      <p className="text-[10px] m-0 mb-0.5" style={{ color: 'var(--text-muted)' }}>{m.label}</p>
+                      <p className="text-sm font-semibold m-0" style={{ color: 'var(--text-primary)' }}>{m.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* News digest */}
+              {summary.news_digest?.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-[11px] font-medium uppercase tracking-wider mb-2 m-0" style={{ color: 'var(--text-muted)' }}>
+                    News digest
+                  </p>
+                  <div className="space-y-1.5">
+                    {summary.news_digest.map((n, i) => (
+                      <div key={i} className="flex gap-2 items-baseline">
+                        <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>{n.time}</span>
+                        <span className="text-xs leading-relaxed" style={{ color: 'var(--text-primary)' }}>{n.headline}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Risk note */}
+              {summary.risk_note && (
+                <div className="rounded-lg p-3 flex gap-2 items-start" style={{ backgroundColor: '#FAEEDA' }}>
+                  <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: '#854F0B' }} />
+                  <div>
+                    <p className="text-xs font-medium m-0 mb-0.5" style={{ color: '#854F0B' }}>Risk note</p>
+                    <p className="text-xs leading-relaxed m-0" style={{ color: '#854F0B', opacity: 0.85 }}>{summary.risk_note}</p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
-      {/* Theses */}
+      {/* === THESES TAB === */}
       {tab === 'theses' && (
         <>
-          {/* Only show composer on your own stock view */}
           {isOwnStock && (
             <div className="rounded-xl p-5 mb-4" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
               <h3 className="text-sm font-semibold mb-3 m-0" style={{ color: 'var(--text-primary)' }}>Share your thesis</h3>
@@ -163,43 +321,23 @@ export default function StockDetail() {
               </form>
             </div>
           )}
-
           {theses.length === 0 ? (
             <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>
               {viewingUser ? `${viewingUser.display_name} hasn't posted a thesis on this stock` : 'No theses yet'}
             </p>
-          ) : (
-            theses.map((t) => (
-              <div key={t.id} className="rounded-xl p-5 mb-3" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{t.display_name}</span>
-                  <TierBadge tier={t.visibility} />
-                </div>
-                <p className="text-sm whitespace-pre-line" style={{ color: 'var(--text-primary)' }}>{t.body}</p>
-                <p className="text-xs mt-2 m-0" style={{ color: 'var(--text-muted)' }}>
-                  {new Date(t.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}
-                </p>
-              </div>
-            ))
-          )}
+          ) : theses.map((t) => <ThesisCard key={t.id} thesis={t} />)}
         </>
       )}
 
-      {/* Notes */}
+      {/* === NOTES TAB === */}
       {tab === 'notes' && (
         <>
-          {/* Only show composer on your own stock view */}
-          {isOwnStock && (
-            <NoteComposer stockTag={contractCode} stockName={stockName} onPosted={(n) => setNotes([n, ...notes])} />
-          )}
-
+          {isOwnStock && <NoteComposer stockTag={contractCode} stockName={stockName} onPosted={(n) => setNotes([n, ...notes])} />}
           {notes.length === 0 ? (
             <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-              {viewingUser ? `${viewingUser.display_name} hasn't posted notes on this stock` : 'No notes about this stock yet'}
+              {viewingUser ? `${viewingUser.display_name} hasn't posted notes on this stock` : 'No notes yet'}
             </p>
-          ) : (
-            notes.map((n) => <NoteCard key={n.id} note={n} />)
-          )}
+          ) : notes.map((n) => <NoteCard key={n.id} note={n} />)}
         </>
       )}
     </div>

@@ -136,7 +136,6 @@ async def get_stock_summary(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Get AI-generated stock summary."""
+    """Get rich AI-generated stock summary with community data."""
     from ai_summary import get_stock_summary as _get_summary
-    summary = await _get_summary(db, contract_code, stock_name)
-    return {"summary": summary}
+    return await _get_summary(db, contract_code, stock_name, current_user_id=user.id)
