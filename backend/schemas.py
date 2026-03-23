@@ -253,6 +253,13 @@ class InvestmentReasonOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ShareTransactionRequest(BaseModel):
+    contract_code: str
+    stock_name: str
+    transaction_type: str  # "buy" or "sell"
+    note: Optional[str] = None  # optional note to attach
+
+
 class FeedEventOut(BaseModel):
     id: int
     user_id: int

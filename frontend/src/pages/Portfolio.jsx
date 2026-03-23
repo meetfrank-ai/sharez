@@ -4,6 +4,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import api from '../utils/api';
 import HoldingCard from '../components/HoldingCard';
 import InvestmentReasonModal from '../components/InvestmentReasonModal';
+import ShareTransactionModal from '../components/ShareTransactionModal';
 
 const CHART_COLORS = ['#4F46E5', '#3B82F6', '#10B981', '#D97706', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -12,6 +13,7 @@ export default function Portfolio() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [newStocks, setNewStocks] = useState([]);
+  const [pendingTransactions, setPendingTransactions] = useState([]);
 
   const fetchHoldings = () => {
     api.get('/portfolio/me')
@@ -27,8 +29,13 @@ export default function Portfolio() {
     try {
       const res = await api.post('/portfolio/sync');
       fetchHoldings();
-      if (res.data.added_stocks?.length > 0) {
-        setNewStocks(res.data.added_stocks);
+      // Collect all detected changes for user to review
+      const allChanges = [
+        ...(res.data.added_stocks || []),
+        ...(res.data.removed_stocks || []),
+      ];
+      if (allChanges.length > 0) {
+        setPendingTransactions(allChanges);
       }
     } catch (err) {
       alert(err.response?.data?.detail || 'Sync failed');
@@ -159,8 +166,23 @@ export default function Portfolio() {
         </>
       )}
 
-      {/* Investment reason prompt for newly synced stocks */}
-      {newStocks.length > 0 && (
+      {/* Step 1: Share transactions modal */}
+      {pendingTransactions.length > 0 && (
+        <ShareTransactionModal
+          transactions={pendingTransactions}
+          onClose={() => {
+            // After sharing decisions, prompt for investment reasons on buys
+            const buys = pendingTransactions.filter(t => t.type === 'buy');
+            setPendingTransactions([]);
+            if (buys.length > 0) {
+              setNewStocks(buys);
+            }
+          }}
+        />
+      )}
+
+      {/* Step 2: Investment reasons for new buys */}
+      {newStocks.length > 0 && pendingTransactions.length === 0 && (
         <InvestmentReasonModal
           stocks={newStocks}
           onClose={() => setNewStocks([])}

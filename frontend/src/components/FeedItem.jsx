@@ -1,8 +1,5 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, TrendingDown, FileText, MessageCircle, PenLine, UserPlus, Send } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
-import api from '../utils/api';
+import { TrendingUp, TrendingDown, FileText, MessageCircle, PenLine, UserPlus } from 'lucide-react';
 
 const eventConfig = {
   added_stock: { verb: 'bought', Icon: TrendingUp, color: 'var(--success)' },
@@ -14,19 +11,11 @@ const eventConfig = {
 };
 
 export default function FeedItem({ event }) {
-  const { user } = useAuth();
   const config = eventConfig[event.event_type] || { verb: event.event_type, Icon: FileText, color: 'var(--text-muted)' };
   const { Icon } = config;
   const stockName = event.metadata?.stock_name || event.stock_name;
   const followingName = event.metadata?.following_name;
   const contractCode = event.metadata?.contract_code || event.stock_tag;
-
-  const isOwnTransaction = event.user_id === user?.id;
-  const isTransaction = event.event_type === 'added_stock' || event.event_type === 'removed_stock';
-
-  const [showComposer, setShowComposer] = useState(false);
-  const [noteBody, setNoteBody] = useState('');
-  const [posting, setPosting] = useState(false);
 
   const time = new Date(event.created_at).toLocaleDateString('en-ZA', {
     day: 'numeric',
@@ -34,25 +23,6 @@ export default function FeedItem({ event }) {
     hour: '2-digit',
     minute: '2-digit',
   });
-
-  const handlePostNote = async () => {
-    if (!noteBody.trim() || posting) return;
-    setPosting(true);
-    try {
-      await api.post('/notes/', {
-        body: noteBody.trim(),
-        visibility: 'public',
-        stock_tag: contractCode,
-        stock_name: stockName,
-      });
-      setNoteBody('');
-      setShowComposer(false);
-    } catch {
-      alert('Failed to post note');
-    } finally {
-      setPosting(false);
-    }
-  };
 
   return (
     <div
@@ -83,6 +53,9 @@ export default function FeedItem({ event }) {
             >
               {event.display_name || 'Someone'}
             </Link>{' '}
+            {event.handle && (
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>@{event.handle} </span>
+            )}
             <span style={{ color: 'var(--text-secondary)' }}>{config.verb}</span>{' '}
             {stockName && contractCode && (
               <Link
@@ -113,49 +86,6 @@ export default function FeedItem({ event }) {
           <Icon size={14} style={{ color: config.color }} />
         </div>
       </div>
-
-      {/* Add note button — only on own transactions */}
-      {isOwnTransaction && isTransaction && !showComposer && (
-        <button
-          onClick={() => setShowComposer(true)}
-          className="flex items-center gap-1 mt-3 px-0 text-xs bg-transparent border-none cursor-pointer"
-          style={{ color: 'var(--accent)' }}
-        >
-          <PenLine size={12} /> Add a note about this {event.event_type === 'added_stock' ? 'buy' : 'sell'}
-        </button>
-      )}
-
-      {/* Inline note composer */}
-      {showComposer && (
-        <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-          <textarea
-            value={noteBody}
-            onChange={(e) => setNoteBody(e.target.value.slice(0, 500))}
-            placeholder={`Why did you ${event.event_type === 'added_stock' ? 'buy' : 'sell'} ${stockName}?`}
-            rows={2}
-            autoFocus
-            className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none mb-2"
-            style={{ backgroundColor: 'var(--bg-page)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-          />
-          <div className="flex items-center justify-end gap-2">
-            <button
-              onClick={() => { setShowComposer(false); setNoteBody(''); }}
-              className="px-3 py-1 rounded-lg text-xs bg-transparent border-none cursor-pointer"
-              style={{ color: 'var(--text-muted)' }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handlePostNote}
-              disabled={!noteBody.trim() || posting}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40 border-none cursor-pointer"
-              style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF' }}
-            >
-              <Send size={11} /> {posting ? '...' : 'Post'}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

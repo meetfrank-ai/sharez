@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, Holding, Tier, InvestmentReason
-from schemas import HoldingOut, EECredentials, TierConfigUpdate, TierConfigOut, InvestmentReasonCreate, InvestmentReasonOut
+from models import User, Holding, Tier, InvestmentReason, FeedEvent, EventType, Note
+from schemas import HoldingOut, EECredentials, TierConfigUpdate, TierConfigOut, InvestmentReasonCreate, InvestmentReasonOut, ShareTransactionRequest
 from auth import get_current_user
 from ee_sync import store_ee_credentials, sync_portfolio
 from tier_access import get_access_tier, can_view
@@ -162,20 +162,37 @@ def save_investment_reason(
     return reason
 
 
-@router.post("/attach-note/{event_id}")
-def attach_note_to_transaction(
-    event_id: int,
+@router.post("/share-transaction")
+def share_transaction(
+    data: ShareTransactionRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Get transaction details so frontend can open composer pre-tagged."""
-    from models import FeedEvent
-    event = db.query(FeedEvent).filter(FeedEvent.id == event_id, FeedEvent.user_id == user.id).first()
-    if not event:
-        raise HTTPException(status_code=404, detail="Transaction not found")
-    return {
-        "event_id": event.id,
-        "stock_name": event.metadata_.get("stock_name") if event.metadata_ else None,
-        "contract_code": event.metadata_.get("contract_code") if event.metadata_ else None,
-        "event_type": event.event_type.value,
-    }
+    """User explicitly shares a buy/sell transaction, with optional note."""
+    event_type = EventType.added_stock if data.transaction_type == "buy" else EventType.removed_stock
+
+    # Create the FeedEvent (now user-initiated, not auto)
+    note_id = None
+    if data.note:
+        note = Note(
+            user_id=user.id,
+            body=data.note[:500],
+            visibility=Tier.public,
+            stock_tag=data.contract_code,
+            stock_name=data.stock_name,
+        )
+        db.add(note)
+        db.flush()
+        note_id = note.id
+
+    feed_event = FeedEvent(
+        user_id=user.id,
+        event_type=event_type,
+        visibility=Tier.public,
+        note_id=note_id,
+        metadata_={"stock_name": data.stock_name, "contract_code": data.contract_code},
+    )
+    db.add(feed_event)
+    db.commit()
+
+    return {"message": "Transaction shared", "note_id": note_id}

@@ -94,40 +94,30 @@ async def sync_portfolio(db: Session, user: User) -> list[dict]:
         db.add(holding)
         new_codes.add(h.get("contract_code", ""))
 
-    # Generate feed events for new and removed stocks
+    # Detect changes — don't auto-share, let user decide
     added = new_codes - existing_codes
     removed = existing_codes - new_codes
 
-    for code in added:
-        name = next(
-            (h.get("name") for h in holdings_data if h.get("contract_code") == code),
-            code,
-        )
-        db.add(FeedEvent(
-            user_id=user.id,
-            event_type=EventType.added_stock,
-            metadata_={"stock_name": name, "contract_code": code},
-        ))
-
-    for code in removed:
-        db.add(FeedEvent(
-            user_id=user.id,
-            event_type=EventType.removed_stock,
-            metadata_={"contract_code": code},
-        ))
-
     db.commit()
 
-    # Return newly added stocks so frontend can prompt for reasons
+    # Build detected changes for user review
     added_stocks = []
     for code in added:
         name = next(
             (h.get("name") for h in holdings_data if h.get("contract_code") == code),
             code,
         )
-        added_stocks.append({"contract_code": code, "stock_name": name})
+        added_stocks.append({"contract_code": code, "stock_name": name, "type": "buy"})
 
-    return {"holdings": holdings_data, "added_stocks": added_stocks}
+    removed_stocks = []
+    for code in removed:
+        removed_stocks.append({"contract_code": code, "type": "sell"})
+
+    return {
+        "holdings": holdings_data,
+        "added_stocks": added_stocks,
+        "removed_stocks": removed_stocks,
+    }
 
 
 async def _fetch_from_ee(username: str, password: str) -> list[dict]:
