@@ -24,7 +24,7 @@ export default function FeedItem({ event }) {
     minute: '2-digit',
   });
 
-  const content = (
+  return (
     <div
       className="rounded-xl p-4 mb-3 transition-all hover:shadow-md"
       style={{
@@ -34,28 +34,44 @@ export default function FeedItem({ event }) {
       }}
     >
       <div className="flex items-start gap-3">
-        <div
-          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-          style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}
-        >
-          {event.display_name?.charAt(0).toUpperCase() || '?'}
-        </div>
+        {/* Avatar — links to user profile */}
+        <Link to={`/user/${event.user_id}`} className="no-underline shrink-0" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity"
+            style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}
+          >
+            {event.display_name?.charAt(0).toUpperCase() || '?'}
+          </div>
+        </Link>
 
         <div className="flex-1 min-w-0">
           <p className="text-sm m-0 leading-snug">
-            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+            {/* Name — links to user profile */}
+            <Link
+              to={`/user/${event.user_id}`}
+              className="font-semibold no-underline hover:underline"
+              style={{ color: 'var(--text-primary)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
               {event.display_name || 'Someone'}
-            </span>{' '}
+            </Link>{' '}
             <span style={{ color: 'var(--text-secondary)' }}>{config.verb}</span>{' '}
-            {stockName && (
-              <span className="font-semibold" style={{ color: config.color }}>
+            {/* Stock name — links to stock page */}
+            {stockName && contractCode && (
+              <Link
+                to={`/stock/${contractCode}?name=${encodeURIComponent(stockName)}`}
+                className="font-semibold no-underline hover:underline"
+                style={{ color: config.color }}
+                onClick={(e) => e.stopPropagation()}
+              >
                 {stockName}
-              </span>
+              </Link>
+            )}
+            {stockName && !contractCode && (
+              <span className="font-semibold" style={{ color: config.color }}>{stockName}</span>
             )}
             {followingName && (
-              <span className="font-semibold" style={{ color: config.color }}>
-                {followingName}
-              </span>
+              <span className="font-semibold" style={{ color: config.color }}>{followingName}</span>
             )}
           </p>
           <p className="text-xs mt-1 m-0" style={{ color: 'var(--text-muted)' }}>
@@ -72,14 +88,4 @@ export default function FeedItem({ event }) {
       </div>
     </div>
   );
-
-  if (contractCode) {
-    return (
-      <Link to={`/stock/${contractCode}?name=${encodeURIComponent(stockName || '')}`} className="block no-underline">
-        {content}
-      </Link>
-    );
-  }
-
-  return content;
 }

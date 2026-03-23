@@ -43,16 +43,18 @@ export default function NoteCard({ note }) {
       >
         {/* Header */}
         <div className="flex items-center gap-2.5 mb-3">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold"
-            style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}
-          >
-            {note.display_name?.charAt(0).toUpperCase()}
-          </div>
+          <Link to={`/user/${note.user_id}`} className="no-underline shrink-0" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity"
+              style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}
+            >
+              {note.display_name?.charAt(0).toUpperCase()}
+            </div>
+          </Link>
           <div className="flex-1 min-w-0">
-            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+            <Link to={`/user/${note.user_id}`} className="text-sm font-semibold no-underline hover:underline" style={{ color: 'var(--text-primary)' }} onClick={(e) => e.stopPropagation()}>
               {note.display_name}
-            </span>
+            </Link>
             <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>
               {time}
             </span>
