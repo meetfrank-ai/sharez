@@ -104,7 +104,7 @@ export default function UserProfile() {
 
       {tab === 'portfolio' && (holdings.length === 0
         ? <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>No visible holdings</p>
-        : holdings.map((h) => <HoldingCard key={h.id} holding={h} />)
+        : holdings.map((h) => <HoldingCard key={h.id} holding={h} userId={userId} />)
       )}
 
       {tab === 'theses' && (theses.length === 0

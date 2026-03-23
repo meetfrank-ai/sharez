@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-export default function HoldingCard({ holding, privacyLevel = 'full' }) {
+export default function HoldingCard({ holding, privacyLevel = 'full', userId }) {
   const profitLoss = holding.current_value && holding.purchase_value
     ? ((holding.current_value - holding.purchase_value) / holding.purchase_value * 100).toFixed(2)
     : null;
@@ -9,7 +9,7 @@ export default function HoldingCard({ holding, privacyLevel = 'full' }) {
 
   return (
     <Link
-      to={`/stock/${holding.contract_code}?name=${encodeURIComponent(holding.stock_name)}`}
+      to={`/stock/${holding.contract_code}?name=${encodeURIComponent(holding.stock_name)}${userId ? `&user=${userId}` : ''}`}
       className="block no-underline"
     >
       <div
