@@ -232,6 +232,27 @@ class UnifiedFeedItem(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# --- Investment Reasons ---
+
+class InvestmentReasonCreate(BaseModel):
+    contract_code: str
+    stock_name: str
+    reasons: list[str] = []
+    free_text: Optional[str] = None
+
+
+class InvestmentReasonOut(BaseModel):
+    id: int
+    user_id: int
+    contract_code: str
+    stock_name: str
+    reasons: list[str]
+    free_text: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class FeedEventOut(BaseModel):
     id: int
     user_id: int

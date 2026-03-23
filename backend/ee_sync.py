@@ -117,7 +117,17 @@ async def sync_portfolio(db: Session, user: User) -> list[dict]:
         ))
 
     db.commit()
-    return holdings_data
+
+    # Return newly added stocks so frontend can prompt for reasons
+    added_stocks = []
+    for code in added:
+        name = next(
+            (h.get("name") for h in holdings_data if h.get("contract_code") == code),
+            code,
+        )
+        added_stocks.append({"contract_code": code, "stock_name": name})
+
+    return {"holdings": holdings_data, "added_stocks": added_stocks}
 
 
 async def _fetch_from_ee(username: str, password: str) -> list[dict]:

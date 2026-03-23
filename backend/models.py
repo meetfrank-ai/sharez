@@ -156,6 +156,20 @@ class Holding(Base):
     user = relationship("User", back_populates="holdings")
 
 
+class InvestmentReason(Base):
+    __tablename__ = "investment_reasons"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    contract_code = Column(String, nullable=False)
+    stock_name = Column(String, nullable=False)
+    reasons = Column(JSON, default=list)  # preset reason tags
+    free_text = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+
+    user = relationship("User")
+
+
 class Thesis(Base):
     __tablename__ = "theses"
 

@@ -3,6 +3,7 @@ import { RefreshCw, TrendingUp, TrendingDown, Award, DollarSign } from 'lucide-r
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import api from '../utils/api';
 import HoldingCard from '../components/HoldingCard';
+import InvestmentReasonModal from '../components/InvestmentReasonModal';
 
 const CHART_COLORS = ['#4F46E5', '#3B82F6', '#10B981', '#D97706', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -10,6 +11,7 @@ export default function Portfolio() {
   const [holdings, setHoldings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [newStocks, setNewStocks] = useState([]);
 
   const fetchHoldings = () => {
     api.get('/portfolio/me')
@@ -23,8 +25,11 @@ export default function Portfolio() {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      await api.post('/portfolio/sync');
+      const res = await api.post('/portfolio/sync');
       fetchHoldings();
+      if (res.data.added_stocks?.length > 0) {
+        setNewStocks(res.data.added_stocks);
+      }
     } catch (err) {
       alert(err.response?.data?.detail || 'Sync failed');
     } finally {
@@ -152,6 +157,14 @@ export default function Portfolio() {
             )}
           </div>
         </>
+      )}
+
+      {/* Investment reason prompt for newly synced stocks */}
+      {newStocks.length > 0 && (
+        <InvestmentReasonModal
+          stocks={newStocks}
+          onClose={() => setNewStocks([])}
+        />
       )}
     </div>
   );

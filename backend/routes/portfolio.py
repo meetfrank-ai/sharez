@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, Holding, Tier
-from schemas import HoldingOut, EECredentials, TierConfigUpdate, TierConfigOut
+from models import User, Holding, Tier, InvestmentReason
+from schemas import HoldingOut, EECredentials, TierConfigUpdate, TierConfigOut, InvestmentReasonCreate, InvestmentReasonOut
 from auth import get_current_user
 from ee_sync import store_ee_credentials, sync_portfolio
 from tier_access import get_access_tier, can_view
@@ -18,8 +18,8 @@ async def connect_easy_equities(
     db: Session = Depends(get_db),
 ):
     store_ee_credentials(db, user, creds.ee_username, creds.ee_password)
-    await sync_portfolio(db, user)
-    return {"message": "EasyEquities connected and portfolio synced"}
+    result = await sync_portfolio(db, user)
+    return {"message": "EasyEquities connected and portfolio synced", "added_stocks": result.get("added_stocks", [])}
 
 
 @router.post("/sync")
@@ -27,8 +27,8 @@ async def trigger_sync(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    await sync_portfolio(db, user)
-    return {"message": "Portfolio synced"}
+    result = await sync_portfolio(db, user)
+    return {"message": "Portfolio synced", "added_stocks": result.get("added_stocks", [])}
 
 
 @router.get("/me", response_model=list[HoldingOut])
@@ -127,3 +127,55 @@ def get_tier_config(
     if not user.tier_config:
         raise HTTPException(status_code=404, detail="Tier config not found")
     return user.tier_config
+
+
+@router.post("/investment-reason", response_model=InvestmentReasonOut, status_code=201)
+def save_investment_reason(
+    data: InvestmentReasonCreate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Save why a user invested in a stock."""
+    # Upsert — update if already exists for this user+stock
+    existing = (
+        db.query(InvestmentReason)
+        .filter(InvestmentReason.user_id == user.id, InvestmentReason.contract_code == data.contract_code)
+        .first()
+    )
+    if existing:
+        existing.reasons = data.reasons
+        existing.free_text = data.free_text
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    reason = InvestmentReason(
+        user_id=user.id,
+        contract_code=data.contract_code,
+        stock_name=data.stock_name,
+        reasons=data.reasons,
+        free_text=data.free_text,
+    )
+    db.add(reason)
+    db.commit()
+    db.refresh(reason)
+    return reason
+
+
+@router.post("/attach-note/{event_id}")
+def attach_note_to_transaction(
+    event_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get transaction details so frontend can open composer pre-tagged."""
+    from models import FeedEvent
+    event = db.query(FeedEvent).filter(FeedEvent.id == event_id, FeedEvent.user_id == user.id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    return {
+        "event_id": event.id,
+        "stock_name": event.metadata_.get("stock_name") if event.metadata_ else None,
+        "contract_code": event.metadata_.get("contract_code") if event.metadata_ else None,
+        "event_type": event.event_type.value,
+    }

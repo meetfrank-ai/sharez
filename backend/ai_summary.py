@@ -10,7 +10,7 @@ from datetime import datetime, timezone, timedelta
 
 from sqlalchemy.orm import Session
 
-from models import StockSummaryCache, Holding, Thesis, User, Follow, FollowStatus
+from models import StockSummaryCache, Holding, Thesis, User, Follow, FollowStatus, InvestmentReason
 
 logger = logging.getLogger(__name__)
 
@@ -188,17 +188,30 @@ def _get_community_data(db: Session, contract_code: str, stock_name: str, curren
 
 
 def _get_investment_reasons(db: Session, contract_code: str) -> list[dict]:
-    """Aggregate investment reasons from theses on this stock."""
+    """Aggregate investment reasons from explicit reasons + theses."""
+    # Source 1: Explicit investment reasons (from "Why are you investing?" prompt)
+    explicit_reasons = (
+        db.query(InvestmentReason)
+        .filter(InvestmentReason.contract_code == contract_code)
+        .all()
+    )
+
+    reason_counts = {}
+    total_sources = 0
+
+    # Count explicit preset reasons
+    for ir in explicit_reasons:
+        total_sources += 1
+        for reason in (ir.reasons or []):
+            reason_counts[reason] = reason_counts.get(reason, 0) + 1
+
+    # Source 2: Keyword extraction from theses (fallback/supplement)
     theses = (
         db.query(Thesis)
         .filter(Thesis.contract_code == contract_code)
         .all()
     )
 
-    if not theses:
-        return []
-
-    # Simple keyword-based reason extraction
     reason_keywords = {
         "Growth potential": ["growth", "growing", "expand", "momentum", "upside"],
         "Dividend income": ["dividend", "income", "yield", "passive"],
@@ -210,8 +223,7 @@ def _get_investment_reasons(db: Session, contract_code: str) -> list[dict]:
         "Management quality": ["management", "leadership", "governance", "ceo"],
     }
 
-    reason_counts = {}
-    total = len(theses)
+    total = max(len(theses) + total_sources, 1)
 
     for thesis in theses:
         body_lower = thesis.body.lower()
