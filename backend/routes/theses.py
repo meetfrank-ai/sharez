@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, Thesis, FeedEvent, EventType, Tier
+from models import User, Thesis, Tier
 from schemas import ThesisCreate, ThesisUpdate, ThesisOut
 from auth import get_current_user
 from tier_access import get_access_tier, can_view
@@ -26,14 +26,6 @@ def create_thesis(
         visibility=visibility,
     )
     db.add(thesis)
-    db.flush()
-
-    db.add(FeedEvent(
-        user_id=user.id,
-        event_type=EventType.new_thesis,
-        visibility=visibility,
-        metadata_={"thesis_id": thesis.id, "stock_name": data.stock_name},
-    ))
     db.commit()
     db.refresh(thesis)
 

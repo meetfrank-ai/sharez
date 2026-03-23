@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, Follow, Subscription, FeedEvent, EventType, Tier, FollowStatus, SubscriptionStatus
+from models import User, Follow, Subscription, Tier, FollowStatus, SubscriptionStatus
 from schemas import FollowOut, SubscriptionOut, UserProfile
 from auth import get_current_user
 from tier_access import get_access_tier
@@ -41,15 +41,6 @@ def follow_user(
         status=FollowStatus.active if auto_accept else FollowStatus.pending,
     )
     db.add(follow)
-
-    if auto_accept:
-        db.add(FeedEvent(
-            user_id=current_user.id,
-            event_type=EventType.new_follow,
-            visibility=Tier.public,
-            metadata_={"following_name": target.display_name, "following_id": user_id},
-        ))
-
     db.commit()
     db.refresh(follow)
 

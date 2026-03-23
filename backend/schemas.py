@@ -206,6 +206,32 @@ class CommentOut(BaseModel):
 
 # --- Feed ---
 
+class UnifiedFeedItem(BaseModel):
+    item_type: str  # "note", "thesis", "transaction"
+    id: int
+    user_id: int
+    display_name: Optional[str] = None
+    handle: Optional[str] = None
+    avatar_url: Optional[str] = None
+    created_at: datetime
+    visibility: Optional[str] = None
+    # Note fields
+    body: Optional[str] = None
+    stock_tag: Optional[str] = None
+    stock_name: Optional[str] = None
+    like_count: Optional[int] = None
+    reply_count: Optional[int] = None
+    liked_by_me: Optional[bool] = None
+    parent_note_id: Optional[int] = None
+    # Thesis fields
+    contract_code: Optional[str] = None
+    # Transaction fields
+    event_type: Optional[str] = None
+    metadata: Optional[dict] = None
+
+    model_config = {"from_attributes": True}
+
+
 class FeedEventOut(BaseModel):
     id: int
     user_id: int

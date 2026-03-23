@@ -4,6 +4,7 @@ import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 import FeedItem from '../components/FeedItem';
 import NoteCard from '../components/NoteCard';
+import ThesisCard from '../components/ThesisCard';
 
 const FILTERS = [
   { key: 'all', label: 'For you' },
@@ -14,8 +15,7 @@ const FILTERS = [
 
 export default function Feed() {
   const { user } = useAuth();
-  const [events, setEvents] = useState([]);
-  const [notes, setNotes] = useState([]);
+  const [items, setItems] = useState([]);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
@@ -29,24 +29,29 @@ export default function Feed() {
   const textareaRef = useRef(null);
   const remaining = 500 - composerBody.length;
 
-  useEffect(() => {
-    Promise.all([api.get('/feed/'), api.get('/notes/')])
-      .then(([feedRes, notesRes]) => {
-        setEvents(feedRes.data);
-        setNotes(notesRes.data);
-      })
+  const fetchFeed = (f = filter) => {
+    setLoading(true);
+    api.get(`/feed/?filter=${f}`)
+      .then((res) => setItems(res.data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { fetchFeed(); }, []);
+
+  const handleFilterChange = (f) => {
+    setFilter(f);
+    fetchFeed(f);
+  };
 
   const handlePost = async () => {
     if (!composerBody.trim() || posting) return;
     setPosting(true);
     try {
-      const res = await api.post('/notes/', { body: composerBody.trim(), visibility: composerVisibility });
-      setNotes([res.data, ...notes]);
+      await api.post('/notes/', { body: composerBody.trim(), visibility: composerVisibility });
       setComposerBody('');
       setComposerExpanded(false);
+      fetchFeed();
     } catch (err) {
       alert(err.response?.data?.detail || 'Failed to post');
     } finally {
@@ -54,23 +59,12 @@ export default function Feed() {
     }
   };
 
-  // Merge + sort
-  const allItems = [
-    ...events.map((e) => ({ ...e, _type: 'event', _time: new Date(e.created_at) })),
-    ...notes.map((n) => ({ ...n, _type: 'note', _time: new Date(n.created_at) })),
-  ].sort((a, b) => b._time - a._time);
-
-  let filteredItems = allItems;
-  if (filter === 'notes') filteredItems = allItems.filter((i) => i._type === 'note');
-  else if (filter === 'transactions') filteredItems = allItems.filter((i) => i._type === 'event' && ['added_stock', 'removed_stock'].includes(i.event_type));
-  else if (filter === 'theses') filteredItems = allItems.filter((i) => i._type === 'event' && i.event_type === 'new_thesis');
-
+  // Client-side search filter
+  let displayItems = items;
   if (search.trim()) {
     const q = search.toLowerCase();
-    filteredItems = filteredItems.filter((item) => {
-      const text = item._type === 'note'
-        ? `${item.body} ${item.stock_name || ''} ${item.display_name || ''}`
-        : `${item.metadata?.stock_name || ''} ${item.display_name || ''}`;
+    displayItems = items.filter((item) => {
+      const text = `${item.body || ''} ${item.stock_name || ''} ${item.display_name || ''} ${item.handle || ''} ${item.metadata?.stock_name || ''}`;
       return text.toLowerCase().includes(q);
     });
   }
@@ -174,7 +168,7 @@ export default function Feed() {
         {FILTERS.map((f) => (
           <button
             key={f.key}
-            onClick={() => setFilter(f.key)}
+            onClick={() => handleFilterChange(f.key)}
             className="px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all border-none cursor-pointer"
             style={{
               backgroundColor: filter === f.key ? 'var(--accent-light)' : 'transparent',
@@ -192,7 +186,7 @@ export default function Feed() {
         <div className="flex items-center justify-center h-40">
           <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--border)', borderTopColor: 'transparent' }} />
         </div>
-      ) : filteredItems.length === 0 ? (
+      ) : displayItems.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
             {search ? 'No results found' : filter === 'all' ? 'No activity yet' : `No ${filter} yet`}
@@ -202,11 +196,12 @@ export default function Feed() {
           )}
         </div>
       ) : (
-        filteredItems.map((item) =>
-          item._type === 'note'
-            ? <NoteCard key={`note-${item.id}`} note={item} />
-            : <FeedItem key={`event-${item.id}`} event={item} />
-        )
+        displayItems.map((item) => {
+          if (item.item_type === 'note') return <NoteCard key={`note-${item.id}`} note={item} />;
+          if (item.item_type === 'thesis') return <ThesisCard key={`thesis-${item.id}`} thesis={item} />;
+          if (item.item_type === 'transaction') return <FeedItem key={`tx-${item.id}`} event={item} />;
+          return null;
+        })
       )}
     </div>
   );

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, Note, NoteLike, FeedEvent, Follow, EventType, Tier, FollowStatus
+from models import User, Note, NoteLike, Follow, Tier, FollowStatus
 from schemas import NoteCreate, NoteOut
 from auth import get_current_user
 from tier_access import get_access_tier, can_view
@@ -73,15 +73,6 @@ def create_note(
     # Update parent reply count
     if data.parent_note_id:
         parent.reply_count = (parent.reply_count or 0) + 1
-
-    # Feed event
-    db.add(FeedEvent(
-        user_id=user.id,
-        event_type=EventType.new_note,
-        visibility=visibility,
-        note_id=note.id,
-        metadata_={"stock_name": data.stock_name, "stock_tag": data.stock_tag},
-    ))
 
     db.commit()
     db.refresh(note)
