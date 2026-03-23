@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -37,15 +37,31 @@ def create_thesis(
 @router.get("/stock/{contract_code}", response_model=list[ThesisOut])
 def get_theses_for_stock(
     contract_code: str,
+    sort: str = Query("recent"),
+    people: str = Query("everyone"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    theses = (
-        db.query(Thesis)
-        .filter(Thesis.contract_code == contract_code)
-        .order_by(Thesis.created_at.desc())
-        .all()
-    )
+    from models import Follow, FollowStatus
+
+    query = db.query(Thesis).filter(Thesis.contract_code == contract_code)
+
+    if people == "following":
+        following_ids = [
+            f[0] for f in
+            db.query(Follow.following_id)
+            .filter(Follow.follower_id == user.id, Follow.status == FollowStatus.active)
+            .all()
+        ]
+        following_ids.append(user.id)
+        query = query.filter(Thesis.user_id.in_(following_ids))
+
+    if sort == "oldest":
+        query = query.order_by(Thesis.created_at.asc())
+    else:
+        query = query.order_by(Thesis.created_at.desc())
+
+    theses = query.all()
 
     result = []
     for t in theses:

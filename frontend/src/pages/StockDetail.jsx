@@ -25,16 +25,11 @@ export default function StockDetail() {
   const [loadingSummary, setLoadingSummary] = useState(true);
   const [posting, setPosting] = useState(false);
   const [viewingUser, setViewingUser] = useState(null);
+  const [sort, setSort] = useState('recent');
+  const [people, setPeople] = useState('everyone');
 
-  useEffect(() => {
-    // Fetch AI summary
-    api.get(`/feed/stock-summary?contract_code=${contractCode}&stock_name=${encodeURIComponent(stockName)}`)
-      .then((res) => setSummary(res.data.summary))
-      .catch(() => setSummary('AI summary unavailable'))
-      .finally(() => setLoadingSummary(false));
-
+  const fetchContent = (s = sort, p = people) => {
     if (viewingUserId) {
-      // Viewing someone else's stock — fetch their theses and notes for this stock
       api.get(`/theses/user/${viewingUserId}`).then((res) => {
         setTheses(res.data.filter(t => t.contract_code === contractCode));
       }).catch(() => {});
@@ -43,11 +38,22 @@ export default function StockDetail() {
       }).catch(() => {});
       api.get(`/profile/${viewingUserId}`).then((res) => setViewingUser(res.data)).catch(() => {});
     } else {
-      // Viewing your own or community stock
-      api.get(`/theses/stock/${contractCode}`).then((res) => setTheses(res.data)).catch(() => {});
-      api.get(`/notes/stock/${contractCode}`).then((res) => setNotes(res.data)).catch(() => {});
+      api.get(`/theses/stock/${contractCode}?sort=${s}&people=${p}`).then((res) => setTheses(res.data)).catch(() => {});
+      api.get(`/notes/stock/${contractCode}?sort=${s}&people=${p}`).then((res) => setNotes(res.data)).catch(() => {});
     }
+  };
+
+  useEffect(() => {
+    api.get(`/feed/stock-summary?contract_code=${contractCode}&stock_name=${encodeURIComponent(stockName)}`)
+      .then((res) => setSummary(res.data.summary))
+      .catch(() => setSummary('AI summary unavailable'))
+      .finally(() => setLoadingSummary(false));
+
+    fetchContent();
   }, [contractCode, stockName, viewingUserId]);
+
+  const handleSortChange = (s) => { setSort(s); fetchContent(s, people); };
+  const handlePeopleChange = (p) => { setPeople(p); fetchContent(sort, p); };
 
   const handlePostThesis = async (e) => {
     e.preventDefault();
@@ -87,6 +93,37 @@ export default function StockDetail() {
           </button>
         ))}
       </div>
+
+      {/* Sort/Filter bar — community view only */}
+      {!viewingUserId && tab !== 'summary' && (
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex gap-1">
+            {['recent', 'oldest'].map((s) => (
+              <button key={s} onClick={() => handleSortChange(s)}
+                className="px-2.5 py-1 rounded-md text-xs font-medium capitalize border-none cursor-pointer"
+                style={{
+                  backgroundColor: sort === s ? 'var(--accent-light)' : 'transparent',
+                  color: sort === s ? 'var(--accent)' : 'var(--text-muted)',
+                }}>
+                {s}
+              </button>
+            ))}
+          </div>
+          <div className="w-px h-4" style={{ backgroundColor: 'var(--border)' }} />
+          <div className="flex gap-1">
+            {[{ key: 'everyone', label: 'Everyone' }, { key: 'following', label: 'Following' }].map((p) => (
+              <button key={p.key} onClick={() => handlePeopleChange(p.key)}
+                className="px-2.5 py-1 rounded-md text-xs font-medium border-none cursor-pointer"
+                style={{
+                  backgroundColor: people === p.key ? 'var(--accent-light)' : 'transparent',
+                  color: people === p.key ? 'var(--accent)' : 'var(--text-muted)',
+                }}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* AI Summary */}
       {tab === 'summary' && (

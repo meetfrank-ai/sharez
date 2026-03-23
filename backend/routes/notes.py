@@ -220,16 +220,29 @@ def unlike_note(
 @router.get("/stock/{contract_code}", response_model=list[NoteOut])
 def get_stock_notes(
     contract_code: str,
+    sort: str = Query("recent"),
+    people: str = Query("everyone"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    notes = (
-        db.query(Note)
-        .filter(Note.stock_tag == contract_code, Note.parent_note_id.is_(None))
-        .order_by(Note.created_at.desc())
-        .limit(50)
-        .all()
-    )
+    query = db.query(Note).filter(Note.stock_tag == contract_code, Note.parent_note_id.is_(None))
+
+    if people == "following":
+        following_ids = [
+            f[0] for f in
+            db.query(Follow.following_id)
+            .filter(Follow.follower_id == current_user.id, Follow.status == FollowStatus.active)
+            .all()
+        ]
+        following_ids.append(current_user.id)
+        query = query.filter(Note.user_id.in_(following_ids))
+
+    if sort == "oldest":
+        query = query.order_by(Note.created_at.asc())
+    else:
+        query = query.order_by(Note.created_at.desc())
+
+    notes = query.limit(50).all()
 
     result = []
     for note in notes:

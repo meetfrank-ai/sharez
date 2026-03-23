@@ -38,17 +38,27 @@ def discover_users(
         ).count()
 
         access = get_access_tier(db, current_user.id, u.id)
-        vault_price = u.tier_config.vault_price_cents if u.tier_config else 0
+        config = u.tier_config
+        vault_price = config.vault_price_cents if config else 0
+
+        follow = db.query(Follow).filter(
+            Follow.follower_id == current_user.id, Follow.following_id == u.id
+        ).first()
+        follow_status = follow.status.value if follow else "none"
 
         result.append(UserProfile(
             id=u.id,
             display_name=u.display_name,
+            handle=u.handle,
             avatar_url=u.avatar_url,
             bio=u.bio,
             follower_count=follower_count,
             following_count=following_count,
             your_tier=access.value,
+            follow_status=follow_status,
             vault_price_cents=vault_price,
+            auto_accept_followers=config.auto_accept_followers if config else True,
+            vault_shows=config.vault_shows if config else [],
             created_at=u.created_at,
         ))
 

@@ -37,11 +37,7 @@ export default function CreatorCard({ user }) {
           </p>
         </div>
 
-        <FollowButton
-          userId={user.id}
-          initialTier={user.your_tier === 'public' ? null : user.your_tier}
-          vaultPrice={user.vault_price_cents}
-        />
+        <FollowButton userId={user.id} profile={user} />
       </div>
     </div>
   );

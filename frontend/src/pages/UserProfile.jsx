@@ -84,7 +84,7 @@ export default function UserProfile() {
 
         <div className="flex items-center justify-center gap-2">
           <TierBadge tier={profile.your_tier || 'public'} />
-          <FollowButton userId={profile.id} initialTier={profile.your_tier === 'public' ? null : profile.your_tier} vaultPrice={profile.vault_price_cents} />
+          <FollowButton userId={profile.id} profile={profile} />
         </div>
       </div>
 
