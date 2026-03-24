@@ -4,13 +4,11 @@ import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 import FeedItem from '../components/FeedItem';
 import NoteCard from '../components/NoteCard';
-import ThesisCard from '../components/ThesisCard';
 
 const FILTERS = [
   { key: 'all', label: 'For you' },
   { key: 'notes', label: 'Notes' },
   { key: 'transactions', label: 'Transactions' },
-  { key: 'theses', label: 'Theses' },
 ];
 
 export default function Feed() {
@@ -198,7 +196,7 @@ export default function Feed() {
       ) : (
         displayItems.map((item) => {
           if (item.item_type === 'note') return <NoteCard key={`note-${item.id}`} note={item} />;
-          if (item.item_type === 'thesis') return <ThesisCard key={`thesis-${item.id}`} thesis={item} />;
+          if (item.item_type === 'thesis') return null; // v2: long-form articles
           if (item.item_type === 'transaction') return <FeedItem key={`tx-${item.id}`} event={item} />;
           return null;
         })

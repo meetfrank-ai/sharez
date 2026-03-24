@@ -156,7 +156,7 @@ export default function StockDetail() {
 
       {/* Tabs */}
       <div className="flex gap-1.5 mb-4">
-        {['summary', 'theses', 'notes'].map((t) => (
+        {['summary', 'notes'].map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className="flex-1 py-2 rounded-lg text-xs font-medium capitalize border-none cursor-pointer"
             style={{

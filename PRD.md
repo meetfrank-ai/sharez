@@ -119,9 +119,8 @@ React Frontend (Vite) ──► FastAPI Backend ──► SQLite Database
 ### ✅ Unified Feed
 - Shows actual content inline (not meta-events):
   - **Notes** — full NoteCard with like/reply
-  - **Theses** — full ThesisCard with stock tag
-  - **Transactions** — buy/sell cards with trending icons
-- Filter tabs: For you | Notes | Transactions | Theses
+  - **Transactions** — buy/sell cards with trending icons (user-initiated sharing)
+- Filter tabs: For you | Notes | Transactions
 - Server-side filtering, client-side search
 - "What's on your mind?" composer (Substack-style)
 
@@ -132,10 +131,13 @@ React Frontend (Vite) ──► FastAPI Backend ──► SQLite Database
 - Threading (replies inherit parent visibility)
 - Like/unlike with counts
 
-### ✅ Theses
-- Long-form investment write-ups tied to a stock
-- Visibility tiers
-- Comments system
+### 🔲 Theses → v2: Articles (Substack-style)
+- Deferred to v2 — will function like Substack articles for investing
+- Long-form thoughtful pieces tied to stocks (not short-form notes)
+- AI-assisted writing: pre-fills context from holdings ("You bought Capitec at R2,100")
+- Paywalled exclusive articles for Vault subscribers
+- Backend models exist (Thesis table) but hidden from UI in v1
+- Comments system on articles
 
 ### ✅ Rich AI Stock Summary
 - **Quick take**: 2-3 sentence plain-language summary (Claude API)
