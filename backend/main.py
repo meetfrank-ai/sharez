@@ -12,25 +12,40 @@ from routes import auth, portfolio, follow, theses, comments, feed, notes, disco
 # Create all tables
 Base.metadata.create_all(bind=engine)
 
-# Migrate: add new columns to existing tables (PostgreSQL doesn't auto-add)
+# Migrate: add new columns to existing tables
 try:
-    from sqlalchemy import text
-    with engine.connect() as conn:
-        # Check and add missing columns
-        for col_name, col_sql in [
+    from sqlalchemy import text, inspect
+    inspector = inspect(engine)
+
+    migrations = {
+        "users": [
             ("portfolio_imported_at", "ALTER TABLE users ADD COLUMN portfolio_imported_at TIMESTAMP"),
-            ("handle", "ALTER TABLE users ADD COLUMN handle VARCHAR UNIQUE"),
+            ("handle", "ALTER TABLE users ADD COLUMN handle VARCHAR"),
+        ],
+        "notes": [
             ("transaction_ids", "ALTER TABLE notes ADD COLUMN transaction_ids JSONB"),
             ("image_url", "ALTER TABLE notes ADD COLUMN image_url VARCHAR"),
             ("reshare_count", "ALTER TABLE notes ADD COLUMN reshare_count INTEGER DEFAULT 0"),
             ("restacked_note_id", "ALTER TABLE notes ADD COLUMN restacked_note_id INTEGER"),
-        ]:
+        ],
+    }
+
+    with engine.connect() as conn:
+        for table_name, columns in migrations.items():
             try:
-                conn.execute(text(col_sql))
-                conn.commit()
-                print(f"Migrated: added {col_name}")
+                existing_cols = {c["name"] for c in inspector.get_columns(table_name)}
             except Exception:
-                conn.rollback()  # Column already exists
+                existing_cols = set()
+
+            for col_name, col_sql in columns:
+                if col_name not in existing_cols:
+                    try:
+                        conn.execute(text(col_sql))
+                        conn.commit()
+                        print(f"Migrated: added {col_name} to {table_name}")
+                    except Exception as e:
+                        conn.rollback()
+                        print(f"Migration skip {col_name}: {e}")
 except Exception as e:
     print(f"Migration check: {e}")
 
