@@ -5,7 +5,6 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 import HoldingCard from '../components/HoldingCard';
-// Import moved to Transactions page
 
 const CHART_COLORS = ['#4F46E5', '#3B82F6', '#10B981', '#D97706', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -13,7 +12,6 @@ export default function Portfolio() {
   const { user } = useAuth();
   const [holdings, setHoldings] = useState([]);
   const [loading, setLoading] = useState(true);
-  // Import moved to Transactions page
 
   const fetchHoldings = () => {
     api.get('/portfolio/me')
@@ -66,7 +64,6 @@ export default function Portfolio() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-6">
-      {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-2xl font-semibold m-0" style={{ color: 'var(--text-primary)' }}>My Portfolio</h1>
@@ -79,32 +76,18 @@ export default function Portfolio() {
             </div>
           )}
         </div>
-        {hasPortfolio && (
-          <button
-            onClick={() => setShowImport(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90 border-none cursor-pointer"
-            style={{ backgroundColor: 'var(--bg-card)', color: 'var(--accent)', border: '1px solid var(--border)' }}
-          >
-            <Upload size={14} />
-            Update
-          </button>
-        )}
       </div>
 
-      {/* Empty state — link to Transactions page */}
       {!hasPortfolio ? (
         <div className="rounded-2xl p-8 text-center" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
             style={{ backgroundColor: 'var(--accent-light)' }}>
             <FileSpreadsheet size={32} style={{ color: 'var(--accent)' }} />
           </div>
-          <h2 className="text-lg font-semibold m-0 mb-2" style={{ color: 'var(--text-primary)' }}>
-            No holdings yet
-          </h2>
+          <h2 className="text-lg font-semibold m-0 mb-2" style={{ color: 'var(--text-primary)' }}>No holdings yet</h2>
           <p className="text-sm mb-6 max-w-sm mx-auto" style={{ color: 'var(--text-secondary)' }}>
             Import your EasyEquities transaction history to build your portfolio automatically.
           </p>
-
           <Link to="/transactions"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold no-underline transition-opacity hover:opacity-90"
             style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF' }}>
@@ -113,7 +96,6 @@ export default function Portfolio() {
         </div>
       ) : (
         <>
-          {/* Summary cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             {[
               { label: 'Total Value', value: `R${totalValue.toLocaleString()}`, Icon: DollarSign, color: 'var(--accent)' },
@@ -132,7 +114,6 @@ export default function Portfolio() {
             ))}
           </div>
 
-          {/* Holdings + Chart */}
           <div className="grid md:grid-cols-3 gap-5">
             <div className="md:col-span-2">
               <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>Holdings</h2>
@@ -172,8 +153,6 @@ export default function Portfolio() {
           </div>
         </>
       )}
-
-      {/* Import moved to Transactions page */}
     </div>
   );
 }

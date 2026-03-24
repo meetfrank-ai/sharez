@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, ChevronDown, ChevronRight, Upload, FileSpreadsheet, Check, Send, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, ChevronDown, ChevronRight, Upload, FileSpreadsheet, Send, X } from 'lucide-react';
 import api from '../utils/api';
 import ImportPortfolioModal from '../components/ImportPortfolioModal';
 
@@ -24,7 +24,7 @@ export default function Transactions() {
 
   useEffect(() => { fetchTransactions(); }, []);
 
-  // Group transactions by stock + date + action
+  // Group by stock + date + action
   const grouped = [];
   const groupMap = {};
   transactions.forEach(tx => {
@@ -49,18 +49,11 @@ export default function Transactions() {
 
   const getSelectedTxIds = () => {
     const ids = [];
-    selected.forEach(key => {
-      const group = groupMap[key];
-      if (group) group.transactions.forEach(t => ids.push(t.id));
-    });
+    selected.forEach(key => { const g = groupMap[key]; if (g) g.transactions.forEach(t => ids.push(t.id)); });
     return ids;
   };
 
-  const getSelectedStockNames = () => {
-    const names = new Set();
-    selected.forEach(key => { const g = groupMap[key]; if (g) names.add(g.stock_name); });
-    return [...names];
-  };
+  const getSelectedStockNames = () => [...new Set([...selected].map(k => groupMap[k]?.stock_name).filter(Boolean))];
 
   const handleShare = async () => {
     const txIds = getSelectedTxIds();
@@ -102,19 +95,17 @@ export default function Transactions() {
         )}
       </div>
       <p className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>
-        {hasTransactions ? 'Tap transactions to select, then share as a note to your feed.' : 'Import your EasyEquities transactions to get started.'}
+        {hasTransactions ? 'Tap to select transactions, then share as a note.' : 'Import your EasyEquities transactions to get started.'}
       </p>
 
-      {/* Empty state */}
       {!hasTransactions ? (
         <div className="rounded-2xl p-8 text-center" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
-            style={{ backgroundColor: 'var(--accent-light)' }}>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5" style={{ backgroundColor: 'var(--accent-light)' }}>
             <FileSpreadsheet size={32} style={{ color: 'var(--accent)' }} />
           </div>
           <h2 className="text-lg font-semibold m-0 mb-2" style={{ color: 'var(--text-primary)' }}>Import your transactions</h2>
           <p className="text-sm mb-6 max-w-sm mx-auto" style={{ color: 'var(--text-secondary)' }}>
-            Download your transaction history from EasyEquities and upload it here. Your portfolio will be built automatically.
+            Download your transaction history from EasyEquities and upload it here.
           </p>
           <button onClick={() => setShowImport(true)}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold border-none cursor-pointer"
@@ -125,42 +116,38 @@ export default function Transactions() {
       ) : (
         <>
           {/* Filters */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex gap-1.5">
-              {[
-                { key: 'all', label: `All (${grouped.length})` },
-                { key: 'buys', label: 'Buys' },
-                { key: 'sells', label: 'Sells' },
-              ].map(f => (
-                <button key={f.key} onClick={() => setFilter(f.key)}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium border-none cursor-pointer"
-                  style={{
-                    backgroundColor: filter === f.key ? 'var(--accent-light)' : 'transparent',
-                    color: filter === f.key ? 'var(--accent)' : 'var(--text-muted)',
-                    border: filter === f.key ? '1px solid #C7D2FE' : '1px solid var(--border)',
-                  }}>
-                  {f.label}
-                </button>
-              ))}
-            </div>
+          <div className="flex gap-1.5 mb-4">
+            {[
+              { key: 'all', label: `All (${grouped.length})` },
+              { key: 'buys', label: 'Buys' },
+              { key: 'sells', label: 'Sells' },
+            ].map(f => (
+              <button key={f.key} onClick={() => setFilter(f.key)}
+                className="px-3 py-1.5 rounded-full text-xs font-medium border-none cursor-pointer"
+                style={{
+                  backgroundColor: filter === f.key ? 'var(--accent-light)' : 'transparent',
+                  color: filter === f.key ? 'var(--accent)' : 'var(--text-muted)',
+                  border: filter === f.key ? '1px solid #C7D2FE' : '1px solid var(--border)',
+                }}>
+                {f.label}
+              </button>
+            ))}
           </div>
 
-          {/* Selected action bar */}
+          {/* Share bar — appears when transactions selected */}
           {selected.size > 0 && (
             <div className="flex items-center justify-between mb-4 px-4 py-3 rounded-xl"
               style={{ backgroundColor: 'var(--accent-light)', border: '1px solid #C7D2FE' }}>
               <span className="text-xs font-medium" style={{ color: 'var(--accent)' }}>
-                {selected.size} selected · {getSelectedStockNames().join(', ')}
+                {selected.size} selected
               </span>
               <div className="flex items-center gap-2">
                 <button onClick={() => setSelected(new Set())}
-                  className="text-xs bg-transparent border-none cursor-pointer" style={{ color: 'var(--text-muted)' }}>
-                  Clear
-                </button>
+                  className="text-xs bg-transparent border-none cursor-pointer" style={{ color: 'var(--text-muted)' }}>Clear</button>
                 <button onClick={() => { setShowComposer(true); setNoteBody(''); }}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border-none cursor-pointer"
+                  className="flex items-center gap-1 px-4 py-1.5 rounded-lg text-xs font-semibold border-none cursor-pointer"
                   style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF' }}>
-                  <Send size={12} /> Write note
+                  Share
                 </button>
               </div>
             </div>
@@ -179,15 +166,15 @@ export default function Transactions() {
                   <div className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors"
                     onClick={() => toggleSelect(group.key)}
                     style={{ backgroundColor: isSelected ? 'var(--accent-light)' : 'transparent' }}>
-                    {/* Icon */}
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                       style={{ backgroundColor: isBuy ? '#D1FAE5' : '#FEE2E2' }}>
                       {isBuy ? <TrendingUp size={15} style={{ color: '#16A34A' }} /> : <TrendingDown size={15} style={{ color: '#DC2626' }} />}
                     </div>
 
-                    {/* Details */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium m-0 truncate" style={{ color: 'var(--text-primary)' }}>{group.stock_name}</p>
+                      <p className={`text-sm m-0 truncate ${isSelected ? 'font-bold' : 'font-medium'}`} style={{ color: 'var(--text-primary)' }}>
+                        {group.stock_name}
+                      </p>
                       <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>
                         {isBuy ? 'Bought' : 'Sold'} {Number(group.total_qty).toLocaleString(undefined, { maximumFractionDigits: 2 })} shares
                         {hasMultiple && ` · ${group.transactions.length} orders`}
@@ -195,23 +182,13 @@ export default function Transactions() {
                       </p>
                     </div>
 
-                    {/* Selected check */}
-                    {isSelected && (
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF' }}>
-                        <Check size={14} />
-                      </div>
-                    )}
-
-                    {/* Shared badge */}
-                    {group.total_shared > 0 && !isSelected && (
+                    {group.total_shared > 0 && (
                       <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0"
                         style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
                         Shared{group.total_shared > 1 ? ` ×${group.total_shared}` : ''}
                       </span>
                     )}
 
-                    {/* Expand */}
                     {hasMultiple && (
                       <button onClick={(e) => { e.stopPropagation(); setExpandedGroup(isExpanded ? null : group.key); }}
                         className="bg-transparent border-none cursor-pointer p-1 shrink-0" style={{ color: 'var(--text-muted)' }}>
@@ -220,7 +197,6 @@ export default function Transactions() {
                     )}
                   </div>
 
-                  {/* Expanded fills */}
                   {isExpanded && (
                     <div className="pl-16 pr-4 pb-3">
                       {group.transactions.map((tx, j) => (
@@ -241,39 +217,36 @@ export default function Transactions() {
         </>
       )}
 
-      {/* Note composer modal */}
+      {/* Note composer modal — same as feed note with tagged transactions */}
       {showComposer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowComposer(false)}>
           <div className="w-full max-w-sm rounded-xl p-6" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold m-0" style={{ color: 'var(--text-primary)' }}>Share as note</h3>
+              <h3 className="text-base font-semibold m-0" style={{ color: 'var(--text-primary)' }}>Create note</h3>
               <button onClick={() => setShowComposer(false)} className="bg-transparent border-none cursor-pointer p-1" style={{ color: 'var(--text-muted)' }}>
                 <X size={18} />
               </button>
             </div>
 
-            {/* Tagged transactions preview */}
-            <div className="rounded-lg p-3 mb-4" style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-              <div className="flex items-center gap-1.5 mb-1">
-                <TrendingUp size={13} style={{ color: '#16A34A' }} />
-                <span className="text-[11px] font-semibold" style={{ color: '#16A34A' }}>Tagged transactions</span>
-              </div>
-              <p className="text-sm font-medium m-0" style={{ color: 'var(--text-primary)' }}>
-                {getSelectedStockNames().join(', ')}
-              </p>
-              <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                {selected.size} group{selected.size > 1 ? 's' : ''} · {getSelectedTxIds().length} transaction{getSelectedTxIds().length > 1 ? 's' : ''}
-              </p>
+            {/* Tagged transactions */}
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {getSelectedStockNames().map((name, i) => (
+                <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium"
+                  style={{ backgroundColor: '#D1FAE5', color: '#16A34A' }}>
+                  ↑ {name}
+                </span>
+              ))}
+              <span className="text-[11px] self-center" style={{ color: 'var(--text-muted)' }}>
+                {getSelectedTxIds().length} transaction{getSelectedTxIds().length > 1 ? 's' : ''} tagged
+              </span>
             </div>
 
-            {/* Note body */}
             <textarea value={noteBody} onChange={e => setNoteBody(e.target.value)}
               placeholder="Write your thoughts about this trade..."
               rows={4} autoFocus
               className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none mb-3"
               style={{ backgroundColor: 'var(--bg-page)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
 
-            {/* Visibility */}
             <div className="mb-4">
               <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Who can see this?</label>
               <div className="flex gap-2">
@@ -300,7 +273,6 @@ export default function Transactions() {
         </div>
       )}
 
-      {/* Import modal */}
       {showImport && (
         <ImportPortfolioModal
           onClose={() => setShowImport(false)}

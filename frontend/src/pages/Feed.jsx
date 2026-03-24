@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Send, DollarSign, ArrowLeftRight, Image as ImageIcon, X, Check, Repeat2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Search, Send, DollarSign, ArrowLeftRight, X, Check, Repeat2, TrendingUp, TrendingDown } from 'lucide-react';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 import FeedItem from '../components/FeedItem';
@@ -205,46 +206,61 @@ export default function Feed() {
               </div>
             )}
 
-            {/* Transaction picker */}
-            {showTxPicker && (
-              <div className="mb-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)', maxHeight: 200, overflowY: 'auto' }}>
-                {myTransactions.length === 0 ? (
-                  <p className="text-xs text-center py-4 m-0" style={{ color: 'var(--text-muted)' }}>
-                    No transactions imported yet
-                  </p>
-                ) : (
-                  myTransactions.slice(0, 20).map((tx) => {
-                    const isSelected = composerTxIds.includes(tx.id);
-                    return (
-                      <div key={tx.id}
-                        className="flex items-center gap-2 px-3 py-2 cursor-pointer text-xs"
-                        style={{ borderBottom: '1px solid var(--border)', backgroundColor: isSelected ? '#D1FAE5' : 'transparent' }}
-                        onClick={() => {
-                          if (isSelected) {
-                            setComposerTxIds(composerTxIds.filter(id => id !== tx.id));
-                            setComposerTxNames(composerTxNames.filter(n => n !== tx.stock_name));
-                          } else {
-                            setComposerTxIds([...composerTxIds, tx.id]);
-                            if (!composerTxNames.includes(tx.stock_name)) setComposerTxNames([...composerTxNames, tx.stock_name]);
-                          }
-                        }}>
-                        <span style={{ color: tx.action === 'buy' ? '#16A34A' : '#DC2626' }}>
-                          {tx.action === 'buy' ? '↑' : '↓'}
-                        </span>
-                        <span className="flex-1 truncate" style={{ color: 'var(--text-primary)' }}>{tx.stock_name}</span>
-                        <span style={{ color: 'var(--text-muted)' }}>{tx.transaction_date}</span>
-                        {isSelected && <Check size={12} style={{ color: '#16A34A' }} />}
-                      </div>
-                    );
-                  })
-                )}
-                <button onClick={() => setShowTxPicker(false)}
-                  className="w-full py-2 text-xs font-medium bg-transparent border-none cursor-pointer"
-                  style={{ color: 'var(--accent)' }}>
-                  Done
-                </button>
-              </div>
-            )}
+            {/* Transaction picker — grouped like Transactions page */}
+            {showTxPicker && (() => {
+              // Group transactions by stock + date + action
+              const txGroups = [];
+              const txGroupMap = {};
+              myTransactions.forEach(tx => {
+                const key = `${tx.stock_name}|${tx.transaction_date}|${tx.action}`;
+                if (!txGroupMap[key]) {
+                  txGroupMap[key] = { key, stock_name: tx.stock_name, action: tx.action, date: tx.transaction_date, transactions: [], total_qty: 0 };
+                  txGroups.push(txGroupMap[key]);
+                }
+                txGroupMap[key].transactions.push(tx);
+                txGroupMap[key].total_qty += tx.quantity;
+              });
+
+              return (
+                <div className="mb-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)', maxHeight: 220, overflowY: 'auto' }}>
+                  {txGroups.length === 0 ? (
+                    <p className="text-xs text-center py-4 m-0" style={{ color: 'var(--text-muted)' }}>No transactions imported yet</p>
+                  ) : (
+                    txGroups.slice(0, 15).map((group) => {
+                      const allIds = group.transactions.map(t => t.id);
+                      const isSelected = allIds.some(id => composerTxIds.includes(id));
+                      const isBuy = group.action === 'buy';
+                      return (
+                        <div key={group.key}
+                          className="flex items-center gap-2 px-3 py-2.5 cursor-pointer text-xs"
+                          style={{ borderBottom: '1px solid var(--border)', backgroundColor: isSelected ? 'var(--accent-light)' : 'transparent' }}
+                          onClick={() => {
+                            if (isSelected) {
+                              setComposerTxIds(composerTxIds.filter(id => !allIds.includes(id)));
+                              setComposerTxNames(composerTxNames.filter(n => n !== group.stock_name));
+                            } else {
+                              setComposerTxIds([...composerTxIds, ...allIds]);
+                              if (!composerTxNames.includes(group.stock_name)) setComposerTxNames([...composerTxNames, group.stock_name]);
+                            }
+                          }}>
+                          {isBuy ? <TrendingUp size={13} style={{ color: '#16A34A' }} /> : <TrendingDown size={13} style={{ color: '#DC2626' }} />}
+                          <span className={`flex-1 truncate ${isSelected ? 'font-bold' : ''}`} style={{ color: 'var(--text-primary)' }}>
+                            {group.stock_name}
+                          </span>
+                          <span style={{ color: 'var(--text-muted)' }}>
+                            {Number(group.total_qty).toLocaleString(undefined, { maximumFractionDigits: 1 })} shares
+                            {group.transactions.length > 1 && ` · ${group.transactions.length}x`}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                  <button onClick={() => setShowTxPicker(false)}
+                    className="w-full py-2 text-xs font-medium bg-transparent border-none cursor-pointer"
+                    style={{ color: 'var(--accent)' }}>Done</button>
+                </div>
+              );
+            })()}
 
             {/* Attachment bar */}
             <div className="flex items-center gap-1 pb-3 mb-3 flex-wrap" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -264,13 +280,6 @@ export default function Feed() {
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                 <ArrowLeftRight size={15} /> Transaction
-              </button>
-              <button
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-transparent border-none cursor-pointer"
-                style={{ color: 'var(--text-muted)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                <ImageIcon size={15} /> Image
               </button>
             </div>
 
