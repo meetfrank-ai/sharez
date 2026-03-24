@@ -91,7 +91,25 @@ export default function StockDetail() {
   };
 
   const priceData = summary?.market_data || {};
-  const changePositive = (priceData.change_pct || 0) >= 0;
+  const changePct = priceData.change_pct || 0;
+  const changeVal = priceData.change || 0;
+  const changePositive = changePct >= 0;
+  const isJSE = (priceData.ticker || '').includes('.JSE');
+  const badgeColor = isJSE ? '#1D9E75' : '#0a84ff';
+  const ticker = (priceData.ticker || contractCode || '').replace('.JSE', '').replace('.US', '');
+
+  // Format price
+  const formatPrice = (price) => {
+    if (!price || typeof price !== 'number') return '—';
+    return `R${price.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  // Format change
+  const formatChange = () => {
+    if (!changePct) return '';
+    const sign = changeVal >= 0 ? '+' : '';
+    return `${sign}R${Math.abs(changeVal).toFixed(2)} (${sign}${changePct.toFixed(2)}%)`;
+  };
 
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-6 py-6">
@@ -99,38 +117,53 @@ export default function StockDetail() {
       {/* Stock Header */}
       <div className="rounded-xl p-5 mb-4" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xs font-semibold"
-            style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF' }}>
-            {stockName?.slice(0, 3).toUpperCase()}
+          <div className="flex items-center justify-center font-medium text-white"
+            style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: badgeColor, fontSize: 15 }}>
+            {ticker.slice(0, 4)}
           </div>
-          <div className="flex-1">
-            <h1 className="text-base font-semibold m-0" style={{ color: 'var(--text-primary)' }}>{stockName}</h1>
-            <p className="text-xs m-0" style={{ color: 'var(--text-muted)' }}>
-              {priceData.ticker || 'JSE'} · {summary?.sector || 'Equities'}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base font-medium m-0 truncate" style={{ color: 'var(--text-primary)' }}>{stockName}</h1>
+            <p className="text-[13px] m-0" style={{ color: 'var(--text-muted)' }}>
+              {isJSE ? 'JSE' : priceData.ticker || 'JSE'} · {summary?.sector || 'Equities'}
             </p>
           </div>
-          {priceData.price && (
-            <div className="text-right">
-              <p className="text-base font-semibold m-0" style={{ color: 'var(--text-primary)' }}>
-                R{typeof priceData.price === 'number' ? priceData.price.toLocaleString() : priceData.price}
+          <div className="text-right">
+            <p className="text-base font-medium m-0" style={{ color: 'var(--text-primary)' }}>
+              {formatPrice(priceData.price)}
+            </p>
+            {changePct !== 0 && (
+              <p className="text-[13px] m-0" style={{ color: changePositive ? '#1D9E75' : '#E24B4A' }}>
+                {formatChange()}
               </p>
-              <p className="text-xs m-0" style={{ color: changePositive ? 'var(--success)' : 'var(--danger)' }}>
-                {changePositive ? '+' : ''}{priceData.change_pct ? `${(priceData.change_pct * (Math.abs(priceData.change_pct) < 1 ? 100 : 1)).toFixed(2)}%` : ''}
-              </p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Mini sparkline */}
-        {summary?.sparkline?.length > 1 && (
-          <div style={{ height: 48, margin: '0 -8px' }}>
-            <ResponsiveContainer width="100%" height={48}>
-              <LineChart data={summary.sparkline.map((v, i) => ({ v, i }))}>
-                <Line type="monotone" dataKey="v" stroke={changePositive ? '#10B981' : '#EF4444'} strokeWidth={1.5} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+        {/* Sparkline — 1 year price chart */}
+        {summary?.sparkline?.length > 1 && (() => {
+          const prices = summary.sparkline;
+          const min = Math.min(...prices);
+          const max = Math.max(...prices);
+          const range = max - min || 1;
+          const w = 360;
+          const h = 48;
+          const points = prices.map((p, i) => ({
+            x: (i / (prices.length - 1)) * w,
+            y: h - ((p - min) / range) * h,
+          }));
+          const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+          const fillPath = `${linePath} L${w} ${h} L0 ${h}Z`;
+          const color = changePositive ? '#1D9E75' : '#E24B4A';
+
+          return (
+            <div style={{ height: 48, margin: '0 -4px 0' }}>
+              <svg width="100%" height="48" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+                <path d={fillPath} fill={color} opacity="0.08" />
+                <path d={linePath} fill="none" stroke={color} strokeWidth="1.5" />
+              </svg>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Community Bar */}

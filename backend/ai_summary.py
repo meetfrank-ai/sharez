@@ -342,19 +342,12 @@ def _get_community_data(db: Session, contract_code: str, stock_name: str, curren
         if e.metadata_ and e.metadata_.get("contract_code") == contract_code
     )
 
-    # Account type breakdown for holders
-    account_breakdown = {}
-    for h in holdings:
-        atype = h.account_type.value if hasattr(h.account_type, 'value') else str(h.account_type)
-        account_breakdown[atype] = account_breakdown.get(atype, 0) + 1
-
     return {
         "total_holders": total_holders,
         "following_holders": following_holders,
         "avg_allocation_pct": avg_allocation,
         "recent_buys": recent_buys_count,
         "recent_sells": recent_sells_count,
-        "account_breakdown": account_breakdown,
     }
 
 
