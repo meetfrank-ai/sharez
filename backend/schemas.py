@@ -34,6 +34,7 @@ class UserOut(BaseModel):
     twitter_url: Optional[str] = None
     website_url: Optional[str] = None
     has_onboarded: bool = False
+    portfolio_imported_at: Optional[datetime] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -64,6 +65,7 @@ class UserProfile(BaseModel):
     vault_price_cents: int = 0
     auto_accept_followers: Optional[bool] = None
     vault_shows: Optional[list[str]] = None
+    portfolio_imported_at: Optional[datetime] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -311,6 +311,11 @@ async def import_transactions(
 
     result = import_holdings_to_db(db, user, parsed, account_type)
 
+    # Update portfolio_imported_at timestamp
+    from datetime import datetime, timezone
+    user.portfolio_imported_at = datetime.now(timezone.utc)
+    db.commit()
+
     return {
         "message": result["message"],
         "holdings_imported": result["count"],

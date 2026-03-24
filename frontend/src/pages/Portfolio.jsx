@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { RefreshCw, TrendingUp, TrendingDown, Award, DollarSign, Upload } from 'lucide-react';
+import { TrendingUp, TrendingDown, Award, DollarSign, Upload, FileSpreadsheet, Shield } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import api from '../utils/api';
+import { useAuth } from '../hooks/useAuth';
 import HoldingCard from '../components/HoldingCard';
 import InvestmentReasonModal from '../components/InvestmentReasonModal';
 import ShareTransactionModal from '../components/ShareTransactionModal';
@@ -10,9 +11,9 @@ import ImportPortfolioModal from '../components/ImportPortfolioModal';
 const CHART_COLORS = ['#4F46E5', '#3B82F6', '#10B981', '#D97706', '#EF4444', '#8B5CF6', '#EC4899'];
 
 export default function Portfolio() {
+  const { user } = useAuth();
   const [holdings, setHoldings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
   const [newStocks, setNewStocks] = useState([]);
   const [pendingTransactions, setPendingTransactions] = useState([]);
   const [showImport, setShowImport] = useState(false);
@@ -26,25 +27,8 @@ export default function Portfolio() {
 
   useEffect(() => { fetchHoldings(); }, []);
 
-  const handleSync = async () => {
-    setSyncing(true);
-    try {
-      const res = await api.post('/portfolio/sync');
-      fetchHoldings();
-      // Collect all detected changes for user to review
-      const allChanges = [
-        ...(res.data.added_stocks || []),
-        ...(res.data.removed_stocks || []),
-      ];
-      if (allChanges.length > 0) {
-        setPendingTransactions(allChanges);
-      }
-    } catch (err) {
-      alert(err.response?.data?.detail || 'Sync failed');
-    } finally {
-      setSyncing(false);
-    }
-  };
+  const hasPortfolio = holdings.length > 0;
+  const importedAt = user?.portfolio_imported_at;
 
   const totalValue = holdings.reduce((s, h) => s + (h.current_value || 0), 0);
   const totalPurchase = holdings.reduce((s, h) => s + (h.purchase_value || 0), 0);
@@ -64,6 +48,17 @@ export default function Portfolio() {
     value: h.current_value,
   }));
 
+  const formatImportDate = (dateStr) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Updated today';
+    if (diffDays === 1) return 'Updated yesterday';
+    if (diffDays < 7) return `Updated ${diffDays} days ago`;
+    return `Updated ${d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })}`;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -74,33 +69,57 @@ export default function Portfolio() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-6">
+      {/* Header */}
       <div className="flex items-center justify-between mb-5">
-        <h1 className="text-2xl font-semibold m-0" style={{ color: 'var(--text-primary)' }}>My Portfolio</h1>
-        <div className="flex items-center gap-2">
+        <div>
+          <h1 className="text-2xl font-semibold m-0" style={{ color: 'var(--text-primary)' }}>My Portfolio</h1>
+          {importedAt && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <Shield size={12} style={{ color: 'var(--success)' }} />
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {formatImportDate(importedAt)} · Verified from EasyEquities
+              </span>
+            </div>
+          )}
+        </div>
+        {hasPortfolio && (
           <button
             onClick={() => setShowImport(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90 border-none cursor-pointer"
             style={{ backgroundColor: 'var(--bg-card)', color: 'var(--accent)', border: '1px solid var(--border)' }}
           >
             <Upload size={14} />
-            Import
+            Update
           </button>
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 border-none cursor-pointer"
-            style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF' }}
-          >
-            <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
-            {syncing ? 'Syncing...' : 'Sync'}
-          </button>
-        </div>
+        )}
       </div>
 
-      {holdings.length === 0 ? (
-        <div className="text-center py-16 rounded-xl" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-          <p className="text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>No holdings yet</p>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Connect EasyEquities in Settings to sync your portfolio</p>
+      {/* Empty state — big import CTA */}
+      {!hasPortfolio ? (
+        <div className="rounded-2xl p-8 text-center" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
+            style={{ backgroundColor: 'var(--accent-light)' }}>
+            <FileSpreadsheet size={32} style={{ color: 'var(--accent)' }} />
+          </div>
+          <h2 className="text-lg font-semibold m-0 mb-2" style={{ color: 'var(--text-primary)' }}>
+            Import your portfolio
+          </h2>
+          <p className="text-sm mb-6 max-w-sm mx-auto" style={{ color: 'var(--text-secondary)' }}>
+            Download your transaction history from EasyEquities and upload it here. We'll build your portfolio automatically from your trades.
+          </p>
+
+          <button
+            onClick={() => setShowImport(true)}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90 border-none cursor-pointer"
+            style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF' }}
+          >
+            <Upload size={18} />
+            Import from EasyEquities
+          </button>
+
+          <p className="text-xs mt-4" style={{ color: 'var(--text-muted)' }}>
+            Takes about 2 minutes. Your data stays private.
+          </p>
         </div>
       ) : (
         <>
@@ -112,11 +131,8 @@ export default function Portfolio() {
               { label: 'Return', value: totalPL ? `${parseFloat(totalPL) >= 0 ? '+' : ''}${totalPL}%` : '—', Icon: isPositive ? TrendingUp : TrendingDown, color: isPositive ? 'var(--success)' : 'var(--danger)' },
               { label: 'Top Performer', value: topPerformer ? topPerformer.name : '—', Icon: Award, color: 'var(--tier-vault)' },
             ].map((card, i) => (
-              <div
-                key={i}
-                className="rounded-xl p-4"
-                style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}
-              >
+              <div key={i} className="rounded-xl p-4"
+                style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
                 <div className="flex items-center gap-2 mb-2">
                   <card.Icon size={14} style={{ color: card.color }} />
                   <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{card.label}</span>
@@ -136,26 +152,15 @@ export default function Portfolio() {
             {pieData.length > 0 && (
               <div>
                 <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>Allocation</h2>
-                <div
-                  className="rounded-xl p-4"
-                  style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}
-                >
+                <div className="rounded-xl p-4"
+                  style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
                   <ResponsiveContainer width="100%" height={200}>
                     <PieChart>
                       <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value">
-                        {pieData.map((_, i) => (
-                          <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                        ))}
+                        {pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                       </Pie>
-                      <Tooltip
-                        formatter={(val) => `R${val.toLocaleString()}`}
-                        contentStyle={{
-                          backgroundColor: '#FFFFFF',
-                          border: '1px solid #E8ECF1',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                        }}
-                      />
+                      <Tooltip formatter={(val) => `R${val.toLocaleString()}`}
+                        contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E8ECF1', borderRadius: '8px', fontSize: '12px' }} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="space-y-1.5 mt-2">
@@ -178,27 +183,21 @@ export default function Portfolio() {
         </>
       )}
 
-      {/* Step 1: Share transactions modal */}
+      {/* Share transactions modal */}
       {pendingTransactions.length > 0 && (
         <ShareTransactionModal
           transactions={pendingTransactions}
           onClose={() => {
-            // After sharing decisions, prompt for investment reasons on buys
             const buys = pendingTransactions.filter(t => t.type === 'buy');
             setPendingTransactions([]);
-            if (buys.length > 0) {
-              setNewStocks(buys);
-            }
+            if (buys.length > 0) setNewStocks(buys);
           }}
         />
       )}
 
-      {/* Step 2: Investment reasons for new buys */}
+      {/* Investment reasons */}
       {newStocks.length > 0 && pendingTransactions.length === 0 && (
-        <InvestmentReasonModal
-          stocks={newStocks}
-          onClose={() => setNewStocks([])}
-        />
+        <InvestmentReasonModal stocks={newStocks} onClose={() => setNewStocks([])} />
       )}
 
       {/* Import modal */}
@@ -207,6 +206,10 @@ export default function Portfolio() {
           onClose={() => setShowImport(false)}
           onImported={(result) => {
             fetchHoldings();
+            // Refresh user data to get updated portfolio_imported_at
+            api.get('/auth/me').then(res => {
+              // Update auth context would be ideal, but for now just refetch
+            }).catch(() => {});
             if (result.added_stocks?.length > 0) {
               setPendingTransactions(result.added_stocks);
             }

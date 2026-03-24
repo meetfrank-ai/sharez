@@ -104,9 +104,9 @@ export default function ImportPortfolioModal({ onClose, onImported }) {
                   <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
                     style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>2</div>
                   <div>
-                    <p className="text-sm font-medium m-0" style={{ color: 'var(--text-primary)' }}>Open the menu</p>
+                    <p className="text-sm font-medium m-0" style={{ color: 'var(--text-primary)' }}>Select your account</p>
                     <p className="text-xs m-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      Hover over the <strong>hamburger menu</strong> (☰) in the top-left corner
+                      At the top of the page, select the account you want to import (e.g. <strong>EasyEquities ZAR</strong>, <strong>TFSA</strong>, or <strong>USD</strong>). Do each account separately.
                     </p>
                   </div>
                 </div>
@@ -114,9 +114,9 @@ export default function ImportPortfolioModal({ onClose, onImported }) {
                   <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
                     style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>3</div>
                   <div>
-                    <p className="text-sm font-medium m-0" style={{ color: 'var(--text-primary)' }}>Go to Transaction History</p>
+                    <p className="text-sm font-medium m-0" style={{ color: 'var(--text-primary)' }}>Open Transaction History</p>
                     <p className="text-xs m-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      Click <strong>Transaction History</strong> at the bottom of the menu
+                      Hover the <strong>hamburger menu</strong> (☰) top-left → click <strong>Transaction History</strong> at the bottom
                     </p>
                   </div>
                 </div>
@@ -126,7 +126,7 @@ export default function ImportPortfolioModal({ onClose, onImported }) {
                   <div>
                     <p className="text-sm font-medium m-0" style={{ color: 'var(--text-primary)' }}>Download the file</p>
                     <p className="text-xs m-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      Scroll to the bottom and click <strong>"Download Past Year's Transactions"</strong>. This downloads an .xlsx file.
+                      Scroll to the bottom and click <strong>"Download Past Year's Transactions"</strong>. This downloads an .xlsx file for that account.
                     </p>
                   </div>
                 </div>

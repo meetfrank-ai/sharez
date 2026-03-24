@@ -212,6 +212,7 @@ def get_user_profile(
         vault_price_cents=vault_price,
         auto_accept_followers=config.auto_accept_followers if config else True,
         vault_shows=config.vault_shows if config else [],
+        portfolio_imported_at=target.portfolio_imported_at,
         created_at=target.created_at,
     )
 

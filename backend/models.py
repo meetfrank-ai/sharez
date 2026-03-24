@@ -70,6 +70,7 @@ class User(Base):
     ee_password_enc = Column(String, nullable=True)
 
     has_onboarded = Column(Boolean, default=False)
+    portfolio_imported_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utcnow)
 
     # Relationships
