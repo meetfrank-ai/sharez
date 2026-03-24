@@ -205,10 +205,50 @@ def _get_community_data(db: Session, contract_code: str, stock_name: str, curren
         if allocations:
             avg_allocation = round(sum(allocations) / len(allocations), 1)
 
+    # Recent buys and sells (from FeedEvents in last 14 days)
+    from models import FeedEvent, EventType
+    from datetime import datetime, timezone, timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(days=14)
+
+    recent_buys = (
+        db.query(FeedEvent)
+        .filter(
+            FeedEvent.event_type == EventType.added_stock,
+            FeedEvent.created_at >= cutoff,
+        )
+        .all()
+    )
+    recent_buys_count = sum(
+        1 for e in recent_buys
+        if e.metadata_ and e.metadata_.get("contract_code") == contract_code
+    )
+
+    recent_sells = (
+        db.query(FeedEvent)
+        .filter(
+            FeedEvent.event_type == EventType.removed_stock,
+            FeedEvent.created_at >= cutoff,
+        )
+        .all()
+    )
+    recent_sells_count = sum(
+        1 for e in recent_sells
+        if e.metadata_ and e.metadata_.get("contract_code") == contract_code
+    )
+
+    # Account type breakdown for holders
+    account_breakdown = {}
+    for h in holdings:
+        atype = h.account_type.value if hasattr(h.account_type, 'value') else str(h.account_type)
+        account_breakdown[atype] = account_breakdown.get(atype, 0) + 1
+
     return {
         "total_holders": total_holders,
         "following_holders": following_holders,
         "avg_allocation_pct": avg_allocation,
+        "recent_buys": recent_buys_count,
+        "recent_sells": recent_sells_count,
+        "account_breakdown": account_breakdown,
     }
 
 

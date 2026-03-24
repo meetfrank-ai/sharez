@@ -128,36 +128,62 @@ export default function StockDetail() {
       </div>
 
       {/* Community Bar */}
-      {summary?.community && summary.community.total_holders > 0 && (
+      {summary?.community && (summary.community.total_holders > 0 || summary.community.recent_buys > 0) && (
         <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-          <div className="flex justify-between items-center mb-2">
+          <div className="flex justify-between items-center mb-3">
             <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Community</span>
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              {summary.community.total_holders} holding
-              {summary.community.avg_allocation_pct > 0 && ` · avg ${summary.community.avg_allocation_pct}% allocation`}
-            </span>
           </div>
+
+          {/* Stats row */}
+          <div className="flex gap-3 mb-3">
+            <div className="flex-1 rounded-lg p-2.5 text-center" style={{ backgroundColor: 'var(--bg-page)' }}>
+              <p className="text-lg font-semibold m-0" style={{ color: 'var(--text-primary)' }}>{summary.community.total_holders}</p>
+              <p className="text-[10px] m-0" style={{ color: 'var(--text-muted)' }}>holding</p>
+            </div>
+            <div className="flex-1 rounded-lg p-2.5 text-center" style={{ backgroundColor: 'var(--bg-page)' }}>
+              <p className="text-lg font-semibold m-0" style={{ color: 'var(--success)' }}>{summary.community.recent_buys || 0}</p>
+              <p className="text-[10px] m-0" style={{ color: 'var(--text-muted)' }}>bought recently</p>
+            </div>
+            <div className="flex-1 rounded-lg p-2.5 text-center" style={{ backgroundColor: 'var(--bg-page)' }}>
+              <p className="text-lg font-semibold m-0" style={{ color: 'var(--danger)' }}>{summary.community.recent_sells || 0}</p>
+              <p className="text-[10px] m-0" style={{ color: 'var(--text-muted)' }}>sold recently</p>
+            </div>
+          </div>
+
+          {/* Account breakdown */}
+          {summary.community.account_breakdown && Object.keys(summary.community.account_breakdown).length > 0 && (
+            <div className="flex gap-2 mb-3">
+              {Object.entries(summary.community.account_breakdown).map(([type, count]) => (
+                <span key={type} className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-secondary)' }}>
+                  {type}: {count}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* People you follow who hold this */}
           {summary.community.following_holders?.length > 0 && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
               <div className="flex -space-x-1.5">
-                {summary.community.following_holders.slice(0, 4).map((h, i) => (
-                  <Link key={h.id} to={`/user/${h.id}`} className="no-underline" style={{ zIndex: 5 - i }}>
+                {summary.community.following_holders.slice(0, 5).map((h, i) => (
+                  <Link key={h.id} to={`/user/${h.id}`} className="no-underline" style={{ zIndex: 6 - i }}>
                     <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold"
                       style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)', border: '2px solid var(--bg-card)' }}>
                       {h.display_name?.charAt(0).toUpperCase()}
                     </div>
                   </Link>
                 ))}
-                {summary.community.following_holders.length > 4 && (
+                {summary.community.following_holders.length > 5 && (
                   <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-medium"
                     style={{ backgroundColor: 'var(--bg-hover)', color: 'var(--text-muted)', border: '2px solid var(--bg-card)' }}>
-                    +{summary.community.following_holders.length - 4}
+                    +{summary.community.following_holders.length - 5}
                   </div>
                 )}
               </div>
-              <span className="text-xs ml-2" style={{ color: 'var(--text-secondary)' }}>
-                {summary.community.following_holders.map(h => h.display_name?.split(' ')[0]).slice(0, 2).join(', ')}
-                {summary.community.following_holders.length > 2 && ` +${summary.community.following_holders.length - 2}`}
+              <span className="text-[11px] ml-2" style={{ color: 'var(--text-secondary)' }}>
+                {summary.community.following_holders.map(h => h.display_name?.split(' ')[0]).slice(0, 3).join(', ')}
+                {summary.community.following_holders.length > 3 && ` +${summary.community.following_holders.length - 3} more`}
               </span>
             </div>
           )}
