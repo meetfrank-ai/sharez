@@ -327,47 +327,25 @@ def _rebuild_holdings(db: Session, user: User, account_type: str):
 
 
 def _refresh_holdings_prices(db: Session, user: User):
-    """Fetch current prices from EODHD and update holdings."""
-    eodhd_key = os.getenv("EODHD_API_KEY")
-    if not eodhd_key:
-        return
-
-    import httpx
-    from datetime import timedelta
-
-    from ticker_resolver import resolve_ticker
+    """Refresh prices using the waterfall resolver."""
+    from price_resolver import resolve_price
 
     holdings = db.query(Holding).filter(Holding.user_id == user.id).all()
     now = datetime.now(timezone.utc)
 
     for h in holdings:
-        ticker = resolve_ticker(h.stock_name)
-        if not ticker:
-            logger.info(f"No EODHD ticker found for {h.stock_name} — skipping price update")
-            continue
+        avg_price = h.purchase_value / h.shares if (h.shares and h.shares > 0 and h.purchase_value) else None
 
-        try:
-            end = now.strftime("%Y-%m-%d")
-            start = (now - timedelta(days=7)).strftime("%Y-%m-%d")
-            resp = httpx.get(
-                f"https://eodhd.com/api/eod/{ticker}",
-                params={"api_token": eodhd_key, "fmt": "json", "from": start, "to": end, "order": "d"},
-                timeout=10,
-            )
-            if resp.status_code == 200:
-                eod = resp.json()
-                if isinstance(eod, list) and len(eod) > 0:
-                    # EODHD JSE prices are in cents
-                    close_cents = eod[0].get("close", 0)
-                    close_rands = close_cents / 100
+        result = resolve_price(db, h.stock_name, avg_buy_price=avg_price)
 
-                    h.current_price = close_rands
-                    if h.shares and h.shares > 0:
-                        h.current_value = round(h.shares * close_rands, 2)
-                    h.last_synced_at = now
-                    logger.info(f"Updated {h.stock_name}: R{close_rands:.2f} × {h.shares:.2f} = R{h.current_value:.2f}")
-        except Exception as e:
-            logger.warning(f"Price fetch failed for {h.stock_name} ({ticker}): {e}")
+        if result["price"] and result["source"] != "none":
+            h.current_price = result["price"]
+            if h.shares and h.shares > 0:
+                h.current_value = round(h.shares * result["price"], 2)
+            h.last_synced_at = now
+            logger.info(f"Updated {h.stock_name}: R{result['price']:.2f} × {h.shares:.2f} = R{h.current_value:.2f} [{result['source']}]")
+        else:
+            logger.info(f"No price available for {h.stock_name}")
 
     db.commit()
 

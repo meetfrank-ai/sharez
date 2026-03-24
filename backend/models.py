@@ -140,6 +140,47 @@ class Subscription(Base):
     creator = relationship("User", foreign_keys=[creator_id])
 
 
+class InstrumentMap(Base):
+    __tablename__ = "instrument_map"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ee_name = Column(String, unique=True, nullable=False)
+    ticker = Column(String, nullable=True)
+    market = Column(String, default="JSE")
+    instrument_type = Column(String, default="stock")  # stock, etf, ametf, unit_trust
+    eodhd_symbol = Column(String, nullable=True)
+    yfinance_symbol = Column(String, nullable=True)
+    scrape_source = Column(String, nullable=True)  # moneyweb, allangray, easyetfs, coronation
+    scrape_code = Column(String, nullable=True)
+    sector = Column(String, nullable=True)
+    is_verified = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=utcnow)
+
+
+class ScrapedPrice(Base):
+    __tablename__ = "scraped_prices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    instrument_code = Column(String, nullable=False)
+    instrument_name = Column(String, nullable=False)
+    nav_price = Column(Float, nullable=True)
+    nav_date = Column(DateTime, nullable=True)
+    source = Column(String, nullable=False)
+    scraped_at = Column(DateTime, default=utcnow)
+
+
+class PriceAnomaly(Base):
+    __tablename__ = "price_anomalies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    stock_name = Column(String, nullable=False)
+    source = Column(String, nullable=False)
+    returned_price = Column(Float)
+    avg_buy_price = Column(Float)
+    implied_pnl_pct = Column(Float)
+    flagged_at = Column(DateTime, default=utcnow)
+
+
 class UserTransaction(Base):
     __tablename__ = "user_transactions"
 

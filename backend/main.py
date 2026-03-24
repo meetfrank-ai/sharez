@@ -66,6 +66,61 @@ try:
 except Exception as e:
     print(f"Seed check skipped: {e}")
 
+# Seed instrument map if empty
+try:
+    from models import InstrumentMap
+    _db = SessionLocal()
+    if not _db.query(InstrumentMap).first():
+        _seed_instruments = [
+            # JSE stocks
+            ("Prosus N.V", "PRX", "JSE", "stock", "PRX.JSE", "PRX.JO", None, None, "Technology"),
+            ("Naspers Limited", "NPN", "JSE", "stock", "NPN.JSE", "NPN.JO", None, None, "Technology"),
+            ("Naspers", "NPN", "JSE", "stock", "NPN.JSE", "NPN.JO", None, None, "Technology"),
+            ("Capitec Bank Holdings Limited", "CPI", "JSE", "stock", "CPI.JSE", "CPI.JO", None, None, "Financials"),
+            ("Capitec Bank", "CPI", "JSE", "stock", "CPI.JSE", "CPI.JO", None, None, "Financials"),
+            ("Shoprite Holdings Limited", "SHP", "JSE", "stock", "SHP.JSE", "SHP.JO", None, None, "Consumer"),
+            ("Shoprite", "SHP", "JSE", "stock", "SHP.JSE", "SHP.JO", None, None, "Consumer"),
+            ("Standard Bank Group Limited", "SBK", "JSE", "stock", "SBK.JSE", "SBK.JO", None, None, "Financials"),
+            ("Standard Bank", "SBK", "JSE", "stock", "SBK.JSE", "SBK.JO", None, None, "Financials"),
+            ("MTN Group Limited", "MTN", "JSE", "stock", "MTN.JSE", "MTN.JO", None, None, "Telecoms"),
+            ("MTN", "MTN", "JSE", "stock", "MTN.JSE", "MTN.JO", None, None, "Telecoms"),
+            ("Discovery", "DSY", "JSE", "stock", "DSY.JSE", "DSY.JO", None, None, "Financials"),
+            ("Absa Group", "ABG", "JSE", "stock", "ABG.JSE", "ABG.JO", None, None, "Financials"),
+            ("Sanlam", "SLM", "JSE", "stock", "SLM.JSE", "SLM.JO", None, None, "Financials"),
+            ("Woolworths", "WHL", "JSE", "stock", "WHL.JSE", "WHL.JO", None, None, "Consumer"),
+            ("Sasol", "SOL", "JSE", "stock", "SOL.JSE", "SOL.JO", None, None, "Energy"),
+            ("FirstRand", "FSR", "JSE", "stock", "FSR.JSE", "FSR.JO", None, None, "Financials"),
+            ("Redefine Properties", "RDF", "JSE", "stock", "RDF.JSE", "RDF.JO", None, None, "Real Estate"),
+            ("Clicks Group", "CLS", "JSE", "stock", "CLS.JSE", "CLS.JO", None, None, "Consumer"),
+            # Established ETFs
+            ("Satrix Top 40 ETF", "STX40", "JSE", "etf", "STX40.JSE", "STX40.JO", None, None, "Broad Market"),
+            ("Satrix S&P 500 ETF", "STX500", "JSE", "etf", "STX500.JSE", "STX500.JO", None, None, "US Equity"),
+            ("CoreShares S&P 500 ETF", "CSP500", "JSE", "etf", "CSP500.JSE", "CSP500.JO", None, None, "US Equity"),
+            # AMETFs
+            ("Allan Gray Orbis Global Equity Feeder AMETF", "AGOGE", "JSE", "ametf", "AGOGE.JSE", "AGOGE.JO", "allangray", "AGOGE", "Global Equity"),
+            ("Coronation Global Emerging Markets Prescient Feeder AMETF", "CGEM", "JSE", "ametf", "CGEM.JSE", "CGEM.JO", "coronation", "CGEM", "Emerging Markets"),
+            ("EasyETFs Global Equity Actively Managed ETF", "EASYGE", "JSE", "ametf", "EASYGE.JSE", "EASYGE.JO", "easyetfs", "easyge", "Global Equity"),
+            # Unit trusts (no ticker, scrape only)
+            ("36ONE BCI SA Equity Fund Class C", None, None, "unit_trust", None, None, "moneyweb", "36ONE", "SA Equity"),
+            ("Merchant West SCI Value Fund", None, None, "unit_trust", None, None, "moneyweb", "MWSCI", "SA Value"),
+            # US stocks
+            ("Apple Inc", "AAPL", "US", "stock", "AAPL.US", "AAPL", None, None, "Technology"),
+            ("Tesla Inc", "TSLA", "US", "stock", "TSLA.US", "TSLA", None, None, "Automotive"),
+            ("NVIDIA Corporation", "NVDA", "US", "stock", "NVDA.US", "NVDA", None, None, "Technology"),
+            ("Microsoft Corporation", "MSFT", "US", "stock", "MSFT.US", "MSFT", None, None, "Technology"),
+        ]
+        for name, ticker, market, itype, eodhd, yf, scrape_src, scrape_code, sector in _seed_instruments:
+            _db.add(InstrumentMap(
+                ee_name=name, ticker=ticker, market=market, instrument_type=itype,
+                eodhd_symbol=eodhd, yfinance_symbol=yf, scrape_source=scrape_src,
+                scrape_code=scrape_code, sector=sector, is_verified=True,
+            ))
+        _db.commit()
+        print(f"Seeded {len(_seed_instruments)} instruments")
+    _db.close()
+except Exception as e:
+    print(f"Instrument seed: {e}")
+
 app = FastAPI(title="Sharez", description="Social investing for friends")
 
 # CORS — allow the React frontend in dev

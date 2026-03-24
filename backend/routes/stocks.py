@@ -2,6 +2,8 @@ import os
 import logging
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+from database import get_db
 from auth import get_current_user
 from models import User
 
@@ -70,3 +72,33 @@ def search_stocks(
             logger.warning(f"EODHD search failed: {e}")
 
     return results[:15]
+
+
+@router.get("/resolve")
+def resolve_stock(
+    name: str = Query(""),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Resolve a stock name to its instrument mapping."""
+    from models import InstrumentMap
+    from price_resolver import _fuzzy_match
+
+    mapping = db.query(InstrumentMap).filter(InstrumentMap.ee_name == name).first()
+    if not mapping:
+        mapping = _fuzzy_match(db, name)
+
+    if not mapping:
+        return {"found": False, "name": name}
+
+    return {
+        "found": True,
+        "ee_name": mapping.ee_name,
+        "ticker": mapping.ticker,
+        "market": mapping.market,
+        "instrument_type": mapping.instrument_type,
+        "eodhd_symbol": mapping.eodhd_symbol,
+        "yfinance_symbol": mapping.yfinance_symbol,
+        "scrape_source": mapping.scrape_source,
+        "sector": mapping.sector,
+    }
