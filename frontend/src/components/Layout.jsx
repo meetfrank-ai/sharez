@@ -4,17 +4,16 @@ import {
   Home,
   BarChart3,
   Compass,
-  StickyNote,
+  Bookmark,
   Bell,
   Settings,
-  HelpCircle,
-  Info,
   LogOut,
 } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Feed', icon: Home },
   { path: '/portfolio', label: 'My Portfolio', icon: BarChart3 },
+  { path: '/watchlist', label: 'Watchlist', icon: Bookmark },
   { path: '/discover', label: 'Discover', icon: Compass },
   { path: '/followers', label: 'Connections', icon: Bell },
   { path: '/profile', label: 'Settings', icon: Settings },
@@ -23,8 +22,8 @@ const navItems = [
 const mobileNavItems = [
   { path: '/', label: 'Feed', icon: Home },
   { path: '/portfolio', label: 'Portfolio', icon: BarChart3 },
+  { path: '/watchlist', label: 'Watchlist', icon: Bookmark },
   { path: '/discover', label: 'Discover', icon: Compass },
-  { path: '/followers', label: 'Network', icon: Bell },
   { path: '/profile', label: 'Profile', icon: Settings },
 ];
 

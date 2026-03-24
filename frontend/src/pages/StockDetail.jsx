@@ -106,7 +106,7 @@ export default function StockDetail() {
           <div className="flex-1">
             <h1 className="text-base font-semibold m-0" style={{ color: 'var(--text-primary)' }}>{stockName}</h1>
             <p className="text-xs m-0" style={{ color: 'var(--text-muted)' }}>
-              {priceData.ticker || 'JSE'} · Equities
+              {priceData.ticker || 'JSE'} · {summary?.sector || 'Equities'}
             </p>
           </div>
           {priceData.price && (
@@ -184,17 +184,7 @@ export default function StockDetail() {
               </div>
             )}
 
-            {/* Account breakdown */}
-            {c.account_breakdown && Object.keys(c.account_breakdown).length > 0 && (
-              <div className="flex gap-2">
-                {Object.entries(c.account_breakdown).map(([type, count]) => (
-                  <span key={type} className="text-[11px] font-medium px-2 py-0.5 rounded-full"
-                    style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-secondary)' }}>
-                    {type}: {count}
-                  </span>
-                ))}
-              </div>
-            )}
+            {/* Account breakdown removed — community bar shows people only */}
           </div>
         );
       })()}

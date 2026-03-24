@@ -67,6 +67,7 @@ async def get_stock_summary(db: Session, contract_code: str, stock_name: str, cu
     summary_data["why_people_invest"] = why_invest
     summary_data["market_data"] = market_data.get("price_info", {})
     summary_data["sparkline"] = market_data.get("sparkline", [])
+    summary_data["sector"] = market_data.get("metrics", {}).get("sector", "Equities")
     summary_data["updated_ago"] = "Just now"
 
     # Cache the AI-generated parts (not community data, which is dynamic)
@@ -181,10 +182,10 @@ def _fetch_eodhd(ticker: str, api_key: str, stock_name: str) -> dict:
         logger.warning(f"EODHD fundamentals failed for {ticker}: {e}")
 
     try:
-        # Sparkline — last 30 days EOD prices
+        # Sparkline — last 1 year of EOD prices
         from datetime import datetime, timedelta
         end = datetime.now().strftime("%Y-%m-%d")
-        start = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+        start = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
         resp = httpx.get(f"{base}/eod/{ticker}", params={"api_token": api_key, "fmt": "json", "from": start, "to": end}, timeout=10)
         if resp.status_code == 200:
             eod_data = resp.json()
@@ -430,16 +431,41 @@ async def _generate_structured_summary(stock_name: str, market_data: dict, commu
         metrics = market_data.get("metrics", {})
         price_info = market_data.get("price_info", {})
         news = market_data.get("news", [])
+        sparkline = market_data.get("sparkline", [])
 
         news_text = "\n".join([f"- {n['title']}" for n in news[:5]]) if news else "No recent news available."
+
+        # Calculate historical performance from sparkline
+        perf_text = ""
+        if sparkline and len(sparkline) > 5:
+            current = sparkline[-1]
+            # 1 month ago (approx 22 trading days)
+            if len(sparkline) > 22:
+                m1 = sparkline[-22]
+                m1_chg = ((current - m1) / m1 * 100)
+                perf_text += f"1-month change: {m1_chg:+.1f}%\n"
+            # 3 months ago
+            if len(sparkline) > 66:
+                m3 = sparkline[-66]
+                m3_chg = ((current - m3) / m3 * 100)
+                perf_text += f"3-month change: {m3_chg:+.1f}%\n"
+            # 6 months ago
+            if len(sparkline) > 132:
+                m6 = sparkline[-132]
+                m6_chg = ((current - m6) / m6 * 100)
+                perf_text += f"6-month change: {m6_chg:+.1f}%\n"
+            # 1 year (full sparkline)
+            y1 = sparkline[0]
+            y1_chg = ((current - y1) / y1 * 100)
+            perf_text += f"1-year change: {y1_chg:+.1f}%\n"
+            # Year high/low from sparkline
+            perf_text += f"Year high: R{max(sparkline):.2f}\nYear low: R{min(sparkline):.2f}\n"
 
         prompt = f"""You are a financial analyst writing for young South African investors on a social investing platform.
 
 Stock: {stock_name}
-Current price: {price_info.get('price', 'N/A')}
-Change: {price_info.get('change_pct', 'N/A')}%
-52-week high: {price_info.get('high_52w', 'N/A')}
-52-week low: {price_info.get('low_52w', 'N/A')}
+Current price: R{price_info.get('price', 'N/A')}
+Daily change: {price_info.get('change_pct', 'N/A')}%
 Sector: {metrics.get('sector', 'N/A')}
 P/E ratio: {metrics.get('pe_ratio', 'N/A')}
 Market cap: {metrics.get('market_cap', 'N/A')}
@@ -447,8 +473,13 @@ Dividend yield: {metrics.get('dividend_yield', 'N/A')}
 Revenue growth: {metrics.get('revenue_growth', 'N/A')}
 ROE: {metrics.get('roe', 'N/A')}
 Debt-to-equity: {metrics.get('debt_to_equity', 'N/A')}
+EPS: {metrics.get('eps', 'N/A')}
 Description: {metrics.get('description', 'N/A')}
-Community: {community.get('total_holders', 0)} people hold this stock
+
+Historical performance:
+{perf_text if perf_text else 'No historical data available.'}
+
+Community: {community.get('total_holders', 0)} people on the platform hold this stock
 
 Recent news:
 {news_text}
@@ -456,7 +487,7 @@ Recent news:
 Return a JSON object with these exact fields:
 
 {{
-  "quick_take": "2-3 sentence plain-language summary of what's happening with this stock right now. Write for a 25-year-old casual investor.",
+  "quick_take": "2-3 sentence summary covering what the stock has been doing recently AND over the past year. Mention specific percentage moves (e.g. 'up 15% this year but down 8% in the last month'). Write for a 25-year-old casual investor.",
   "sentiment_tags": [
     {{"label": "tag text", "type": "positive|caution|neutral"}}
   ],

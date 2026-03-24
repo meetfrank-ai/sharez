@@ -11,6 +11,7 @@ import Discover from './pages/Discover';
 import UserProfile from './pages/UserProfile';
 import TierSettings from './pages/TierSettings';
 import Followers from './pages/Followers';
+import Watchlist from './pages/Watchlist';
 import NoteThread from './pages/NoteThread';
 
 function ProtectedRoute({ children }) {
@@ -48,6 +49,7 @@ function AppRoutes() {
         <Route path="/" element={<Feed />} />
         <Route path="/discover" element={<Discover />} />
         <Route path="/portfolio" element={<Portfolio />} />
+        <Route path="/watchlist" element={<Watchlist />} />
         <Route path="/stock/:contractCode" element={<StockDetail />} />
         <Route path="/user/:userId" element={<UserProfile />} />
         <Route path="/profile" element={<Profile />} />
