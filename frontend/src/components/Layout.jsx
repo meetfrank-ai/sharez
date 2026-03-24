@@ -17,6 +17,7 @@ const navItems = [
   { path: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { path: '/watchlist', label: 'Watchlist', icon: Bookmark },
   { path: '/discover', label: 'Discover', icon: Compass },
+  { path: '/saved', label: 'Saved', icon: Bookmark },
   { path: '/followers', label: 'Connections', icon: Bell },
   { path: '/profile', label: 'Settings', icon: Settings },
 ];

@@ -155,7 +155,10 @@ class NoteOut(BaseModel):
     parent_note_id: Optional[int] = None
     like_count: int = 0
     reply_count: int = 0
+    reshare_count: int = 0
     liked_by_me: bool = False
+    saved_by_me: bool = False
+    reshared_by_me: bool = False
     locked: bool = False
     created_at: datetime
 

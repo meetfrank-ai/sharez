@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, Note, NoteLike, Follow, Tier, FollowStatus
+from models import User, Note, NoteLike, SavedNote, NoteReshare, Follow, Tier, FollowStatus
 from schemas import NoteCreate, NoteOut
 from auth import get_current_user
 from tier_access import get_access_tier, can_view
@@ -13,6 +13,12 @@ router = APIRouter(prefix="/api/notes", tags=["notes"])
 def _note_to_out(note: Note, current_user_id: int, db: Session) -> NoteOut:
     liked = db.query(NoteLike).filter(
         NoteLike.note_id == note.id, NoteLike.user_id == current_user_id
+    ).first() is not None
+    saved = db.query(SavedNote).filter(
+        SavedNote.note_id == note.id, SavedNote.user_id == current_user_id
+    ).first() is not None
+    reshared = db.query(NoteReshare).filter(
+        NoteReshare.note_id == note.id, NoteReshare.user_id == current_user_id
     ).first() is not None
 
     return NoteOut(
@@ -28,7 +34,10 @@ def _note_to_out(note: Note, current_user_id: int, db: Session) -> NoteOut:
         parent_note_id=note.parent_note_id,
         like_count=note.like_count,
         reply_count=note.reply_count,
+        reshare_count=note.reshare_count or 0,
         liked_by_me=liked,
+        saved_by_me=saved,
+        reshared_by_me=reshared,
         created_at=note.created_at,
     )
 
@@ -252,5 +261,123 @@ def get_stock_notes(
         access = get_access_tier(db, current_user.id, note.user_id)
         if can_view(access, note.visibility):
             result.append(_note_to_out(note, current_user.id, db))
+
+    return result
+
+
+# --- Save ---
+
+@router.post("/{note_id}/save")
+def save_note(
+    note_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    note = db.query(Note).filter(Note.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    existing = db.query(SavedNote).filter(SavedNote.note_id == note_id, SavedNote.user_id == user.id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Already saved")
+    db.add(SavedNote(note_id=note_id, user_id=user.id))
+    db.commit()
+    return {"message": "Saved"}
+
+
+@router.delete("/{note_id}/save")
+def unsave_note(
+    note_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    saved = db.query(SavedNote).filter(SavedNote.note_id == note_id, SavedNote.user_id == user.id).first()
+    if not saved:
+        raise HTTPException(status_code=404, detail="Not saved")
+    db.delete(saved)
+    db.commit()
+    return {"message": "Unsaved"}
+
+
+@router.get("/saved", response_model=list[NoteOut])
+def get_saved_notes(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    saved = (
+        db.query(SavedNote)
+        .filter(SavedNote.user_id == user.id)
+        .order_by(SavedNote.created_at.desc())
+        .all()
+    )
+    result = []
+    for s in saved:
+        note = db.query(Note).filter(Note.id == s.note_id).first()
+        if note:
+            result.append(_note_to_out(note, user.id, db))
+    return result
+
+
+# --- Reshare ---
+
+@router.post("/{note_id}/reshare")
+def reshare_note(
+    note_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    note = db.query(Note).filter(Note.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    existing = db.query(NoteReshare).filter(NoteReshare.note_id == note_id, NoteReshare.user_id == user.id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Already reshared")
+    db.add(NoteReshare(note_id=note_id, user_id=user.id))
+    note.reshare_count = (note.reshare_count or 0) + 1
+    db.commit()
+    return {"message": "Reshared", "reshare_count": note.reshare_count}
+
+
+@router.delete("/{note_id}/reshare")
+def unreshare_note(
+    note_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    reshare = db.query(NoteReshare).filter(NoteReshare.note_id == note_id, NoteReshare.user_id == user.id).first()
+    if not reshare:
+        raise HTTPException(status_code=404, detail="Not reshared")
+    db.delete(reshare)
+    note = db.query(Note).filter(Note.id == note_id).first()
+    note.reshare_count = max((note.reshare_count or 0) - 1, 0)
+    db.commit()
+    return {"message": "Unreshared", "reshare_count": note.reshare_count}
+
+
+# --- Public note (no auth) ---
+
+@router.get("/public/{note_id}")
+def get_public_note(
+    note_id: int,
+    db: Session = Depends(get_db),
+):
+    """Public note for shared links — no auth required."""
+    note = db.query(Note).filter(Note.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    if note.visibility != Tier.public:
+        raise HTTPException(status_code=403, detail="This note is not public")
+    return {
+        "id": note.id,
+        "user_id": note.user_id,
+        "display_name": note.user.display_name,
+        "handle": note.user.handle,
+        "body": note.body,
+        "stock_tag": note.stock_tag,
+        "stock_name": note.stock_name,
+        "like_count": note.like_count,
+        "reply_count": note.reply_count,
+        "reshare_count": note.reshare_count or 0,
+        "created_at": str(note.created_at),
+    }
 
     return result

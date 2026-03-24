@@ -257,6 +257,7 @@ class Note(Base):
     parent_note_id = Column(Integer, ForeignKey("notes.id"), nullable=True)
     like_count = Column(Integer, default=0)
     reply_count = Column(Integer, default=0)
+    reshare_count = Column(Integer, default=0)
 
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
@@ -304,6 +305,38 @@ class NoteLike(Base):
 
     __table_args__ = (
         UniqueConstraint("note_id", "user_id", name="uq_note_like"),
+    )
+
+
+class SavedNote(Base):
+    __tablename__ = "saved_notes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    note_id = Column(Integer, ForeignKey("notes.id"), nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    user = relationship("User")
+    note = relationship("Note")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "note_id", name="uq_saved_note"),
+    )
+
+
+class NoteReshare(Base):
+    __tablename__ = "note_reshares"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    note_id = Column(Integer, ForeignKey("notes.id"), nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    user = relationship("User")
+    note = relationship("Note")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "note_id", name="uq_note_reshare"),
     )
 
 
