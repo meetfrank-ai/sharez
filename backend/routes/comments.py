@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, Thesis, Comment, FeedEvent, EventType
+from models import User, Thesis, Comment
 from schemas import CommentCreate, CommentOut
 from auth import get_current_user
 
@@ -26,20 +26,12 @@ def add_comment(
         body=data.body,
     )
     db.add(comment)
-    db.flush()
-
-    db.add(FeedEvent(
-        user_id=user.id,
-        event_type=EventType.new_comment,
-        metadata_={
-            "comment_id": comment.id,
-            "thesis_id": thesis_id,
-            "stock_name": thesis.stock_name,
-        },
-    ))
     db.commit()
     db.refresh(comment)
-    return comment
+
+    result = CommentOut.model_validate(comment)
+    result.display_name = user.display_name
+    return result
 
 
 @router.get("/{thesis_id}", response_model=list[CommentOut])
@@ -54,4 +46,10 @@ def get_comments(
         .order_by(Comment.created_at.asc())
         .all()
     )
-    return comments
+
+    result = []
+    for c in comments:
+        out = CommentOut.model_validate(c)
+        out.display_name = c.user.display_name if c.user else None
+        result.append(out)
+    return result

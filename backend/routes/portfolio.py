@@ -162,6 +162,22 @@ def save_investment_reason(
     return reason
 
 
+@router.delete("/investment-reason/{contract_code}")
+def delete_investment_reason(
+    contract_code: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    reason = db.query(InvestmentReason).filter(
+        InvestmentReason.user_id == user.id, InvestmentReason.contract_code == contract_code
+    ).first()
+    if not reason:
+        return {"message": "Not found"}
+    db.delete(reason)
+    db.commit()
+    return {"message": "Deleted"}
+
+
 @router.post("/follow-stock/{contract_code}")
 def follow_stock(
     contract_code: str,
