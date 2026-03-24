@@ -479,7 +479,7 @@ Description: {metrics.get('description', 'N/A')}
 Historical performance:
 {perf_text if perf_text else 'No historical data available.'}
 
-Community: {community.get('total_holders', 0)} people on the platform hold this stock
+Note: Ignore community/holder count data for your analysis — focus only on financial fundamentals, price action, and news.
 
 Recent news:
 {news_text}
@@ -497,7 +497,7 @@ Return a JSON object with these exact fields:
   "news_digest": [
     {{"time": "relative time like '2h' or '1d'", "headline": "rewritten headline in plain language"}}
   ],
-  "risk_note": "The single biggest risk for someone buying this stock today. Be specific and cite a number if possible."
+  "risk_note": "The single biggest FINANCIAL risk for someone buying this stock today. Focus on: valuation (P/E vs sector), debt levels, geopolitical exposure, regulatory risk, earnings decline, currency risk, or sector headwinds. Be specific and cite a number. Do NOT mention community size or number of holders — that's platform data, not a financial risk."
 }}
 
 Rules:
