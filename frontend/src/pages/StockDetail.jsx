@@ -34,6 +34,8 @@ export default function StockDetail() {
   const [viewingUser, setViewingUser] = useState(null);
   const [sort, setSort] = useState('recent');
   const [people, setPeople] = useState(viewingUserId ? 'user' : 'everyone');
+  const [followingStock, setFollowingStock] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
   // 'user' = specific user only, 'following' = people I follow, 'everyone' = all
 
   const fetchContent = (s = sort, p = people) => {
@@ -66,6 +68,10 @@ export default function StockDetail() {
     if (viewingUserId) {
       api.get(`/profile/${viewingUserId}`).then((res) => setViewingUser(res.data)).catch(() => {});
     }
+    // Check if following this stock
+    api.get('/portfolio/followed-stocks').then((res) => {
+      setFollowingStock(res.data.some(s => s.contract_code === contractCode));
+    }).catch(() => {});
     fetchContent();
   }, [contractCode, stockName, viewingUserId]);
 
@@ -436,10 +442,27 @@ export default function StockDetail() {
       {/* Action buttons */}
       <div className="flex gap-2 mt-5">
         <button
-          className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-lg text-sm font-medium border-none cursor-pointer transition-opacity hover:opacity-90"
-          style={{ backgroundColor: 'var(--text-primary)', color: 'var(--bg-card)' }}
+          onClick={async () => {
+            setFollowLoading(true);
+            try {
+              if (followingStock) {
+                await api.delete(`/portfolio/follow-stock/${contractCode}`);
+                setFollowingStock(false);
+              } else {
+                await api.post(`/portfolio/follow-stock/${contractCode}?stock_name=${encodeURIComponent(stockName)}`);
+                setFollowingStock(true);
+              }
+            } catch {} finally { setFollowLoading(false); }
+          }}
+          disabled={followLoading}
+          className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-lg text-sm font-medium border-none cursor-pointer transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{
+            backgroundColor: followingStock ? 'var(--bg-card)' : 'var(--text-primary)',
+            color: followingStock ? 'var(--text-primary)' : 'var(--bg-card)',
+            border: followingStock ? '1px solid var(--border)' : 'none',
+          }}
         >
-          <BookmarkPlus size={16} /> Follow stock
+          <BookmarkPlus size={16} /> {followingStock ? 'Following stock' : 'Follow stock'}
         </button>
         <button
           className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-lg text-sm font-medium cursor-pointer transition-opacity hover:opacity-90"

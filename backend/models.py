@@ -156,6 +156,22 @@ class Holding(Base):
     user = relationship("User", back_populates="holdings")
 
 
+class StockFollow(Base):
+    __tablename__ = "stock_follows"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    contract_code = Column(String, nullable=False)
+    stock_name = Column(String, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    user = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "contract_code", name="uq_stock_follow"),
+    )
+
+
 class InvestmentReason(Base):
     __tablename__ = "investment_reasons"
 

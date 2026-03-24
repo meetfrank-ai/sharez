@@ -253,6 +253,15 @@ class InvestmentReasonOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class StockFollowOut(BaseModel):
+    id: int
+    contract_code: str
+    stock_name: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class ShareTransactionRequest(BaseModel):
     contract_code: str
     stock_name: str

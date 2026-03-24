@@ -40,11 +40,11 @@ export default function Layout({ children }) {
         style={{ backgroundColor: 'var(--bg-sidebar)', borderColor: 'var(--border)' }}
       >
         {/* Logo */}
-        <div className="px-5 py-5 border-b" style={{ borderColor: 'var(--border)' }}>
+        <NavLink to="/" className="block px-5 py-5 border-b no-underline" style={{ borderColor: 'var(--border)' }}>
           <h1 className="text-lg font-semibold m-0" style={{ color: 'var(--accent)' }}>
             Sharez
           </h1>
-        </div>
+        </NavLink>
 
         {/* User info */}
         <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>

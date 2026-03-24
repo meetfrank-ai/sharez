@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, Holding, Tier, InvestmentReason, FeedEvent, EventType, Note
-from schemas import HoldingOut, EECredentials, TierConfigUpdate, TierConfigOut, InvestmentReasonCreate, InvestmentReasonOut, ShareTransactionRequest
+from models import User, Holding, Tier, InvestmentReason, FeedEvent, EventType, Note, StockFollow
+from schemas import HoldingOut, EECredentials, TierConfigUpdate, TierConfigOut, InvestmentReasonCreate, InvestmentReasonOut, ShareTransactionRequest, StockFollowOut
 from auth import get_current_user
 from ee_sync import store_ee_credentials, sync_portfolio
 from tier_access import get_access_tier, can_view
@@ -160,6 +160,68 @@ def save_investment_reason(
     db.commit()
     db.refresh(reason)
     return reason
+
+
+@router.post("/follow-stock/{contract_code}")
+def follow_stock(
+    contract_code: str,
+    stock_name: str = "",
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    existing = db.query(StockFollow).filter(
+        StockFollow.user_id == user.id, StockFollow.contract_code == contract_code
+    ).first()
+    if existing:
+        return {"message": "Already following", "id": existing.id}
+
+    sf = StockFollow(user_id=user.id, contract_code=contract_code, stock_name=stock_name)
+    db.add(sf)
+    db.commit()
+    db.refresh(sf)
+    return {"message": "Stock followed", "id": sf.id}
+
+
+@router.delete("/follow-stock/{contract_code}")
+def unfollow_stock(
+    contract_code: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    sf = db.query(StockFollow).filter(
+        StockFollow.user_id == user.id, StockFollow.contract_code == contract_code
+    ).first()
+    if not sf:
+        return {"message": "Not following"}
+    db.delete(sf)
+    db.commit()
+    return {"message": "Stock unfollowed"}
+
+
+@router.get("/followed-stocks", response_model=list[StockFollowOut])
+def get_followed_stocks(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return (
+        db.query(StockFollow)
+        .filter(StockFollow.user_id == user.id)
+        .order_by(StockFollow.stock_name.asc())
+        .all()
+    )
+
+
+@router.get("/followed-stocks/{user_id}", response_model=list[StockFollowOut])
+def get_user_followed_stocks(
+    user_id: int,
+    db: Session = Depends(get_db),
+):
+    return (
+        db.query(StockFollow)
+        .filter(StockFollow.user_id == user_id)
+        .order_by(StockFollow.stock_name.asc())
+        .all()
+    )
 
 
 @router.post("/share-transaction")
