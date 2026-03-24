@@ -372,11 +372,18 @@ def get_my_transactions(
     } for t in txs]
 
 
+class ShareTransactionsBody(BaseModel):
+    transaction_ids: list[int]
+    visibility: str = "public"
+    note_body: str = ""
+
+from fastapi import Query as QueryParam
+
 @router.post("/transactions/share")
 def share_transactions(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    transaction_ids: list[int] = [],
+    transaction_ids: list[int] = QueryParam(default=[]),
     visibility: str = "public",
     note_body: str = "",
 ):
