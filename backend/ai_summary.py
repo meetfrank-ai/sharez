@@ -14,7 +14,6 @@ from models import StockSummaryCache, Holding, Thesis, User, Follow, FollowStatu
 
 logger = logging.getLogger(__name__)
 
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 CACHE_HOURS = 4
 
 
@@ -249,12 +248,13 @@ def _get_investment_reasons(db: Session, contract_code: str) -> list[dict]:
 async def _generate_structured_summary(stock_name: str, market_data: dict, community: dict) -> dict:
     """Generate structured AI summary using Claude."""
 
-    if not ANTHROPIC_API_KEY:
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
         return _fallback_summary(stock_name, market_data)
 
     try:
         import anthropic
-        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        client = anthropic.Anthropic(api_key=api_key)
 
         metrics = market_data.get("metrics", {})
         price_info = market_data.get("price_info", {})
