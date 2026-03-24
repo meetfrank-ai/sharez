@@ -87,7 +87,122 @@ async def get_stock_summary(db: Session, contract_code: str, stock_name: str, cu
 
 
 def _get_market_data(stock_name: str) -> dict:
-    """Pull price, metrics, and news from yfinance."""
+    """Pull price, metrics, and news from EODHD (primary) or yfinance (fallback)."""
+
+    # Ticker mapping: stock_name → EODHD ticker (SYMBOL.XJSE)
+    TICKER_MAP = {
+        "Capitec Bank": "CPI.JSE", "Naspers": "NPN.JSE", "Standard Bank": "SBK.JSE",
+        "Shoprite": "SHP.JSE", "MTN": "MTN.JSE", "Sasol": "SOL.JSE",
+        "FirstRand": "FSR.JSE", "Discovery": "DSY.JSE", "Woolworths": "WHL.JSE",
+        "Absa Group": "ABG.JSE", "Sanlam": "SLM.JSE", "Clicks Group": "CLS.JSE",
+        "Redefine Properties": "RDF.JSE",
+    }
+
+    eodhd_key = os.getenv("EODHD_API_KEY")
+    ticker = TICKER_MAP.get(stock_name, stock_name.replace(" ", "")[:3].upper() + ".JSE")
+
+    if eodhd_key:
+        return _fetch_eodhd(ticker, eodhd_key, stock_name)
+    else:
+        return _fetch_yfinance(stock_name)
+
+
+def _fetch_eodhd(ticker: str, api_key: str, stock_name: str) -> dict:
+    """Fetch market data from EODHD API."""
+    import httpx
+
+    base = "https://eodhd.com/api"
+    price_info = {}
+    metrics = {}
+    news_items = []
+    sparkline = []
+
+    try:
+        # Real-time / end-of-day quote
+        resp = httpx.get(f"{base}/real-time/{ticker}", params={"api_token": api_key, "fmt": "json"}, timeout=10)
+        if resp.status_code == 200:
+            q = resp.json()
+            price_info = {
+                "ticker": ticker,
+                "price": q.get("close"),
+                "change": q.get("change"),
+                "change_pct": q.get("change_p"),
+                "prev_close": q.get("previousClose"),
+                "high_52w": q.get("high"),  # day high, 52w from fundamentals
+                "low_52w": q.get("low"),
+            }
+    except Exception as e:
+        logger.warning(f"EODHD quote failed for {ticker}: {e}")
+
+    try:
+        # Fundamentals
+        resp = httpx.get(f"{base}/fundamentals/{ticker}", params={"api_token": api_key, "fmt": "json"}, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            highlights = data.get("Highlights", {})
+            valuation = data.get("Valuation", {})
+            tech = data.get("Technicals", {})
+            general = data.get("General", {})
+
+            metrics = {
+                "sector": general.get("Sector", "N/A"),
+                "industry": general.get("Industry", "N/A"),
+                "market_cap": highlights.get("MarketCapitalization"),
+                "pe_ratio": highlights.get("PERatio"),
+                "forward_pe": valuation.get("ForwardPE"),
+                "dividend_yield": highlights.get("DividendYield"),
+                "revenue_growth": highlights.get("QuarterlyRevenueGrowthYOY"),
+                "profit_margin": highlights.get("ProfitMargin"),
+                "roe": highlights.get("ReturnOnEquityTTM"),
+                "debt_to_equity": tech.get("DebtToEquity"),
+                "beta": tech.get("Beta"),
+                "eps": highlights.get("EarningsShare"),
+                "description": (general.get("Description") or "")[:500],
+                "high_52w": tech.get("52WeekHigh"),
+                "low_52w": tech.get("52WeekLow"),
+            }
+            # Update price_info with 52w from fundamentals
+            if metrics.get("high_52w"):
+                price_info["high_52w"] = metrics["high_52w"]
+            if metrics.get("low_52w"):
+                price_info["low_52w"] = metrics["low_52w"]
+    except Exception as e:
+        logger.warning(f"EODHD fundamentals failed for {ticker}: {e}")
+
+    try:
+        # Sparkline — last 30 days EOD prices
+        from datetime import datetime, timedelta
+        end = datetime.now().strftime("%Y-%m-%d")
+        start = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+        resp = httpx.get(f"{base}/eod/{ticker}", params={"api_token": api_key, "fmt": "json", "from": start, "to": end}, timeout=10)
+        if resp.status_code == 200:
+            eod_data = resp.json()
+            if isinstance(eod_data, list):
+                sparkline = [round(d.get("close", 0), 2) for d in eod_data if d.get("close")]
+    except Exception as e:
+        logger.warning(f"EODHD sparkline failed for {ticker}: {e}")
+
+    try:
+        # News
+        symbol = ticker.split(".")[0]
+        resp = httpx.get(f"{base}/news", params={"api_token": api_key, "s": ticker, "limit": 5, "fmt": "json"}, timeout=10)
+        if resp.status_code == 200:
+            news_data = resp.json()
+            if isinstance(news_data, list):
+                for n in news_data[:5]:
+                    news_items.append({
+                        "title": n.get("title", ""),
+                        "publisher": n.get("source", ""),
+                        "published": n.get("date", ""),
+                    })
+    except Exception as e:
+        logger.warning(f"EODHD news failed for {ticker}: {e}")
+
+    return {"price_info": price_info, "metrics": metrics, "news": news_items, "sparkline": sparkline}
+
+
+def _fetch_yfinance(stock_name: str) -> dict:
+    """Fallback: fetch market data from yfinance."""
     try:
         import yfinance as yf
 
@@ -118,31 +233,10 @@ def _get_market_data(stock_name: str) -> dict:
             "industry": info.get("industry", "N/A"),
             "market_cap": info.get("marketCap"),
             "pe_ratio": info.get("trailingPE"),
-            "forward_pe": info.get("forwardPE"),
             "dividend_yield": info.get("dividendYield"),
-            "revenue_growth": info.get("revenueGrowth"),
-            "profit_margin": info.get("profitMargins"),
-            "roe": info.get("returnOnEquity"),
-            "debt_to_equity": info.get("debtToEquity"),
-            "beta": info.get("beta"),
-            "eps": info.get("trailingEps"),
             "description": (info.get("longBusinessSummary") or "")[:500],
         }
 
-        # Get recent news
-        news_items = []
-        try:
-            news = ticker.news[:5] if hasattr(ticker, 'news') else []
-            for n in news:
-                news_items.append({
-                    "title": n.get("title", ""),
-                    "publisher": n.get("publisher", ""),
-                    "published": n.get("providerPublishTime", 0),
-                })
-        except Exception:
-            pass
-
-        # Sparkline — last 30 days of closing prices
         sparkline = []
         try:
             hist = ticker.history(period="1mo")
@@ -151,7 +245,7 @@ def _get_market_data(stock_name: str) -> dict:
         except Exception:
             pass
 
-        return {"price_info": price_info, "metrics": metrics, "news": news_items, "sparkline": sparkline}
+        return {"price_info": price_info, "metrics": metrics, "news": [], "sparkline": sparkline}
 
     except Exception as e:
         logger.warning(f"yfinance failed for {stock_name}: {e}")
