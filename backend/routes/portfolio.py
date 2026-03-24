@@ -377,18 +377,19 @@ class ShareTransactionsBody(BaseModel):
     visibility: str = "public"
     note_body: str = ""
 
-from fastapi import Query as QueryParam
 
 @router.post("/transactions/share")
 def share_transactions(
+    data: ShareTransactionsBody,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    transaction_ids: list[int] = QueryParam(default=[]),
-    visibility: str = "public",
-    note_body: str = "",
 ):
     """Share one or more transactions as a note with tagged transactions."""
     from models import UserTransaction, Note, Tier
+
+    transaction_ids = data.transaction_ids
+    visibility = data.visibility
+    note_body = data.note_body
 
     if not transaction_ids:
         raise HTTPException(status_code=400, detail="No transactions selected")

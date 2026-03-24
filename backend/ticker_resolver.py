@@ -56,7 +56,7 @@ def get_jse_symbols():
     return _fetch_jse_symbols()
 
 
-def resolve_ticker(stock_name: str) -> str | None:
+def resolve_ticker(stock_name: str):
     """
     Resolve a stock name (from EE transaction) to an EODHD ticker.
     Returns 'CODE.JSE' or None if not found.

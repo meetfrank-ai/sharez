@@ -65,8 +65,8 @@ export default function Feed() {
     try {
       if (composerTxIds.length > 0) {
         // Post as note with tagged transactions
-        await api.post('/portfolio/transactions/share', null, {
-          params: { transaction_ids: composerTxIds, visibility: composerVisibility, note_body: composerBody.trim() },
+        await api.post('/portfolio/transactions/share', {
+          transaction_ids: composerTxIds, visibility: composerVisibility, note_body: composerBody.trim(),
         });
       } else {
         await api.post('/notes/', {

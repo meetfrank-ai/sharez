@@ -60,8 +60,8 @@ export default function Transactions() {
     if (!txIds.length) return;
     setSharing(true);
     try {
-      await api.post('/portfolio/transactions/share', null, {
-        params: { transaction_ids: txIds, visibility, note_body: noteBody },
+      await api.post('/portfolio/transactions/share', {
+        transaction_ids: txIds, visibility, note_body: noteBody,
       });
       fetchTransactions();
       setShowComposer(false);
