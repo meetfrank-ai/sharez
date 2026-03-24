@@ -118,19 +118,30 @@ def _fetch_eodhd(ticker: str, api_key: str, stock_name: str) -> dict:
     sparkline = []
 
     try:
-        # Real-time / end-of-day quote
-        resp = httpx.get(f"{base}/real-time/{ticker}", params={"api_token": api_key, "fmt": "json"}, timeout=10)
+        # Get latest price from EOD data (more reliable than real-time on free tier)
+        from datetime import datetime as dt, timedelta as td
+        end = dt.now().strftime("%Y-%m-%d")
+        start = (dt.now() - td(days=7)).strftime("%Y-%m-%d")
+        resp = httpx.get(f"{base}/eod/{ticker}", params={"api_token": api_key, "fmt": "json", "from": start, "to": end, "order": "d"}, timeout=10)
         if resp.status_code == 200:
-            q = resp.json()
-            price_info = {
-                "ticker": ticker,
-                "price": q.get("close"),
-                "change": q.get("change"),
-                "change_pct": q.get("change_p"),
-                "prev_close": q.get("previousClose"),
-                "high_52w": q.get("high"),  # day high, 52w from fundamentals
-                "low_52w": q.get("low"),
-            }
+            eod = resp.json()
+            if isinstance(eod, list) and len(eod) >= 1:
+                latest = eod[0]
+                prev = eod[1] if len(eod) > 1 else latest
+                close = latest.get("close", 0)
+                prev_close = prev.get("close", close)
+                change = close - prev_close
+                change_pct = (change / prev_close * 100) if prev_close else 0
+                # EODHD JSE prices are in cents — convert to rands
+                price_info = {
+                    "ticker": ticker,
+                    "price": round(close / 100, 2),
+                    "change": round(change / 100, 2),
+                    "change_pct": round(change_pct, 2),
+                    "prev_close": round(prev_close / 100, 2),
+                    "high_52w": None,
+                    "low_52w": None,
+                }
     except Exception as e:
         logger.warning(f"EODHD quote failed for {ticker}: {e}")
 
@@ -178,7 +189,7 @@ def _fetch_eodhd(ticker: str, api_key: str, stock_name: str) -> dict:
         if resp.status_code == 200:
             eod_data = resp.json()
             if isinstance(eod_data, list):
-                sparkline = [round(d.get("close", 0), 2) for d in eod_data if d.get("close")]
+                sparkline = [round(d.get("close", 0) / 100, 2) for d in eod_data if d.get("close")]
     except Exception as e:
         logger.warning(f"EODHD sparkline failed for {ticker}: {e}")
 
