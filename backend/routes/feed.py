@@ -13,6 +13,7 @@ router = APIRouter(prefix="/api/feed", tags=["feed"])
 @router.get("/", response_model=list[UnifiedFeedItem])
 def get_feed(
     filter: str = Query("all"),
+    scope: str = Query("blend"),  # "community" = followed only, "discover" = everyone, "blend" = mix
     limit: int = Query(50, le=100),
     offset: int = Query(0, ge=0),
     user: User = Depends(get_current_user),
@@ -28,17 +29,17 @@ def get_feed(
     ]
     following_ids.append(user.id)
 
+    # Determine which users to show content from
+    community_only = scope == "community"
+
     items = []
 
     # Fetch notes (top-level only)
     if filter in ("all", "notes"):
-        notes = (
-            db.query(Note)
-            .filter(Note.user_id.in_(following_ids), Note.parent_note_id.is_(None))
-            .order_by(Note.created_at.desc())
-            .limit(limit * 2)
-            .all()
-        )
+        note_query = db.query(Note).filter(Note.parent_note_id.is_(None))
+        if community_only:
+            note_query = note_query.filter(Note.user_id.in_(following_ids))
+        notes = note_query.order_by(Note.created_at.desc()).limit(limit * 2).all()
         for n in notes:
             access = get_access_tier(db, user.id, n.user_id)
             if not can_view(access, n.visibility):
@@ -66,13 +67,10 @@ def get_feed(
 
     # Fetch theses
     if filter in ("all", "theses"):
-        theses = (
-            db.query(Thesis)
-            .filter(Thesis.user_id.in_(following_ids))
-            .order_by(Thesis.created_at.desc())
-            .limit(limit * 2)
-            .all()
-        )
+        thesis_query = db.query(Thesis)
+        if community_only:
+            thesis_query = thesis_query.filter(Thesis.user_id.in_(following_ids))
+        theses = thesis_query.order_by(Thesis.created_at.desc()).limit(limit * 2).all()
         for t in theses:
             access = get_access_tier(db, user.id, t.user_id)
             if not can_view(access, t.visibility):
@@ -94,12 +92,13 @@ def get_feed(
 
     # Fetch transactions (buy/sell only)
     if filter in ("all", "transactions"):
-        events = (
-            db.query(FeedEvent)
-            .filter(
-                FeedEvent.user_id.in_(following_ids),
+        tx_query = db.query(FeedEvent).filter(
                 FeedEvent.event_type.in_([EventType.added_stock, EventType.removed_stock]),
             )
+        if community_only:
+            tx_query = tx_query.filter(FeedEvent.user_id.in_(following_ids))
+        events = (
+            tx_query
             .order_by(FeedEvent.created_at.desc())
             .limit(limit * 2)
             .all()

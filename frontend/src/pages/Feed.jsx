@@ -15,6 +15,7 @@ export default function Feed() {
   const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [scope, setScope] = useState('blend'); // 'blend' | 'community'
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -27,9 +28,9 @@ export default function Feed() {
   const textareaRef = useRef(null);
   const remaining = 500 - composerBody.length;
 
-  const fetchFeed = (f = filter) => {
+  const fetchFeed = (f = filter, s = scope) => {
     setLoading(true);
-    api.get(`/feed/?filter=${f}`)
+    api.get(`/feed/?filter=${f}&scope=${s}`)
       .then((res) => setItems(res.data))
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -39,7 +40,12 @@ export default function Feed() {
 
   const handleFilterChange = (f) => {
     setFilter(f);
-    fetchFeed(f);
+    fetchFeed(f, scope);
+  };
+
+  const handleScopeChange = (s) => {
+    setScope(s);
+    fetchFeed(filter, s);
   };
 
   const handlePost = async () => {
@@ -161,13 +167,35 @@ export default function Feed() {
         )}
       </div>
 
-      {/* Filter pills */}
+      {/* Scope + Filter pills */}
       <div className="flex items-center gap-1.5 mb-5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-        {FILTERS.map((f) => (
+        {/* Scope toggle */}
+        {[
+          { key: 'blend', label: 'For you' },
+          { key: 'community', label: 'My community' },
+        ].map((s) => (
+          <button
+            key={s.key}
+            onClick={() => handleScopeChange(s.key)}
+            className="px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border-none cursor-pointer"
+            style={{
+              backgroundColor: scope === s.key ? 'var(--accent-light)' : 'transparent',
+              color: scope === s.key ? 'var(--accent)' : 'var(--text-muted)',
+              border: scope === s.key ? '1px solid #C7D2FE' : '1px solid var(--border)',
+            }}
+          >
+            {s.label}
+          </button>
+        ))}
+
+        <div className="w-px h-4 shrink-0" style={{ backgroundColor: 'var(--border)' }} />
+
+        {/* Content filter */}
+        {FILTERS.filter(f => f.key !== 'all').map((f) => (
           <button
             key={f.key}
-            onClick={() => handleFilterChange(f.key)}
-            className="px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all border-none cursor-pointer"
+            onClick={() => handleFilterChange(filter === f.key ? 'all' : f.key)}
+            className="px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border-none cursor-pointer"
             style={{
               backgroundColor: filter === f.key ? 'var(--accent-light)' : 'transparent',
               color: filter === f.key ? 'var(--accent)' : 'var(--text-muted)',
