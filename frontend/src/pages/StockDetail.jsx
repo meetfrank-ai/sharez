@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { Send, AlertTriangle, Sparkles, TrendingUp, TrendingDown } from 'lucide-react';
+import { Send, AlertTriangle, Sparkles, TrendingUp, TrendingDown, Share2, BookmarkPlus } from 'lucide-react';
+import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 import NoteCard from '../components/NoteCard';
@@ -99,7 +100,7 @@ export default function StockDetail() {
           <div className="flex-1">
             <h1 className="text-base font-semibold m-0" style={{ color: 'var(--text-primary)' }}>{stockName}</h1>
             <p className="text-xs m-0" style={{ color: 'var(--text-muted)' }}>
-              {priceData.ticker || 'JSE'} · {summary?.key_metrics?.[0]?.label === 'Sector' ? summary.key_metrics[0].value : 'Equities'}
+              {priceData.ticker || 'JSE'} · Equities
             </p>
           </div>
           {priceData.price && (
@@ -114,7 +115,16 @@ export default function StockDetail() {
           )}
         </div>
 
-        {/* Removed — filter is per-tab now */}
+        {/* Mini sparkline */}
+        {summary?.sparkline?.length > 1 && (
+          <div style={{ height: 48, margin: '0 -8px' }}>
+            <ResponsiveContainer width="100%" height={48}>
+              <LineChart data={summary.sparkline.map((v, i) => ({ v, i }))}>
+                <Line type="monotone" dataKey="v" stroke={changePositive ? '#10B981' : '#EF4444'} strokeWidth={1.5} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       {/* Community Bar */}
@@ -189,6 +199,9 @@ export default function StockDetail() {
                   <Sparkles size={11} color="#fff" />
                 </div>
                 <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>AI Summary</span>
+              {summary?.updated_ago && (
+                <span className="text-[11px] ml-auto" style={{ color: 'var(--text-muted)' }}>Updated {summary.updated_ago}</span>
+              )}
               </div>
 
               {/* Quick take */}
@@ -390,6 +403,22 @@ export default function StockDetail() {
           ) : notes.map((n) => <NoteCard key={n.id} note={n} />)}
         </>
       )}
+
+      {/* Action buttons */}
+      <div className="flex gap-2 mt-5">
+        <button
+          className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-lg text-sm font-medium border-none cursor-pointer transition-opacity hover:opacity-90"
+          style={{ backgroundColor: 'var(--text-primary)', color: 'var(--bg-card)' }}
+        >
+          <BookmarkPlus size={16} /> Follow stock
+        </button>
+        <button
+          className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-lg text-sm font-medium cursor-pointer transition-opacity hover:opacity-90"
+          style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+        >
+          <Share2 size={16} /> Share
+        </button>
+      </div>
     </div>
   );
 }

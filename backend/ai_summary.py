@@ -17,6 +17,17 @@ logger = logging.getLogger(__name__)
 CACHE_HOURS = 4
 
 
+def _format_age(age: timedelta) -> str:
+    """Format a timedelta as a human-readable string."""
+    minutes = int(age.total_seconds() / 60)
+    if minutes < 60:
+        return f"{minutes}m ago"
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours}h ago"
+    return f"{hours // 24}d ago"
+
+
 async def get_stock_summary(db: Session, contract_code: str, stock_name: str, current_user_id: int = None) -> dict:
     """Get a rich AI summary for a stock. Returns structured data."""
 
@@ -32,10 +43,14 @@ async def get_stock_summary(db: Session, contract_code: str, stock_name: str, cu
         if age < timedelta(hours=CACHE_HOURS):
             try:
                 summary_data = json.loads(cached.summary_text)
-                # Always refresh community data (it's cheap)
-                summary_data["community"] = _get_community_data(db, contract_code, stock_name, current_user_id)
-                summary_data["why_people_invest"] = _get_investment_reasons(db, contract_code)
-                return summary_data
+                # Skip cache if it's a fallback summary (API key wasn't set when cached)
+                if "ANTHROPIC_API_KEY" in summary_data.get("risk_note", ""):
+                    pass  # Regenerate
+                else:
+                    summary_data["community"] = _get_community_data(db, contract_code, stock_name, current_user_id)
+                    summary_data["why_people_invest"] = _get_investment_reasons(db, contract_code)
+                    summary_data["updated_ago"] = _format_age(age)
+                    return summary_data
             except json.JSONDecodeError:
                 pass  # Stale format, regenerate
 
@@ -51,6 +66,8 @@ async def get_stock_summary(db: Session, contract_code: str, stock_name: str, cu
     summary_data["community"] = community
     summary_data["why_people_invest"] = why_invest
     summary_data["market_data"] = market_data.get("price_info", {})
+    summary_data["sparkline"] = market_data.get("sparkline", [])
+    summary_data["updated_ago"] = "Just now"
 
     # Cache the AI-generated parts (not community data, which is dynamic)
     cache_data = {k: v for k, v in summary_data.items() if k not in ("community", "why_people_invest")}
@@ -125,11 +142,20 @@ def _get_market_data(stock_name: str) -> dict:
         except Exception:
             pass
 
-        return {"price_info": price_info, "metrics": metrics, "news": news_items}
+        # Sparkline — last 30 days of closing prices
+        sparkline = []
+        try:
+            hist = ticker.history(period="1mo")
+            if not hist.empty:
+                sparkline = [round(p, 2) for p in hist["Close"].tolist()]
+        except Exception:
+            pass
+
+        return {"price_info": price_info, "metrics": metrics, "news": news_items, "sparkline": sparkline}
 
     except Exception as e:
         logger.warning(f"yfinance failed for {stock_name}: {e}")
-        return {"price_info": {}, "metrics": {}, "news": []}
+        return {"price_info": {}, "metrics": {}, "news": [], "sparkline": []}
 
 
 def _get_community_data(db: Session, contract_code: str, stock_name: str, current_user_id: int = None) -> dict:
