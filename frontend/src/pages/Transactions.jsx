@@ -221,7 +221,7 @@ export default function Transactions() {
       {/* Note composer modal — same as feed note with tagged transactions */}
       {showComposer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowComposer(false)}>
-          <div className="w-full max-w-lg rounded-xl p-6" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }} onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-full md:max-w-lg rounded-none md:rounded-xl p-5 md:p-6" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-semibold m-0" style={{ color: 'var(--text-primary)' }}>Create note</h3>
               <button onClick={() => setShowComposer(false)} className="bg-transparent border-none cursor-pointer p-1" style={{ color: 'var(--text-muted)' }}>

@@ -140,7 +140,7 @@ export default function FollowButton({ userId, profile }) {
       {/* Vault popup */}
       {showVaultPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="w-full max-w-sm rounded-xl p-6" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+          <div className="w-full max-w-full md:max-w-sm rounded-none md:rounded-xl p-6" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Lock size={16} style={{ color: 'var(--tier-vault)' }} />
