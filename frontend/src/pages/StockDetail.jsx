@@ -32,20 +32,27 @@ export default function StockDetail() {
   const [posting, setPosting] = useState(false);
   const [viewingUser, setViewingUser] = useState(null);
   const [sort, setSort] = useState('recent');
-  const [people, setPeople] = useState('everyone');
+  const [people, setPeople] = useState(viewingUserId ? 'user' : 'everyone');
+  // 'user' = specific user only, 'following' = people I follow, 'everyone' = all
 
   const fetchContent = (s = sort, p = people) => {
-    if (viewingUserId) {
+    if (p === 'user' && viewingUserId) {
+      // Filtered to specific user
       api.get(`/theses/user/${viewingUserId}`).then((res) => {
-        setTheses(res.data.filter(t => t.contract_code === contractCode));
+        let filtered = res.data.filter(t => t.contract_code === contractCode);
+        if (s === 'oldest') filtered.reverse();
+        setTheses(filtered);
       }).catch(() => {});
       api.get(`/notes/user/${viewingUserId}`).then((res) => {
-        setNotes(res.data.filter(n => n.stock_tag === contractCode));
+        let filtered = res.data.filter(n => n.stock_tag === contractCode);
+        if (s === 'oldest') filtered.reverse();
+        setNotes(filtered);
       }).catch(() => {});
-      api.get(`/profile/${viewingUserId}`).then((res) => setViewingUser(res.data)).catch(() => {});
     } else {
-      api.get(`/theses/stock/${contractCode}?sort=${s}&people=${p}`).then((res) => setTheses(res.data)).catch(() => {});
-      api.get(`/notes/stock/${contractCode}?sort=${s}&people=${p}`).then((res) => setNotes(res.data)).catch(() => {});
+      // Community view
+      const pParam = p === 'following' ? 'following' : 'everyone';
+      api.get(`/theses/stock/${contractCode}?sort=${s}&people=${pParam}`).then((res) => setTheses(res.data)).catch(() => {});
+      api.get(`/notes/stock/${contractCode}?sort=${s}&people=${pParam}`).then((res) => setNotes(res.data)).catch(() => {});
     }
   };
 
@@ -54,6 +61,10 @@ export default function StockDetail() {
       .then((res) => setSummary(res.data))
       .catch(() => setSummary(null))
       .finally(() => setLoadingSummary(false));
+
+    if (viewingUserId) {
+      api.get(`/profile/${viewingUserId}`).then((res) => setViewingUser(res.data)).catch(() => {});
+    }
     fetchContent();
   }, [contractCode, stockName, viewingUserId]);
 
@@ -103,11 +114,7 @@ export default function StockDetail() {
           )}
         </div>
 
-        {viewingUser && (
-          <p className="text-xs m-0" style={{ color: 'var(--accent)' }}>
-            Viewing {viewingUser.display_name}'s activity on this stock
-          </p>
-        )}
+        {/* Removed — filter is per-tab now */}
       </div>
 
       {/* Community Bar */}
@@ -162,30 +169,7 @@ export default function StockDetail() {
         ))}
       </div>
 
-      {/* Sort/Filter bar */}
-      {!viewingUserId && tab !== 'summary' && (
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex gap-1">
-            {['recent', 'oldest'].map((s) => (
-              <button key={s} onClick={() => handleSortChange(s)}
-                className="px-2.5 py-1 rounded-md text-xs font-medium capitalize border-none cursor-pointer"
-                style={{ backgroundColor: sort === s ? 'var(--accent-light)' : 'transparent', color: sort === s ? 'var(--accent)' : 'var(--text-muted)' }}>
-                {s}
-              </button>
-            ))}
-          </div>
-          <div className="w-px h-4" style={{ backgroundColor: 'var(--border)' }} />
-          <div className="flex gap-1">
-            {[{ key: 'everyone', label: 'Everyone' }, { key: 'following', label: 'Following' }].map((p) => (
-              <button key={p.key} onClick={() => handlePeopleChange(p.key)}
-                className="px-2.5 py-1 rounded-md text-xs font-medium border-none cursor-pointer"
-                style={{ backgroundColor: people === p.key ? 'var(--accent-light)' : 'transparent', color: people === p.key ? 'var(--accent)' : 'var(--text-muted)' }}>
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Sort/Filter bar is rendered inside each tab */}
 
       {/* === AI SUMMARY TAB === */}
       {tab === 'summary' && (
@@ -297,6 +281,39 @@ export default function StockDetail() {
       {/* === THESES TAB === */}
       {tab === 'theses' && (
         <>
+          {/* Filter bar inside tab */}
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
+            <div className="flex gap-1">
+              {['recent', 'oldest'].map((s) => (
+                <button key={s} onClick={() => handleSortChange(s)}
+                  className="px-2.5 py-1 rounded-md text-xs font-medium capitalize border-none cursor-pointer"
+                  style={{ backgroundColor: sort === s ? 'var(--accent-light)' : 'transparent', color: sort === s ? 'var(--accent)' : 'var(--text-muted)' }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+            <div className="w-px h-4" style={{ backgroundColor: 'var(--border)' }} />
+            <div className="flex gap-1">
+              {viewingUser && (
+                <button onClick={() => handlePeopleChange('user')}
+                  className="px-2.5 py-1 rounded-md text-xs font-medium border-none cursor-pointer"
+                  style={{ backgroundColor: people === 'user' ? 'var(--accent-light)' : 'transparent', color: people === 'user' ? 'var(--accent)' : 'var(--text-muted)' }}>
+                  {viewingUser.display_name?.split(' ')[0]}
+                </button>
+              )}
+              <button onClick={() => handlePeopleChange('following')}
+                className="px-2.5 py-1 rounded-md text-xs font-medium border-none cursor-pointer"
+                style={{ backgroundColor: people === 'following' ? 'var(--accent-light)' : 'transparent', color: people === 'following' ? 'var(--accent)' : 'var(--text-muted)' }}>
+                Following
+              </button>
+              <button onClick={() => handlePeopleChange('everyone')}
+                className="px-2.5 py-1 rounded-md text-xs font-medium border-none cursor-pointer"
+                style={{ backgroundColor: people === 'everyone' ? 'var(--accent-light)' : 'transparent', color: people === 'everyone' ? 'var(--accent)' : 'var(--text-muted)' }}>
+                Everyone
+              </button>
+            </div>
+          </div>
+
           {isOwnStock && (
             <div className="rounded-xl p-5 mb-4" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
               <h3 className="text-sm font-semibold mb-3 m-0" style={{ color: 'var(--text-primary)' }}>Share your thesis</h3>
@@ -323,7 +340,7 @@ export default function StockDetail() {
           )}
           {theses.length === 0 ? (
             <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-              {viewingUser ? `${viewingUser.display_name} hasn't posted a thesis on this stock` : 'No theses yet'}
+              {people === 'user' && viewingUser ? `${viewingUser.display_name} hasn't posted a thesis on this stock` : 'No theses yet'}
             </p>
           ) : theses.map((t) => <ThesisCard key={t.id} thesis={t} />)}
         </>
@@ -332,10 +349,43 @@ export default function StockDetail() {
       {/* === NOTES TAB === */}
       {tab === 'notes' && (
         <>
+          {/* Filter bar inside tab */}
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
+            <div className="flex gap-1">
+              {['recent', 'oldest'].map((s) => (
+                <button key={s} onClick={() => handleSortChange(s)}
+                  className="px-2.5 py-1 rounded-md text-xs font-medium capitalize border-none cursor-pointer"
+                  style={{ backgroundColor: sort === s ? 'var(--accent-light)' : 'transparent', color: sort === s ? 'var(--accent)' : 'var(--text-muted)' }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+            <div className="w-px h-4" style={{ backgroundColor: 'var(--border)' }} />
+            <div className="flex gap-1">
+              {viewingUser && (
+                <button onClick={() => handlePeopleChange('user')}
+                  className="px-2.5 py-1 rounded-md text-xs font-medium border-none cursor-pointer"
+                  style={{ backgroundColor: people === 'user' ? 'var(--accent-light)' : 'transparent', color: people === 'user' ? 'var(--accent)' : 'var(--text-muted)' }}>
+                  {viewingUser.display_name?.split(' ')[0]}
+                </button>
+              )}
+              <button onClick={() => handlePeopleChange('following')}
+                className="px-2.5 py-1 rounded-md text-xs font-medium border-none cursor-pointer"
+                style={{ backgroundColor: people === 'following' ? 'var(--accent-light)' : 'transparent', color: people === 'following' ? 'var(--accent)' : 'var(--text-muted)' }}>
+                Following
+              </button>
+              <button onClick={() => handlePeopleChange('everyone')}
+                className="px-2.5 py-1 rounded-md text-xs font-medium border-none cursor-pointer"
+                style={{ backgroundColor: people === 'everyone' ? 'var(--accent-light)' : 'transparent', color: people === 'everyone' ? 'var(--accent)' : 'var(--text-muted)' }}>
+                Everyone
+              </button>
+            </div>
+          </div>
+
           {isOwnStock && <NoteComposer stockTag={contractCode} stockName={stockName} onPosted={(n) => setNotes([n, ...notes])} />}
           {notes.length === 0 ? (
             <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-              {viewingUser ? `${viewingUser.display_name} hasn't posted notes on this stock` : 'No notes yet'}
+              {people === 'user' && viewingUser ? `${viewingUser.display_name} hasn't posted notes on this stock` : 'No notes yet'}
             </p>
           ) : notes.map((n) => <NoteCard key={n.id} note={n} />)}
         </>
