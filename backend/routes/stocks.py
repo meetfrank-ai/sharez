@@ -74,6 +74,38 @@ def search_stocks(
     return results[:15]
 
 
+@router.post("/scrape-navs")
+def trigger_nav_scrape(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Trigger a scrape of latest fund NAV prices from ProfileData.
+    TEMPORARY: Will be replaced with professional data feed.
+    """
+    from nav_scraper import run_daily_scrape
+    result = run_daily_scrape(db)
+    return result
+
+
+@router.get("/scraped-prices")
+def get_scraped_prices(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get all scraped fund prices."""
+    from models import ScrapedPrice
+    prices = db.query(ScrapedPrice).order_by(ScrapedPrice.instrument_name.asc()).all()
+    return [{
+        "instrument_name": p.instrument_name,
+        "instrument_code": p.instrument_code,
+        "nav_price": p.nav_price,
+        "nav_date": str(p.nav_date)[:10] if p.nav_date else None,
+        "source": p.source,
+        "scraped_at": str(p.scraped_at),
+    } for p in prices]
+
+
 @router.get("/resolve")
 def resolve_stock(
     name: str = Query(""),

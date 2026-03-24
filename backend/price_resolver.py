@@ -49,20 +49,17 @@ def resolve_price(db: Session, stock_name: str, avg_buy_price: float = None, ins
         elif price:
             _log_anomaly(db, stock_name, "yfinance", price, avg_buy_price)
 
-    # Source 3: Scraped NAV cache
-    if scrape_code or scrape_source:
-        code = scrape_code or stock_name
-        scraped = (
-            db.query(ScrapedPrice)
-            .filter(ScrapedPrice.instrument_code == code)
-            .order_by(ScrapedPrice.nav_date.desc())
-            .first()
-        )
-        if scraped and scraped.nav_price:
-            age_hours = (datetime.now(timezone.utc) - scraped.scraped_at.replace(tzinfo=timezone.utc)).total_seconds() / 3600
-            confidence = "medium" if age_hours < 48 else "low"
-            if _sanity_check(scraped.nav_price, avg_buy_price, inst_type):
-                return {"price": scraped.nav_price, "source": "scrape", "confidence": confidence}
+    # Source 3: Scraped NAV cache (ProfileData)
+    # TEMPORARY: This source will be replaced with a professional data feed.
+    from nav_scraper import match_holding_to_scraped
+    scraped = match_holding_to_scraped(db, stock_name)
+    if scraped and scraped.nav_price:
+        age_hours = (datetime.now(timezone.utc) - scraped.scraped_at.replace(tzinfo=timezone.utc)).total_seconds() / 3600
+        confidence = "medium" if age_hours < 48 else "low"
+        if _sanity_check(scraped.nav_price, avg_buy_price, inst_type):
+            return {"price": scraped.nav_price, "source": "scrape", "confidence": confidence}
+        else:
+            _log_anomaly(db, stock_name, "scrape", scraped.nav_price, avg_buy_price)
 
     # No price available
     return {"price": None, "source": "none", "confidence": "none"}
