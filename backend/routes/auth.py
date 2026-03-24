@@ -110,6 +110,87 @@ def update_profile(
     return user
 
 
+class GoogleAuthRequest(BaseModel):
+    credential: str  # Google ID token from frontend
+
+
+@router.post("/google", response_model=Token)
+def google_auth(
+    data: GoogleAuthRequest,
+    db: Session = Depends(get_db),
+):
+    """Authenticate with Google. Creates account if new user."""
+    import os, requests as req
+
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    if not client_id:
+        raise HTTPException(status_code=500, detail="Google auth not configured")
+
+    # Verify the Google ID token
+    try:
+        resp = req.get(f"https://oauth2.googleapis.com/tokeninfo?id_token={data.credential}", timeout=10)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=401, detail="Invalid Google token")
+        google_data = resp.json()
+
+        if google_data.get("aud") != client_id:
+            raise HTTPException(status_code=401, detail="Token not for this app")
+
+        email = google_data.get("email")
+        name = google_data.get("name", "")
+        if not email:
+            raise HTTPException(status_code=401, detail="No email in Google token")
+
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=401, detail="Failed to verify Google token")
+
+    # Check if user exists
+    user = db.query(User).filter(User.email == email).first()
+
+    if user:
+        # Existing user — just login
+        return Token(access_token=create_access_token(user.id))
+
+    # New user — create account
+    # Generate handle from name
+    handle_base = re.sub(r'[^a-z0-9_]', '', name.lower().replace(' ', '_'))[:15]
+    handle = handle_base
+    counter = 1
+    while db.query(User).filter(User.handle == handle).first():
+        handle = f"{handle_base}{counter}"
+        counter += 1
+
+    user = User(
+        email=email,
+        password_hash=hash_password(os.urandom(32).hex()),  # Random password (user uses Google)
+        display_name=name,
+        handle=handle,
+        has_onboarded=False,
+    )
+    db.add(user)
+    db.flush()
+
+    # Default tier config
+    tier_config = UserTierConfig(user_id=user.id)
+    db.add(tier_config)
+
+    # Auto-follow demo accounts
+    demo_users = db.query(User).filter(
+        User.email.in_(["thabo@sharez.co.za", "sarah@sharez.co.za", "lebo@sharez.co.za"])
+    ).all()
+    for demo in demo_users:
+        if demo.id != user.id:
+            db.add(Follow(follower_id=user.id, following_id=demo.id,
+                          tier=Tier.inner_circle, status=FollowStatus.active))
+
+    db.commit()
+    db.refresh(user)
+
+    return Token(access_token=create_access_token(user.id))
+
+
 class ForgotPasswordRequest(BaseModel):
     email: str
 

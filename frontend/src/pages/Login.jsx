@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../hooks/useAuth';
+import api from '../utils/api';
 
 export default function Login() {
   const [isRegister, setIsRegister] = useState(false);
@@ -10,7 +12,7 @@ export default function Login() {
   const [handle, setHandle] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, register } = useAuth();
+  const { login, register, setUser } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -153,6 +155,33 @@ export default function Login() {
             >
               {loading ? 'Please wait...' : isRegister ? 'Create Account' : 'Sign In'}
             </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 my-3">
+              <div className="flex-1 h-px" style={{ backgroundColor: 'var(--border)' }} />
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>or</span>
+              <div className="flex-1 h-px" style={{ backgroundColor: 'var(--border)' }} />
+            </div>
+
+            {/* Google Sign In */}
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={async (credentialResponse) => {
+                  try {
+                    const res = await api.post('/auth/google', { credential: credentialResponse.credential });
+                    localStorage.setItem('sharez_token', res.data.access_token);
+                    const me = await api.get('/auth/me');
+                    setUser(me.data);
+                  } catch (err) {
+                    setError(err.response?.data?.detail || 'Google sign-in failed');
+                  }
+                }}
+                onError={() => setError('Google sign-in failed')}
+                size="large"
+                width="100%"
+                text={isRegister ? 'signup_with' : 'signin_with'}
+              />
+            </div>
           </form>
         </div>
 
