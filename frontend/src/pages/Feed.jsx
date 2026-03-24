@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Send, Plus, DollarSign, ArrowLeftRight, Image as ImageIcon, X } from 'lucide-react';
+import { Search, Send, DollarSign, ArrowLeftRight, Image as ImageIcon, X, Check } from 'lucide-react';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 import FeedItem from '../components/FeedItem';
@@ -28,7 +28,11 @@ export default function Feed() {
   const [composerExpanded, setComposerExpanded] = useState(false);
   const [composerStockTag, setComposerStockTag] = useState('');
   const [composerStockName, setComposerStockName] = useState('');
+  const [composerTxIds, setComposerTxIds] = useState([]);
+  const [composerTxNames, setComposerTxNames] = useState([]);
   const [showStockInput, setShowStockInput] = useState(false);
+  const [showTxPicker, setShowTxPicker] = useState(false);
+  const [myTransactions, setMyTransactions] = useState([]);
   const [posting, setPosting] = useState(false);
   const textareaRef = useRef(null);
 
@@ -56,16 +60,26 @@ export default function Feed() {
     if (!composerBody.trim() || posting) return;
     setPosting(true);
     try {
-      await api.post('/notes/', {
-        body: composerBody.trim(),
-        visibility: composerVisibility,
-        stock_tag: composerStockTag || null,
-        stock_name: composerStockName || null,
-      });
+      if (composerTxIds.length > 0) {
+        // Post as note with tagged transactions
+        await api.post('/portfolio/transactions/share', null, {
+          params: { transaction_ids: composerTxIds, visibility: composerVisibility, note_body: composerBody.trim() },
+        });
+      } else {
+        await api.post('/notes/', {
+          body: composerBody.trim(),
+          visibility: composerVisibility,
+          stock_tag: composerStockTag || null,
+          stock_name: composerStockName || null,
+        });
+      }
       setComposerBody('');
       setComposerStockTag('');
       setComposerStockName('');
+      setComposerTxIds([]);
+      setComposerTxNames([]);
       setShowStockInput(false);
+      setShowTxPicker(false);
       setComposerExpanded(false);
       fetchFeed();
     } catch (err) {
@@ -146,27 +160,37 @@ export default function Feed() {
               style={{ color: 'var(--text-primary)' }}
             />
 
-            {/* Stock tag pill (if set) */}
-            {composerStockName && (
-              <div className="flex items-center gap-1 mb-3">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium"
-                  style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
-                  <DollarSign size={11} />{composerStockName}
-                  <button onClick={() => { setComposerStockTag(''); setComposerStockName(''); }}
-                    className="ml-1 bg-transparent border-none cursor-pointer p-0" style={{ color: 'var(--accent)' }}>
-                    <X size={11} />
-                  </button>
-                </span>
+            {/* Tagged items pills */}
+            {(composerStockName || composerTxNames.length > 0) && (
+              <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                {composerStockName && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium"
+                    style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
+                    <DollarSign size={11} />{composerStockName}
+                    <button onClick={() => { setComposerStockTag(''); setComposerStockName(''); }}
+                      className="ml-0.5 bg-transparent border-none cursor-pointer p-0" style={{ color: 'var(--accent)' }}>
+                      <X size={10} />
+                    </button>
+                  </span>
+                )}
+                {composerTxNames.map((name, i) => (
+                  <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium"
+                    style={{ backgroundColor: '#D1FAE5', color: '#16A34A' }}>
+                    ↑ {name}
+                    <button onClick={() => {
+                      setComposerTxIds([]); setComposerTxNames([]);
+                    }} className="ml-0.5 bg-transparent border-none cursor-pointer p-0" style={{ color: '#16A34A' }}>
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
               </div>
             )}
 
-            {/* Stock tag input (when toggled) */}
+            {/* Stock tag input */}
             {showStockInput && !composerStockName && (
               <div className="mb-3">
-                <input
-                  type="text"
-                  placeholder="Stock name (e.g. Capitec Bank)"
-                  autoFocus
+                <input type="text" placeholder="Stock name (e.g. Capitec Bank)" autoFocus
                   className="w-full px-3 py-2 rounded-lg text-xs outline-none"
                   style={{ backgroundColor: 'var(--bg-page)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
                   onKeyDown={(e) => {
@@ -176,22 +200,71 @@ export default function Feed() {
                       setComposerStockTag(`EE_${name.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 10)}`);
                       setShowStockInput(false);
                     }
-                  }}
-                />
+                  }} />
                 <p className="text-[10px] mt-1 m-0" style={{ color: 'var(--text-muted)' }}>Press Enter to tag</p>
+              </div>
+            )}
+
+            {/* Transaction picker */}
+            {showTxPicker && (
+              <div className="mb-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)', maxHeight: 200, overflowY: 'auto' }}>
+                {myTransactions.length === 0 ? (
+                  <p className="text-xs text-center py-4 m-0" style={{ color: 'var(--text-muted)' }}>
+                    No transactions imported yet
+                  </p>
+                ) : (
+                  myTransactions.slice(0, 20).map((tx) => {
+                    const isSelected = composerTxIds.includes(tx.id);
+                    return (
+                      <div key={tx.id}
+                        className="flex items-center gap-2 px-3 py-2 cursor-pointer text-xs"
+                        style={{ borderBottom: '1px solid var(--border)', backgroundColor: isSelected ? '#D1FAE5' : 'transparent' }}
+                        onClick={() => {
+                          if (isSelected) {
+                            setComposerTxIds(composerTxIds.filter(id => id !== tx.id));
+                            setComposerTxNames(composerTxNames.filter(n => n !== tx.stock_name));
+                          } else {
+                            setComposerTxIds([...composerTxIds, tx.id]);
+                            if (!composerTxNames.includes(tx.stock_name)) setComposerTxNames([...composerTxNames, tx.stock_name]);
+                          }
+                        }}>
+                        <span style={{ color: tx.action === 'buy' ? '#16A34A' : '#DC2626' }}>
+                          {tx.action === 'buy' ? '↑' : '↓'}
+                        </span>
+                        <span className="flex-1 truncate" style={{ color: 'var(--text-primary)' }}>{tx.stock_name}</span>
+                        <span style={{ color: 'var(--text-muted)' }}>{tx.transaction_date}</span>
+                        {isSelected && <Check size={12} style={{ color: '#16A34A' }} />}
+                      </div>
+                    );
+                  })
+                )}
+                <button onClick={() => setShowTxPicker(false)}
+                  className="w-full py-2 text-xs font-medium bg-transparent border-none cursor-pointer"
+                  style={{ color: 'var(--accent)' }}>
+                  Done
+                </button>
               </div>
             )}
 
             {/* Attachment bar */}
             <div className="flex items-center gap-1 pb-3 mb-3 flex-wrap" style={{ borderBottom: '1px solid var(--border)' }}>
-              <button onClick={() => setShowStockInput(!showStockInput)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-transparent border-none cursor-pointer transition-colors"
+              <button onClick={() => { setShowStockInput(!showStockInput); setShowTxPicker(false); }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-transparent border-none cursor-pointer"
                 style={{ color: showStockInput ? 'var(--accent)' : 'var(--text-muted)' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                 <DollarSign size={15} /> Stock
               </button>
-              {/* Trade sharing moved to Transactions page */}
+              <button onClick={() => {
+                  setShowTxPicker(!showTxPicker); setShowStockInput(false);
+                  if (myTransactions.length === 0) api.get('/portfolio/transactions').then(r => setMyTransactions(r.data)).catch(() => {});
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-transparent border-none cursor-pointer"
+                style={{ color: showTxPicker ? 'var(--accent)' : 'var(--text-muted)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                <ArrowLeftRight size={15} /> Transaction
+              </button>
               <button
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-transparent border-none cursor-pointer"
                 style={{ color: 'var(--text-muted)' }}
