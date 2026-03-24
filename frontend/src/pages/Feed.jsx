@@ -365,17 +365,7 @@ export default function Feed() {
       ) : (
         displayItems.map((item) => {
           if (item.item_type === 'note') return <NoteCard key={`note-${item.id}`} note={item} />;
-          if (item.item_type === 'reshare') return (
-            <div key={`reshare-${item.id}-${item.reshared_by_id}`}>
-              <div className="flex items-center gap-1.5 px-2 mb-1">
-                <Repeat2 size={13} style={{ color: 'var(--success)' }} />
-                <Link to={`/user/${item.reshared_by_id}`} className="text-xs font-medium no-underline" style={{ color: 'var(--success)' }}>
-                  {item.reshared_by_name} restacked
-                </Link>
-              </div>
-              <NoteCard note={item} />
-            </div>
-          );
+          if (item.item_type === 'reshare') return null; // reshares are now notes with restacked_note_id
           if (item.item_type === 'thesis') return null;
           if (item.item_type === 'trade') return <TradeCard key={`trade-${item.id}`} trade={item} />;
           if (item.item_type === 'transaction') return <FeedItem key={`tx-${item.id}`} event={item} />;

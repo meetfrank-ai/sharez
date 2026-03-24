@@ -132,8 +132,36 @@ export default function NoteCard({ note, onReplyPosted }) {
           </div>
         )}
 
+        {/* Restacked note embed */}
+        {note.restacked_note && (
+          <div className="rounded-lg p-3 mb-3 cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate(`/note/${note.restacked_note.id}`); }}
+            style={{ backgroundColor: 'var(--bg-page)', border: '1px solid var(--border)' }}>
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-semibold"
+                style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
+                {note.restacked_note.display_name?.charAt(0).toUpperCase()}
+              </div>
+              <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {note.restacked_note.display_name}
+              </span>
+              {note.restacked_note.handle && (
+                <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>@{note.restacked_note.handle}</span>
+              )}
+            </div>
+            <p className="text-xs leading-relaxed whitespace-pre-line m-0" style={{ color: 'var(--text-secondary)' }}>
+              {note.restacked_note.body?.length > 200 ? note.restacked_note.body.slice(0, 200) + '...' : note.restacked_note.body}
+            </p>
+            {note.restacked_note.stock_name && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium mt-1.5"
+                style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
+                {note.restacked_note.stock_name}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Stock tag */}
-        {note.stock_name && !note.transaction_ids?.length && (
+        {note.stock_name && !note.transaction_ids?.length && !note.restacked_note && (
           <Link to={`/stock/${note.stock_tag}?name=${encodeURIComponent(note.stock_name)}`}
             onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium no-underline mb-3"

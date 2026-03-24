@@ -155,6 +155,8 @@ class NoteOut(BaseModel):
     parent_note_id: Optional[int] = None
     transaction_ids: Optional[list[int]] = None
     image_url: Optional[str] = None
+    restacked_note_id: Optional[int] = None
+    restacked_note: Optional[dict] = None  # embedded original note data
     like_count: int = 0
     reply_count: int = 0
     reshare_count: int = 0

@@ -36,12 +36,33 @@ def _note_to_out(note: Note, current_user_id: int, db: Session) -> NoteOut:
         reply_count=note.reply_count,
         transaction_ids=note.transaction_ids,
         image_url=note.image_url,
+        restacked_note_id=note.restacked_note_id,
+        restacked_note=_get_restacked_note(note.restacked_note_id, db) if note.restacked_note_id else None,
         reshare_count=note.reshare_count or 0,
         liked_by_me=liked,
         saved_by_me=saved,
         reshared_by_me=reshared,
         created_at=note.created_at,
     )
+
+
+def _get_restacked_note(note_id: int, db: Session) -> dict | None:
+    """Get the original note data for a restack embed."""
+    original = db.query(Note).filter(Note.id == note_id).first()
+    if not original:
+        return None
+    return {
+        "id": original.id,
+        "user_id": original.user_id,
+        "display_name": original.user.display_name if original.user else None,
+        "handle": original.user.handle if original.user else None,
+        "body": original.body,
+        "stock_tag": original.stock_tag,
+        "stock_name": original.stock_name,
+        "like_count": original.like_count or 0,
+        "reply_count": original.reply_count or 0,
+        "created_at": str(original.created_at),
+    }
 
 
 @router.post("/", response_model=NoteOut, status_code=201)
@@ -327,16 +348,31 @@ def reshare_note(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    note = db.query(Note).filter(Note.id == note_id).first()
-    if not note:
+    original = db.query(Note).filter(Note.id == note_id).first()
+    if not original:
         raise HTTPException(status_code=404, detail="Note not found")
     existing = db.query(NoteReshare).filter(NoteReshare.note_id == note_id, NoteReshare.user_id == user.id).first()
     if existing:
         raise HTTPException(status_code=400, detail="Already reshared")
+
+    # Track the reshare
     db.add(NoteReshare(note_id=note_id, user_id=user.id))
-    note.reshare_count = (note.reshare_count or 0) + 1
+    original.reshare_count = (original.reshare_count or 0) + 1
+
+    # Create a new note that embeds the original (the restack)
+    restack_note = Note(
+        user_id=user.id,
+        body="",  # empty body — the content is the restacked note
+        visibility=Tier.public,
+        restacked_note_id=note_id,
+        stock_tag=original.stock_tag,
+        stock_name=original.stock_name,
+    )
+    db.add(restack_note)
     db.commit()
-    return {"message": "Reshared", "reshare_count": note.reshare_count}
+    db.refresh(restack_note)
+
+    return {"message": "Restacked", "reshare_count": original.reshare_count, "note_id": restack_note.id}
 
 
 @router.delete("/{note_id}/reshare")
