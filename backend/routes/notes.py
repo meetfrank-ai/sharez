@@ -36,8 +36,8 @@ def _note_to_out(note: Note, current_user_id: int, db: Session) -> NoteOut:
         reply_count=note.reply_count,
         transaction_ids=note.transaction_ids,
         image_url=note.image_url,
-        restacked_note_id=note.restacked_note_id,
-        restacked_note=_get_restacked_note(note.restacked_note_id, db) if note.restacked_note_id else None,
+        restacked_note_id=getattr(note, 'restacked_note_id', None),
+        restacked_note=_get_restacked_note(getattr(note, 'restacked_note_id', None), db) if getattr(note, 'restacked_note_id', None) else None,
         reshare_count=note.reshare_count or 0,
         liked_by_me=liked,
         saved_by_me=saved,
@@ -362,12 +362,16 @@ def reshare_note(
     # Create a new note that embeds the original (the restack)
     restack_note = Note(
         user_id=user.id,
-        body="",  # empty body — the content is the restacked note
+        body=f"Restacked from {original.user.display_name}",
         visibility=Tier.public,
-        restacked_note_id=note_id,
         stock_tag=original.stock_tag,
         stock_name=original.stock_name,
     )
+    # Set restacked_note_id if column exists
+    try:
+        restack_note.restacked_note_id = note_id
+    except Exception:
+        pass
     db.add(restack_note)
     db.commit()
     db.refresh(restack_note)

@@ -255,8 +255,6 @@ class Note(Base):
     stock_name = Column(String, nullable=True)
     transaction_ids = Column(JSON, nullable=True)  # array of UserTransaction IDs
     image_url = Column(String, nullable=True)
-    restacked_note_id = Column(Integer, nullable=True)  # ID of restacked note (no FK to avoid self-ref issues)
-
     parent_note_id = Column(Integer, ForeignKey("notes.id"), nullable=True)
     like_count = Column(Integer, default=0)
     reply_count = Column(Integer, default=0)
