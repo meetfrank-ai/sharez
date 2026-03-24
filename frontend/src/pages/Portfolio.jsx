@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { RefreshCw, TrendingUp, TrendingDown, Award, DollarSign } from 'lucide-react';
+import { RefreshCw, TrendingUp, TrendingDown, Award, DollarSign, Upload } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import api from '../utils/api';
 import HoldingCard from '../components/HoldingCard';
 import InvestmentReasonModal from '../components/InvestmentReasonModal';
 import ShareTransactionModal from '../components/ShareTransactionModal';
+import ImportPortfolioModal from '../components/ImportPortfolioModal';
 
 const CHART_COLORS = ['#4F46E5', '#3B82F6', '#10B981', '#D97706', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -14,6 +15,7 @@ export default function Portfolio() {
   const [syncing, setSyncing] = useState(false);
   const [newStocks, setNewStocks] = useState([]);
   const [pendingTransactions, setPendingTransactions] = useState([]);
+  const [showImport, setShowImport] = useState(false);
 
   const fetchHoldings = () => {
     api.get('/portfolio/me')
@@ -74,15 +76,25 @@ export default function Portfolio() {
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-6">
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-2xl font-semibold m-0" style={{ color: 'var(--text-primary)' }}>My Portfolio</h1>
-        <button
-          onClick={handleSync}
-          disabled={syncing}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 border-none cursor-pointer"
-          style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF' }}
-        >
-          <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
-          {syncing ? 'Syncing...' : 'Sync'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90 border-none cursor-pointer"
+            style={{ backgroundColor: 'var(--bg-card)', color: 'var(--accent)', border: '1px solid var(--border)' }}
+          >
+            <Upload size={14} />
+            Import
+          </button>
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 border-none cursor-pointer"
+            style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF' }}
+          >
+            <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
+            {syncing ? 'Syncing...' : 'Sync'}
+          </button>
+        </div>
       </div>
 
       {holdings.length === 0 ? (
@@ -186,6 +198,19 @@ export default function Portfolio() {
         <InvestmentReasonModal
           stocks={newStocks}
           onClose={() => setNewStocks([])}
+        />
+      )}
+
+      {/* Import modal */}
+      {showImport && (
+        <ImportPortfolioModal
+          onClose={() => setShowImport(false)}
+          onImported={(result) => {
+            fetchHoldings();
+            if (result.added_stocks?.length > 0) {
+              setPendingTransactions(result.added_stocks);
+            }
+          }}
         />
       )}
     </div>

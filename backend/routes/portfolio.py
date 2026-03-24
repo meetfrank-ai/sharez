@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+import re
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -274,3 +276,64 @@ def share_transaction(
     db.commit()
 
     return {"message": "Transaction shared", "note_id": note_id}
+
+
+@router.post("/import-transactions")
+async def import_transactions(
+    file: UploadFile = File(...),
+    account_type: str = Form("ZAR"),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Import portfolio from EasyEquities transaction history XLSX."""
+    from ee_import import parse_transaction_xlsx, import_holdings_to_db
+
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Please upload an Excel file (.xlsx)")
+
+    contents = await file.read()
+    if len(contents) > 10 * 1024 * 1024:  # 10MB limit
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+
+    try:
+        parsed = parse_transaction_xlsx(contents)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to parse file: {str(e)}")
+
+    result = import_holdings_to_db(db, user, parsed, account_type)
+
+    return {
+        "message": result["message"],
+        "holdings_imported": result["count"],
+        "stocks": result.get("stocks", []),
+        "transactions_found": parsed["total_transactions"],
+        "added_stocks": [
+            {"contract_code": f"EE_{re.sub(r'[^A-Z0-9]', '', h['stock_name'].upper())[:10]}", "stock_name": h["stock_name"], "type": "buy"}
+            for h in parsed["holdings"]
+        ],
+    }
+
+
+@router.post("/import-preview")
+async def import_preview(
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+):
+    """Preview what would be imported from an EE transaction history file."""
+    from ee_import import parse_transaction_xlsx
+
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Please upload an Excel file (.xlsx)")
+
+    contents = await file.read()
+
+    try:
+        parsed = parse_transaction_xlsx(contents)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to parse file: {str(e)}")
+
+    return {
+        "holdings": parsed["holdings"],
+        "total_transactions": parsed["total_transactions"],
+        "total_stocks": parsed["total_stocks"],
+    }
