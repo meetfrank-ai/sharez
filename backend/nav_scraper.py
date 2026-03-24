@@ -166,14 +166,53 @@ def _clean_fund_name(name: str) -> str:
     return re.sub(r'\s+', ' ', name.strip().lower())
 
 
-def run_daily_scrape(db: Session):
+def scrape_and_store_for_holdings(db: Session):
     """
-    Main entry point for the daily scrape job.
-    Call after market close (~17:30 SAST).
+    Scrape ProfileData but only store prices for funds held by platform users.
+    Much faster than storing all 5500 funds.
 
     TEMPORARY: This will be replaced with a professional data feed.
     """
-    logger.info("Starting ProfileData NAV scrape...")
+    from models import Holding
+
+    # Get unique stock names from all user holdings
+    holdings = db.query(Holding.stock_name).distinct().all()
+    holding_names = {h[0].lower().strip() for h in holdings if h[0]}
+
+    logger.info(f"Scraping ProfileData for {len(holding_names)} unique holdings...")
+
+    prices = scrape_latest_prices()
+    if not prices:
+        logger.warning("Scrape returned no prices — preserving existing data")
+        return {"scraped": 0, "matched": 0, "stored": 0}
+
+    # Filter to only funds that match our holdings
+    matched = []
+    for p in prices:
+        fund_lower = p['fund_name'].lower().strip()
+        for holding_name in holding_names:
+            # Match if holding name is contained in scraped fund name
+            if holding_name in fund_lower or fund_lower in holding_name:
+                matched.append(p)
+                break
+
+    stored = store_scraped_prices(db, matched) if matched else 0
+
+    return {
+        "scraped": len(prices),
+        "matched": len(matched),
+        "stored": stored,
+        "source": SOURCE_URL,
+        "matched_funds": [m['fund_name'] for m in matched],
+    }
+
+
+def run_daily_scrape(db: Session):
+    """
+    Full scrape — stores ALL fund prices. Use for bulk initial load.
+    TEMPORARY: This will be replaced with a professional data feed.
+    """
+    logger.info("Starting full ProfileData NAV scrape...")
     prices = scrape_latest_prices()
 
     if not prices:

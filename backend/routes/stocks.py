@@ -80,11 +80,11 @@ def trigger_nav_scrape(
     db: Session = Depends(get_db),
 ):
     """
-    Trigger a scrape of latest fund NAV prices from ProfileData.
+    Scrape fund NAV prices from ProfileData — only for funds held by users.
     TEMPORARY: Will be replaced with professional data feed.
     """
-    from nav_scraper import run_daily_scrape
-    result = run_daily_scrape(db)
+    from nav_scraper import scrape_and_store_for_holdings
+    result = scrape_and_store_for_holdings(db)
     return result
 
 
