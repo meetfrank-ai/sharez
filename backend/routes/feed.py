@@ -138,4 +138,21 @@ async def get_stock_summary(
 ):
     """Get rich AI-generated stock summary with community data."""
     from ai_summary import get_stock_summary as _get_summary
+    from models import StockSummaryCache
+
+    # Force refresh if requested
+    refresh = contract_code  # Can add ?refresh=1 later
+    # Clear stale cache entries that have no market data
+    cached = db.query(StockSummaryCache).filter(StockSummaryCache.contract_code == contract_code).first()
+    if cached:
+        import json
+        try:
+            data = json.loads(cached.summary_text)
+            if not data.get("market_data") or not data["market_data"].get("price"):
+                db.delete(cached)
+                db.commit()
+        except Exception:
+            db.delete(cached)
+            db.commit()
+
     return await _get_summary(db, contract_code, stock_name, current_user_id=user.id)
