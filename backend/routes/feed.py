@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, FeedEvent, Follow, FollowStatus, Note, Thesis, NoteLike, EventType
+from models import User, FeedEvent, Follow, FollowStatus, Note, Thesis, NoteLike, EventType, Trade
 from schemas import UnifiedFeedItem
 from auth import get_current_user
 from tier_access import get_access_tier, can_view
@@ -121,6 +121,45 @@ def get_feed(
                 metadata=e.metadata_,
                 stock_name=e.metadata_.get("stock_name") if e.metadata_ else None,
                 stock_tag=e.metadata_.get("contract_code") if e.metadata_ else None,
+            ))
+
+    # Fetch verified trades
+    if filter in ("all", "transactions"):
+        trade_query = db.query(Trade)
+        if community_only:
+            trade_query = trade_query.filter(Trade.user_id.in_(following_ids))
+        verified_trades = trade_query.order_by(Trade.created_at.desc()).limit(limit * 2).all()
+        for t in verified_trades:
+            access = get_access_tier(db, user.id, t.user_id)
+            if not can_view(access, t.visibility):
+                continue
+            trade_user = db.query(User).filter(User.id == t.user_id).first()
+            # Get linked note body
+            note_body = None
+            if t.note_id:
+                linked_note = db.query(Note).filter(Note.id == t.note_id).first()
+                if linked_note:
+                    note_body = linked_note.body
+            items.append(UnifiedFeedItem(
+                item_type="trade",
+                id=t.id,
+                user_id=t.user_id,
+                display_name=trade_user.display_name if trade_user else None,
+                handle=trade_user.handle if trade_user else None,
+                avatar_url=trade_user.avatar_url if trade_user else None,
+                created_at=t.created_at,
+                visibility=t.visibility.value,
+                event_type=t.action,  # "buy" or "sell"
+                stock_name=t.stock_name,
+                stock_tag=t.ticker,
+                body=note_body,
+                metadata={
+                    "ticker": t.ticker,
+                    "market": t.market,
+                    "trade_date": str(t.trade_date)[:10] if t.trade_date else None,
+                    "is_verified": bool(t.screenshot_url and t.ai_confidence in ("high", "medium")),
+                    "account_type": t.account_type,
+                },
             ))
 
     # Sort all items chronologically and paginate

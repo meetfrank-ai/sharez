@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Send } from 'lucide-react';
+import { Search, Send, Plus } from 'lucide-react';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 import FeedItem from '../components/FeedItem';
 import NoteCard from '../components/NoteCard';
+import TradeCard from '../components/TradeCard';
+import ShareTradeModal from '../components/ShareTradeModal';
 
 const FILTERS = [
   { key: 'all', label: 'For you' },
@@ -18,6 +20,7 @@ export default function Feed() {
   const [scope, setScope] = useState('blend'); // 'blend' | 'community'
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [showShareTrade, setShowShareTrade] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Composer
@@ -225,9 +228,27 @@ export default function Feed() {
         displayItems.map((item) => {
           if (item.item_type === 'note') return <NoteCard key={`note-${item.id}`} note={item} />;
           if (item.item_type === 'thesis') return null; // v2: long-form articles
+          if (item.item_type === 'trade') return <TradeCard key={`trade-${item.id}`} trade={item} />;
           if (item.item_type === 'transaction') return <FeedItem key={`tx-${item.id}`} event={item} />;
           return null;
         })
+      )}
+
+      {/* FAB — Share trade button */}
+      <button
+        onClick={() => setShowShareTrade(true)}
+        className="fixed bottom-24 md:bottom-8 right-6 w-12 h-12 rounded-full flex items-center justify-center border-none cursor-pointer shadow-lg transition-transform hover:scale-105"
+        style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF', zIndex: 40 }}
+      >
+        <Plus size={22} />
+      </button>
+
+      {/* Share trade modal */}
+      {showShareTrade && (
+        <ShareTradeModal
+          onClose={() => setShowShareTrade(false)}
+          onTradeShared={() => fetchFeed()}
+        />
       )}
     </div>
   );

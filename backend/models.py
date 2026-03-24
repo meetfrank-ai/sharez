@@ -238,6 +238,31 @@ class Note(Base):
     likes = relationship("NoteLike", back_populates="note", cascade="all, delete-orphan")
 
 
+class Trade(Base):
+    __tablename__ = "trades"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action = Column(String, nullable=False)  # "buy" or "sell"
+    stock_name = Column(String, nullable=False)
+    ticker = Column(String, nullable=True)
+    market = Column(String, nullable=False, default="JSE")
+    account_type = Column(String, nullable=True)
+    trade_date = Column(DateTime, nullable=True)
+    amount_private = Column(Float, nullable=True)  # NEVER exposed via API
+    share_price_private = Column(Float, nullable=True)  # NEVER exposed
+    shares_private = Column(Float, nullable=True)  # NEVER exposed
+    screenshot_url = Column(String, nullable=True)
+    ai_confidence = Column(String, nullable=True)
+    ai_raw_response = Column(JSON, nullable=True)
+    visibility = Column(Enum(Tier), default=Tier.public)
+    note_id = Column(Integer, ForeignKey("notes.id"), nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+
+    user = relationship("User")
+    note = relationship("Note", foreign_keys=[note_id])
+
+
 class NoteLike(Base):
     __tablename__ = "note_likes"
 

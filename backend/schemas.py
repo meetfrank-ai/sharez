@@ -269,6 +269,58 @@ class ShareTransactionRequest(BaseModel):
     note: Optional[str] = None  # optional note to attach
 
 
+# --- Trades ---
+
+class TradeExtraction(BaseModel):
+    action: Optional[str] = None
+    stock_name: Optional[str] = None
+    ticker: Optional[str] = None
+    date: Optional[str] = None
+    account_type: Optional[str] = None
+    amount_zar: Optional[float] = None
+    share_price: Optional[float] = None
+    shares: Optional[float] = None
+    confidence: str = "low"
+    error: Optional[str] = None
+
+
+class TradeCreate(BaseModel):
+    action: str
+    stock_name: str
+    ticker: Optional[str] = None
+    market: str = "JSE"
+    account_type: Optional[str] = None
+    trade_date: Optional[str] = None
+    amount_private: Optional[float] = None
+    share_price_private: Optional[float] = None
+    shares_private: Optional[float] = None
+    screenshot_url: Optional[str] = None
+    ai_confidence: Optional[str] = None
+    visibility: str = "public"
+    note_body: Optional[str] = None
+
+
+class TradeOut(BaseModel):
+    id: int
+    user_id: int
+    display_name: Optional[str] = None
+    handle: Optional[str] = None
+    action: str
+    stock_name: str
+    ticker: Optional[str] = None
+    market: str
+    account_type: Optional[str] = None
+    trade_date: Optional[datetime] = None
+    is_verified: bool = False
+    ai_confidence: Optional[str] = None
+    visibility: str = "public"
+    note_body: Optional[str] = None
+    note_id: Optional[int] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class FeedEventOut(BaseModel):
     id: int
     user_id: int
