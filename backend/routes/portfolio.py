@@ -51,13 +51,17 @@ def get_user_holdings(
     if not target:
         raise HTTPException(status_code=404, detail="User not found")
 
+    is_self = current_user.id == user_id
     access = get_access_tier(db, current_user.id, user_id)
     config = target.tier_config
 
     holdings = db.query(Holding).filter(Holding.user_id == user_id).all()
 
+    # Self-view: return everything unmodified
+    if is_self:
+        return holdings
+
     if not config:
-        # No config — only show public (stock names if enabled)
         return []
 
     # Determine what to show based on tier access
@@ -68,28 +72,33 @@ def get_user_holdings(
     else:
         shows = config.public_shows or []
 
-    # Check if stock names are visible at this tier
-    show_stocks = "stock_names" in shows or "amounts" in shows
-    show_allocation = "allocation_pct" in shows
-    show_amounts = "amounts" in shows
-
+    show_stocks = "stock_names" in shows or "amounts" in shows or "allocation_pct" in shows
     if not show_stocks and "sectors" not in shows:
         return []
 
-    total_value = sum(h.current_value or 0 for h in holdings)
-    result = []
+    show_allocation = "allocation_pct" in shows or "amounts" in shows
 
-    for h in holdings:
+    total_value = sum(h.current_value or 0 for h in holdings)
+
+    # Sort by current_value DESC for top-N logic and weight calculation
+    holdings_sorted = sorted(holdings, key=lambda h: h.current_value or 0, reverse=True)
+
+    # Public tier: only return top 5 holdings
+    if access == Tier.public:
+        holdings_sorted = holdings_sorted[:5]
+
+    result = []
+    for h in holdings_sorted:
         out = HoldingOut.model_validate(h)
 
-        if not show_amounts:
-            out.purchase_value = None
-            out.current_price = None
-            out.shares = None
-            if show_allocation and total_value > 0 and h.current_value:
-                out.current_value = round((h.current_value / total_value) * 100, 2)
-            elif not show_allocation:
-                out.current_value = None
+        # Never expose rand amounts to other users — only percentages
+        weight_pct = round((h.current_value / total_value) * 100, 2) if (total_value > 0 and h.current_value) else None
+        pnl_pct = round(((h.current_value - h.purchase_value) / h.purchase_value) * 100, 2) if (h.purchase_value and h.current_value and h.purchase_value > 0) else None
+
+        out.purchase_value = None
+        out.current_price = None
+        out.shares = None
+        out.current_value = weight_pct if show_allocation else None
 
         result.append(out)
 
@@ -256,7 +265,7 @@ def share_transaction(
     if data.note:
         note = Note(
             user_id=user.id,
-            body=data.note[:500],
+            body=data.note,
             visibility=Tier.public,
             stock_tag=data.contract_code,
             stock_name=data.stock_name,

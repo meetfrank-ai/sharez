@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Send, Share2 } from 'lucide-react';
+import { Heart, MessageCircle, Send, Share2, Lock } from 'lucide-react';
 import TierBadge from './TierBadge';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
@@ -104,9 +104,26 @@ export default function NoteCard({ note, onReplyPosted }) {
         </div>
 
         {/* Body */}
-        <p className="text-sm leading-relaxed whitespace-pre-line m-0 mb-3" style={{ color: 'var(--text-primary)' }}>
-          {note.body}
-        </p>
+        {note.locked ? (
+          <div className="relative mb-3">
+            <p
+              className="text-sm leading-relaxed whitespace-pre-line m-0"
+              style={{ color: 'var(--text-primary)', filter: 'blur(4px)', userSelect: 'none' }}
+            >
+              {note.body}
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <Lock size={14} style={{ color: 'var(--text-muted)' }} />
+              <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+                {note.visibility === 'vault' ? 'Join vault to read' : 'Follow to unlock'}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm leading-relaxed whitespace-pre-line m-0 mb-3" style={{ color: 'var(--text-primary)' }}>
+            {note.body}
+          </p>
+        )}
 
         {/* Stock tag */}
         {note.stock_name && (
@@ -122,31 +139,33 @@ export default function NoteCard({ note, onReplyPosted }) {
       </div>
 
       {/* Footer — actions (not clickable to navigate) */}
-      <div className="flex items-center gap-5 px-5 py-3" style={{ borderTop: '1px solid var(--border)' }}>
-        <button
-          onClick={toggleLike}
-          className="flex items-center gap-1.5 text-xs bg-transparent border-none cursor-pointer p-0"
-          style={{ color: liked ? 'var(--danger)' : 'var(--text-muted)' }}
-        >
-          <Heart size={15} fill={liked ? 'var(--danger)' : 'none'} />
-          {likeCount}
-        </button>
-        <button
-          onClick={handleCommentClick}
-          className="flex items-center gap-1.5 text-xs bg-transparent border-none cursor-pointer p-0"
-          style={{ color: showReply ? 'var(--accent)' : 'var(--text-muted)' }}
-        >
-          <MessageCircle size={15} fill={showReply ? 'var(--accent-light)' : 'none'} />
-          {replyCount}
-        </button>
-        <button
-          className="flex items-center gap-1.5 text-xs bg-transparent border-none cursor-pointer p-0 ml-auto"
-          style={{ color: 'var(--text-muted)' }}
-          onClick={(e) => { e.stopPropagation(); /* share functionality later */ }}
-        >
-          <Share2 size={14} />
-        </button>
-      </div>
+      {!note.locked && (
+        <div className="flex items-center gap-5 px-5 py-3" style={{ borderTop: '1px solid var(--border)' }}>
+          <button
+            onClick={toggleLike}
+            className="flex items-center gap-1.5 text-xs bg-transparent border-none cursor-pointer p-0"
+            style={{ color: liked ? 'var(--danger)' : 'var(--text-muted)' }}
+          >
+            <Heart size={15} fill={liked ? 'var(--danger)' : 'none'} />
+            {likeCount}
+          </button>
+          <button
+            onClick={handleCommentClick}
+            className="flex items-center gap-1.5 text-xs bg-transparent border-none cursor-pointer p-0"
+            style={{ color: showReply ? 'var(--accent)' : 'var(--text-muted)' }}
+          >
+            <MessageCircle size={15} fill={showReply ? 'var(--accent-light)' : 'none'} />
+            {replyCount}
+          </button>
+          <button
+            className="flex items-center gap-1.5 text-xs bg-transparent border-none cursor-pointer p-0 ml-auto"
+            style={{ color: 'var(--text-muted)' }}
+            onClick={(e) => { e.stopPropagation(); /* share functionality later */ }}
+          >
+            <Share2 size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Inline reply bar */}
       {showReply && (

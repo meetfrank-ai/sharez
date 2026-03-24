@@ -39,9 +39,6 @@ def create_note(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if len(data.body) > 500:
-        raise HTTPException(status_code=400, detail="Note cannot exceed 500 characters")
-
     visibility = Tier(data.visibility)
 
     # Replies inherit parent visibility (cannot be more public)
@@ -141,11 +138,17 @@ def get_user_notes(
         .all()
     )
 
-    return [
-        _note_to_out(n, current_user.id, db)
-        for n in notes
-        if can_view(access, n.visibility)
-    ]
+    result = []
+    for n in notes:
+        out = _note_to_out(n, current_user.id, db)
+        if not can_view(access, n.visibility):
+            # Return a locked teaser instead of hiding the note
+            out.body = (n.body[:100] + "...") if len(n.body) > 100 else n.body
+            out.locked = True
+            out.liked_by_me = False
+        result.append(out)
+
+    return result
 
 
 @router.get("/{note_id}/thread", response_model=list[NoteOut])

@@ -154,6 +154,7 @@ class NoteOut(BaseModel):
     like_count: int = 0
     reply_count: int = 0
     liked_by_me: bool = False
+    locked: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}

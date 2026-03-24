@@ -7,9 +7,6 @@ export default function NoteComposer({ stockTag, stockName, parentNoteId, onPost
   const [visibility, setVisibility] = useState('public');
   const [posting, setPosting] = useState(false);
 
-  const maxChars = 500;
-  const remaining = maxChars - body.length;
-
   const handlePost = async () => {
     if (!body.trim() || posting) return;
     setPosting(true);
@@ -41,7 +38,7 @@ export default function NoteComposer({ stockTag, stockName, parentNoteId, onPost
     >
       <textarea
         value={body}
-        onChange={(e) => setBody(e.target.value.slice(0, maxChars))}
+        onChange={(e) => setBody(e.target.value)}
         placeholder={parentNoteId ? "Write a reply..." : "What's on your mind?"}
         rows={2}
         className="w-full px-0 py-1 text-sm outline-none resize-none bg-transparent border-none"
@@ -66,12 +63,6 @@ export default function NoteComposer({ stockTag, stockName, parentNoteId, onPost
               <option value="vault">Vault</option>
             </select>
           )}
-          <span
-            className="text-xs"
-            style={{ color: remaining < 50 ? 'var(--danger)' : 'var(--text-muted)' }}
-          >
-            {remaining}
-          </span>
         </div>
 
         <button

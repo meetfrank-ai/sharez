@@ -29,7 +29,6 @@ export default function Feed() {
   const [composerExpanded, setComposerExpanded] = useState(false);
   const [posting, setPosting] = useState(false);
   const textareaRef = useRef(null);
-  const remaining = 500 - composerBody.length;
 
   const fetchFeed = (f = filter, s = scope) => {
     setLoading(true);
@@ -136,7 +135,7 @@ export default function Feed() {
                 <textarea
                   ref={textareaRef}
                   value={composerBody}
-                  onChange={(e) => setComposerBody(e.target.value.slice(0, 500))}
+                  onChange={(e) => setComposerBody(e.target.value)}
                   placeholder="Share a thought, stock pick, or hot take..."
                   rows={3}
                   className="w-full text-sm outline-none resize-none bg-transparent border-none p-0"
@@ -153,7 +152,6 @@ export default function Feed() {
                   <option value="inner_circle">Inner Circle</option>
                   <option value="vault">Vault</option>
                 </select>
-                <span className="text-xs" style={{ color: remaining < 50 ? 'var(--danger)' : 'var(--text-muted)' }}>{remaining}</span>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => { setComposerExpanded(false); setComposerBody(''); }}
