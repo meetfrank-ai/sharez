@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, FeedEvent, Follow, FollowStatus, Note, Thesis, NoteLike, EventType, Trade
+from models import User, FeedEvent, Follow, FollowStatus, Note, Thesis, NoteLike, NoteReshare, EventType, Trade
 from schemas import UnifiedFeedItem
 from auth import get_current_user
 from tier_access import get_access_tier, can_view
@@ -160,6 +160,41 @@ def get_feed(
                     "is_verified": bool(t.screenshot_url and t.ai_confidence in ("high", "medium")),
                     "account_type": t.account_type,
                 },
+            ))
+
+    # Fetch reshares (notes reshared by people you follow)
+    if filter in ("all", "notes"):
+        reshare_query = db.query(NoteReshare).join(Note, NoteReshare.note_id == Note.id)
+        if community_only:
+            reshare_query = reshare_query.filter(NoteReshare.user_id.in_(following_ids))
+        reshares = reshare_query.order_by(NoteReshare.created_at.desc()).limit(limit).all()
+        for r in reshares:
+            note = db.query(Note).filter(Note.id == r.note_id).first()
+            if not note:
+                continue
+            access = get_access_tier(db, user.id, note.user_id)
+            if not can_view(access, note.visibility):
+                continue
+            resharer = db.query(User).filter(User.id == r.user_id).first()
+            liked = db.query(NoteLike).filter(NoteLike.note_id == note.id, NoteLike.user_id == user.id).first() is not None
+            items.append(UnifiedFeedItem(
+                item_type="reshare",
+                id=note.id,
+                user_id=note.user_id,
+                display_name=note.user.display_name,
+                handle=note.user.handle,
+                avatar_url=note.user.avatar_url,
+                created_at=r.created_at,  # reshare time, not original note time
+                visibility=note.visibility.value,
+                body=note.body,
+                stock_tag=note.stock_tag,
+                stock_name=note.stock_name,
+                like_count=note.like_count,
+                reply_count=note.reply_count,
+                liked_by_me=liked,
+                reshared_by_name=resharer.display_name if resharer else None,
+                reshared_by_handle=resharer.handle if resharer else None,
+                reshared_by_id=r.user_id,
             ))
 
     # Sort all items chronologically and paginate

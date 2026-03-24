@@ -215,7 +215,7 @@ class CommentOut(BaseModel):
 # --- Feed ---
 
 class UnifiedFeedItem(BaseModel):
-    item_type: str  # "note", "thesis", "transaction"
+    item_type: str  # "note", "thesis", "transaction", "trade", "reshare"
     id: int
     user_id: int
     display_name: Optional[str] = None
@@ -223,6 +223,10 @@ class UnifiedFeedItem(BaseModel):
     avatar_url: Optional[str] = None
     created_at: datetime
     visibility: Optional[str] = None
+    # Reshare fields
+    reshared_by_name: Optional[str] = None
+    reshared_by_handle: Optional[str] = None
+    reshared_by_id: Optional[int] = None
     # Note fields
     body: Optional[str] = None
     stock_tag: Optional[str] = None

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Send, Share2, Lock, Bookmark, Repeat2, LinkIcon, X, TrendingUp, TrendingDown } from 'lucide-react';
+import { Heart, MessageCircle, Send, Lock, Bookmark, Repeat2, TrendingUp, TrendingDown } from 'lucide-react';
 import TierBadge from './TierBadge';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
@@ -15,7 +15,6 @@ export default function NoteCard({ note, onReplyPosted }) {
   const [reshared, setReshared] = useState(note.reshared_by_me);
   const [saved, setSaved] = useState(note.saved_by_me);
   const [showReply, setShowReply] = useState(false);
-  const [showShareMenu, setShowShareMenu] = useState(false);
   const [replyBody, setReplyBody] = useState('');
   const [posting, setPosting] = useState(false);
 
@@ -73,20 +72,6 @@ export default function NoteCard({ note, onReplyPosted }) {
       onReplyPosted?.();
     } catch { alert('Failed to post reply'); }
     finally { setPosting(false); }
-  };
-
-  const handleShareClick = (e) => {
-    e.preventDefault(); e.stopPropagation();
-    setShowShareMenu(!showShareMenu);
-  };
-
-  const shareUrl = `${window.location.origin}/note/${note.id}`;
-  const shareText = `${note.display_name}: "${note.body?.slice(0, 100)}${note.body?.length > 100 ? '...' : ''}" — on Sharez`;
-
-  const copyLink = (e) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(shareUrl);
-    setShowShareMenu(false);
   };
 
   const time = new Date(note.created_at).toLocaleDateString('en-ZA', {
@@ -176,55 +161,11 @@ export default function NoteCard({ note, onReplyPosted }) {
             style={{ color: reshared ? 'var(--success)' : 'var(--text-muted)' }}>
             <Repeat2 size={15} /> {reshareCount}
           </button>
-          <div className="ml-auto flex items-center gap-3">
-            <button onClick={toggleSave}
-              className="bg-transparent border-none cursor-pointer p-0"
-              style={{ color: saved ? 'var(--accent)' : 'var(--text-muted)' }}>
-              <Bookmark size={15} fill={saved ? 'var(--accent)' : 'none'} />
-            </button>
-            <button onClick={handleShareClick}
-              className="bg-transparent border-none cursor-pointer p-0"
-              style={{ color: 'var(--text-muted)' }}>
-              <Share2 size={14} />
-            </button>
-          </div>
-
-          {/* Share menu */}
-          {showShareMenu && (
-            <div className="absolute right-4 bottom-12 rounded-lg shadow-lg p-2 z-10"
-              style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', minWidth: 160 }}>
-              <button onClick={copyLink} className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs text-left bg-transparent border-none cursor-pointer"
-                style={{ color: 'var(--text-primary)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                <LinkIcon size={13} /> Copy link
-              </button>
-              <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`}
-                target="_blank" rel="noopener noreferrer"
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs no-underline"
-                style={{ color: 'var(--text-primary)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                𝕏 Share on X
-              </a>
-              <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`}
-                target="_blank" rel="noopener noreferrer"
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs no-underline"
-                style={{ color: 'var(--text-primary)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                in Share on LinkedIn
-              </a>
-              <a href={`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`}
-                target="_blank" rel="noopener noreferrer"
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs no-underline"
-                style={{ color: 'var(--text-primary)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                💬 Share on WhatsApp
-              </a>
-            </div>
-          )}
+          <button onClick={toggleSave}
+            className="bg-transparent border-none cursor-pointer p-0 ml-auto"
+            style={{ color: saved ? 'var(--accent)' : 'var(--text-muted)' }}>
+            <Bookmark size={15} fill={saved ? 'var(--accent)' : 'none'} />
+          </button>
         </div>
       )}
 
