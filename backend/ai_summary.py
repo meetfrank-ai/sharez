@@ -43,9 +43,10 @@ async def get_stock_summary(db: Session, contract_code: str, stock_name: str, cu
         if age < timedelta(hours=CACHE_HOURS):
             try:
                 summary_data = json.loads(cached.summary_text)
-                # Skip cache if it's a fallback summary (API key wasn't set when cached)
-                if "ANTHROPIC_API_KEY" in summary_data.get("risk_note", ""):
-                    pass  # Regenerate
+                # Skip cache if it has stale content
+                risk = summary_data.get("risk_note", "")
+                if "ANTHROPIC_API_KEY" in risk or "people holding" in risk or "community" in risk.lower():
+                    pass  # Regenerate — stale prompt
                 else:
                     summary_data["community"] = _get_community_data(db, contract_code, stock_name, current_user_id)
                     summary_data["why_people_invest"] = _get_investment_reasons(db, contract_code)
@@ -281,17 +282,10 @@ def _fetch_yfinance(stock_name: str) -> dict:
 
 
 def _get_community_data(db: Session, contract_code: str, stock_name: str, current_user_id: int = None) -> dict:
-    """Get platform community stats for a stock."""
-    # Total holders
-    total_holders = (
-        db.query(Holding.user_id)
-        .filter(Holding.contract_code == contract_code)
-        .distinct()
-        .count()
-    )
+    """Get community stats scoped to people the current user follows."""
 
-    # Holders among people the current user follows
-    following_holders = []
+    # Get who the current user follows
+    following_ids = []
     if current_user_id:
         following_ids = [
             f[0] for f in
@@ -300,20 +294,35 @@ def _get_community_data(db: Session, contract_code: str, stock_name: str, curren
             .all()
         ]
 
-        if following_ids:
-            holders = (
-                db.query(User)
-                .join(Holding, Holding.user_id == User.id)
-                .filter(Holding.contract_code == contract_code, User.id.in_(following_ids))
-                .all()
-            )
-            following_holders = [
-                {"id": u.id, "display_name": u.display_name, "handle": u.handle}
-                for u in holders
-            ]
+    # If user follows nobody, return empty community
+    if not following_ids:
+        return {
+            "total_holders": 0,
+            "following_holders": [],
+            "avg_allocation_pct": 0,
+            "recent_buys": 0,
+            "recent_sells": 0,
+        }
 
-    # Average allocation among holders
-    holdings = db.query(Holding).filter(Holding.contract_code == contract_code).all()
+    # Holders among people you follow
+    holders = (
+        db.query(User)
+        .join(Holding, Holding.user_id == User.id)
+        .filter(Holding.contract_code == contract_code, User.id.in_(following_ids))
+        .all()
+    )
+    following_holders = [
+        {"id": u.id, "display_name": u.display_name, "handle": u.handle}
+        for u in holders
+    ]
+    total_holders = len(following_holders)
+
+    # Average allocation among followed holders
+    holdings = (
+        db.query(Holding)
+        .filter(Holding.contract_code == contract_code, Holding.user_id.in_(following_ids))
+        .all()
+    )
     avg_allocation = 0
     if holdings:
         allocations = []
@@ -327,7 +336,7 @@ def _get_community_data(db: Session, contract_code: str, stock_name: str, curren
         if allocations:
             avg_allocation = round(sum(allocations) / len(allocations), 1)
 
-    # Recent buys and sells (from FeedEvents in last 14 days)
+    # Recent buys and sells from FOLLOWED users only (last 14 days)
     from models import FeedEvent, EventType
     from datetime import datetime, timezone, timedelta
     cutoff = datetime.now(timezone.utc) - timedelta(days=14)
@@ -336,6 +345,7 @@ def _get_community_data(db: Session, contract_code: str, stock_name: str, curren
         db.query(FeedEvent)
         .filter(
             FeedEvent.event_type == EventType.added_stock,
+            FeedEvent.user_id.in_(following_ids),
             FeedEvent.created_at >= cutoff,
         )
         .all()
@@ -349,6 +359,7 @@ def _get_community_data(db: Session, contract_code: str, stock_name: str, curren
         db.query(FeedEvent)
         .filter(
             FeedEvent.event_type == EventType.removed_stock,
+            FeedEvent.user_id.in_(following_ids),
             FeedEvent.created_at >= cutoff,
         )
         .all()
