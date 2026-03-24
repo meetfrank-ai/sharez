@@ -17,6 +17,112 @@ from models import User, Holding, UserTransaction, AccountType
 logger = logging.getLogger(__name__)
 
 
+def verify_ee_xlsx(file_bytes: bytes) -> dict:
+    """Verify an XLSX file is genuinely from EasyEquities. Returns score and checks."""
+    import openpyxl
+    from datetime import datetime as dt
+
+    try:
+        wb = openpyxl.load_workbook(BytesIO(file_bytes), read_only=True)
+    except Exception:
+        return {"score": 0, "max_score": 9, "checks": {}, "verified": False}
+
+    ws = wb.active
+    checks = {}
+
+    # 1. Sheet name
+    checks["sheet_name"] = ws.title == "Transaction History"
+
+    # 2-4. Column headers
+    checks["col_date"] = str(ws.cell(1, 1).value or "").strip() == "Date"
+    checks["col_comment"] = str(ws.cell(1, 2).value or "").strip() == "Comment"
+    checks["col_debit"] = str(ws.cell(1, 3).value or "").strip() == "Debit/Credit"
+
+    # 5. Balance row
+    row2_comment = str(ws.cell(2, 2).value or "")
+    checks["balance_row"] = "Account Balance Carried Forward" in row2_comment
+
+    # 6. Date is datetime object (not string)
+    checks["date_is_datetime"] = isinstance(ws.cell(2, 1).value, dt)
+
+    # 7-9. EE-specific fee patterns in first 100 rows
+    has_broker_fee = False
+    has_settlement = False
+    has_vat = False
+    for row in range(2, min(100, ws.max_row + 1)):
+        comment = str(ws.cell(row, 2).value or "")
+        if "Broker Commission" in comment:
+            has_broker_fee = True
+        if "Settlement and administration" in comment:
+            has_settlement = True
+        if "Value Added Tax" in comment:
+            has_vat = True
+
+    checks["has_broker_fees"] = has_broker_fee
+    checks["has_settlement"] = has_settlement
+    checks["has_vat"] = has_vat
+
+    wb.close()
+
+    score = sum(checks.values())
+    max_score = len(checks)
+
+    # Fee consistency check on first 3 buy transactions
+    fee_consistent = _check_fee_consistency(file_bytes)
+    checks["fee_consistency"] = fee_consistent
+    if fee_consistent:
+        score += 1
+    max_score += 1
+
+    verified = score >= 8  # 8/10 = verified, 5-7 = imported, <5 = unverified
+    badge = "verified" if score >= 8 else "imported" if score >= 5 else "unverified"
+
+    return {
+        "score": score,
+        "max_score": max_score,
+        "checks": checks,
+        "verified": verified,
+        "badge": badge,
+    }
+
+
+def _check_fee_consistency(file_bytes: bytes) -> bool:
+    """Check if broker fees are ~0.25% of trade amounts for first few buys."""
+    import openpyxl
+
+    try:
+        wb = openpyxl.load_workbook(BytesIO(file_bytes), read_only=True)
+        ws = wb.active
+
+        checked = 0
+        consistent = 0
+
+        for row in range(2, ws.max_row + 1):
+            comment = str(ws.cell(row, 2).value or "")
+            amount = ws.cell(row, 3).value or 0
+
+            if comment.startswith("Bought ") and abs(amount) > 100:
+                trade_amount = abs(amount)
+                # Next row should be broker commission
+                next_comment = str(ws.cell(row + 1, 2).value or "")
+                next_amount = abs(ws.cell(row + 1, 3).value or 0)
+
+                if "Broker Commission" in next_comment and next_amount > 0:
+                    fee_pct = (next_amount / trade_amount) * 100
+                    # EE charges 0.25% — allow 0.1% to 0.5% range
+                    if 0.1 <= fee_pct <= 0.5:
+                        consistent += 1
+                    checked += 1
+
+                if checked >= 3:
+                    break
+
+        wb.close()
+        return checked > 0 and consistent == checked
+    except Exception:
+        return False
+
+
 def parse_transaction_xlsx(file_bytes: bytes) -> dict:
     """Parse an EasyEquities Transaction History XLSX file."""
     import openpyxl

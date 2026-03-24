@@ -310,8 +310,8 @@ async def import_transactions(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Import transactions from EasyEquities XLSX. Stores raw transactions and rebuilds holdings."""
-    from ee_import import parse_transaction_xlsx, import_transactions_to_db
+    """Import transactions from EasyEquities XLSX. Verifies, stores, and rebuilds holdings."""
+    from ee_import import parse_transaction_xlsx, import_transactions_to_db, verify_ee_xlsx
 
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="Please upload an Excel file (.xlsx)")
@@ -320,6 +320,9 @@ async def import_transactions(
     if len(contents) > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large (max 10MB)")
 
+    # Verify file is genuinely from EasyEquities
+    verification = verify_ee_xlsx(contents)
+
     try:
         parsed = parse_transaction_xlsx(contents)
     except Exception as e:
@@ -327,7 +330,7 @@ async def import_transactions(
 
     result = import_transactions_to_db(db, user, parsed, account_type)
 
-    # Update portfolio_imported_at timestamp
+    # Update timestamps and verification score
     from datetime import datetime as dt, timezone as tz
     user.portfolio_imported_at = dt.now(tz.utc)
     db.commit()
@@ -335,6 +338,7 @@ async def import_transactions(
     return {
         "message": result["message"],
         "holdings_imported": result["count"],
+        "verification": verification,
         "new_transactions": result["new_count"],
         "stocks": result.get("stocks", []),
         "transactions_found": result["total_transactions"],
