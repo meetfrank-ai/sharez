@@ -90,7 +90,7 @@ async def get_stock_summary(db: Session, contract_code: str, stock_name: str, cu
 def _get_market_data(stock_name: str) -> dict:
     """Pull price, metrics, and news from EODHD (primary) or yfinance (fallback)."""
 
-    # Ticker mapping: stock_name → EODHD ticker (SYMBOL.XJSE)
+    # Ticker mapping: stock_name → EODHD ticker
     TICKER_MAP = {
         "Capitec Bank": "CPI.JSE", "Naspers": "NPN.JSE", "Standard Bank": "SBK.JSE",
         "Shoprite": "SHP.JSE", "MTN": "MTN.JSE", "Sasol": "SOL.JSE",
@@ -99,13 +99,29 @@ def _get_market_data(stock_name: str) -> dict:
         "Redefine Properties": "RDF.JSE",
     }
 
+    # Sector mapping (EODHD fundamentals requires paid tier for JSE)
+    SECTOR_MAP = {
+        "Capitec Bank": "Financials", "Naspers": "Technology", "Standard Bank": "Financials",
+        "Shoprite": "Consumer Staples", "MTN": "Telecommunications", "Sasol": "Energy",
+        "FirstRand": "Financials", "Discovery": "Financials", "Woolworths": "Consumer Discretionary",
+        "Absa Group": "Financials", "Sanlam": "Financials", "Clicks Group": "Consumer Staples",
+        "Redefine Properties": "Real Estate",
+    }
+
     eodhd_key = os.getenv("EODHD_API_KEY")
     ticker = TICKER_MAP.get(stock_name, stock_name.replace(" ", "")[:3].upper() + ".JSE")
+    sector = SECTOR_MAP.get(stock_name, "Equities")
 
     if eodhd_key:
-        return _fetch_eodhd(ticker, eodhd_key, stock_name)
+        result = _fetch_eodhd(ticker, eodhd_key, stock_name)
     else:
-        return _fetch_yfinance(stock_name)
+        result = _fetch_yfinance(stock_name)
+
+    # Ensure sector is set (fundamentals may not be available)
+    if not result.get("metrics", {}).get("sector") or result["metrics"]["sector"] == "N/A":
+        result.setdefault("metrics", {})["sector"] = sector
+
+    return result
 
 
 def _fetch_eodhd(ticker: str, api_key: str, stock_name: str) -> dict:
