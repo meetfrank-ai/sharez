@@ -1,4 +1,5 @@
 import os
+import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, status
@@ -10,7 +11,14 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import User
 
+logger = logging.getLogger(__name__)
+
 SECRET_KEY = os.getenv("SHAREZ_SECRET_KEY", "dev-secret-change-me-in-production")
+if SECRET_KEY == "dev-secret-change-me-in-production":
+    logger.warning(
+        "SHAREZ_SECRET_KEY is not set — using insecure default. "
+        "Set SHAREZ_SECRET_KEY in environment variables before deploying to production."
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
 

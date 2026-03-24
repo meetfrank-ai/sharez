@@ -137,11 +137,11 @@ export default function Portfolio() {
                   <div className="space-y-1.5 mt-2">
                     {pieData.map((d, i) => (
                       <div key={i} className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                          <span style={{ color: 'var(--text-secondary)' }}>{d.name}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                          <span className="truncate" style={{ color: 'var(--text-secondary)' }}>{d.name}</span>
                         </div>
-                        <span style={{ color: 'var(--text-primary)' }}>
+                        <span className="shrink-0 ml-2" style={{ color: 'var(--text-primary)' }}>
                           {totalValue > 0 ? `${((d.value / totalValue) * 100).toFixed(1)}%` : '—'}
                         </span>
                       </div>
@@ -151,6 +151,11 @@ export default function Portfolio() {
               </div>
             )}
           </div>
+
+          {/* Calculation note */}
+          <p className="text-[11px] mt-4" style={{ color: 'var(--text-muted)' }}>
+            Portfolio values are estimated from imported transactions and latest market prices. May not reflect all holdings if not all accounts have been imported.
+          </p>
         </>
       )}
     </div>

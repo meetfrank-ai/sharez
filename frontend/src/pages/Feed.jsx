@@ -20,7 +20,6 @@ export default function Feed() {
   const [scope, setScope] = useState('blend'); // 'blend' | 'community'
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
-  // Trade sharing moved to Transactions page
   const [loading, setLoading] = useState(true);
 
   // Composer
@@ -382,7 +381,6 @@ export default function Feed() {
         })
       )}
 
-      {/* Trade sharing moved to Transactions page */}
     </div>
   );
 }

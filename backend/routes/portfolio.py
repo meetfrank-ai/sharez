@@ -1,5 +1,3 @@
-import re
-
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
@@ -8,7 +6,7 @@ from models import User, Holding, Tier, InvestmentReason, FeedEvent, EventType, 
 from schemas import HoldingOut, EECredentials, TierConfigUpdate, TierConfigOut, InvestmentReasonCreate, InvestmentReasonOut, ShareTransactionRequest, StockFollowOut
 from auth import get_current_user
 from ee_sync import store_ee_credentials, sync_portfolio
-from tier_access import get_access_tier, can_view
+from tier_access import get_access_tier
 
 router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 
@@ -38,7 +36,23 @@ def get_my_holdings(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return db.query(Holding).filter(Holding.user_id == user.id).all()
+    holdings = db.query(Holding).filter(Holding.user_id == user.id).all()
+
+    # Auto-refresh prices if stale (older than 1 hour)
+    if holdings:
+        from datetime import datetime, timezone, timedelta
+        oldest_sync = min((h.last_synced_at for h in holdings if h.last_synced_at), default=None)
+        if oldest_sync:
+            age = datetime.now(timezone.utc) - oldest_sync.replace(tzinfo=timezone.utc)
+            if age > timedelta(hours=1):
+                try:
+                    from ee_import import refresh_user_prices
+                    refresh_user_prices(db, user)
+                    holdings = db.query(Holding).filter(Holding.user_id == user.id).all()
+                except Exception:
+                    pass
+
+    return holdings
 
 
 @router.get("/user/{user_id}", response_model=list[HoldingOut])
@@ -140,13 +154,14 @@ def get_tier_config(
     return user.tier_config
 
 
+# v2: InvestmentReason endpoints — not yet called by the frontend.
 @router.post("/investment-reason", response_model=InvestmentReasonOut, status_code=201)
 def save_investment_reason(
     data: InvestmentReasonCreate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Save why a user invested in a stock."""
+    """Save why a user invested in a stock. (v2 — not yet used by frontend)"""
     # Upsert — update if already exists for this user+stock
     existing = (
         db.query(InvestmentReason)
@@ -173,6 +188,7 @@ def save_investment_reason(
     return reason
 
 
+# v2: not yet called by frontend.
 @router.delete("/investment-reason/{contract_code}")
 def delete_investment_reason(
     contract_code: str,

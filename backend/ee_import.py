@@ -3,6 +3,7 @@ EasyEquities file import — parse transaction history XLSX,
 store raw transactions, and derive holdings.
 """
 
+import os
 import re
 import hashlib
 import logging
@@ -206,8 +207,77 @@ def _rebuild_holdings(db: Session, user: User, account_type: str):
             stock_name=name,
             contract_code=data['contract_code'],
             purchase_value=data['total_cost'],
-            current_value=data['total_cost'],  # Updated by EODHD price refresh
+            current_value=data['total_cost'],  # Will be updated by refresh_holdings_prices
             current_price=avg_price,
             shares=data['shares'],
             last_synced_at=now,
         ))
+
+    # Try to update with live prices
+    try:
+        _refresh_holdings_prices(db, user)
+    except Exception as e:
+        logger.warning(f"Price refresh failed for user {user.id}: {e}")
+
+
+def _refresh_holdings_prices(db: Session, user: User):
+    """Fetch current prices from EODHD and update holdings."""
+    eodhd_key = os.getenv("EODHD_API_KEY")
+    if not eodhd_key:
+        return
+
+    import httpx
+    from datetime import timedelta
+
+    TICKER_MAP = {
+        "Capitec Bank": "CPI.JSE", "Naspers": "NPN.JSE", "Standard Bank": "SBK.JSE",
+        "Shoprite": "SHP.JSE", "MTN": "MTN.JSE", "Sasol": "SOL.JSE",
+        "FirstRand": "FSR.JSE", "Discovery": "DSY.JSE", "Woolworths": "WHL.JSE",
+        "Absa Group": "ABG.JSE", "Sanlam": "SLM.JSE", "Clicks Group": "CLS.JSE",
+        "Redefine Properties": "RDF.JSE", "Prosus N.V": "PRX.JSE",
+        "Allan Gray Orbis Global Equity Feeder AMETF": None,  # No EODHD ticker
+        "Coronation Global Emerging Markets Prescient Feeder AMETF": None,
+        "36ONE BCI SA Equity Fund Class C": None,
+        "Merchant West SCI Value Fund": None,
+        "EasyETFs Global Equity Actively Managed ETF": None,
+    }
+
+    holdings = db.query(Holding).filter(Holding.user_id == user.id).all()
+    now = datetime.now(timezone.utc)
+
+    for h in holdings:
+        ticker = TICKER_MAP.get(h.stock_name)
+        if not ticker:
+            # Try to construct from stock name
+            code = re.sub(r'[^A-Z]', '', h.stock_name.upper())[:3]
+            ticker = f"{code}.JSE"
+
+        try:
+            end = now.strftime("%Y-%m-%d")
+            start = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+            resp = httpx.get(
+                f"https://eodhd.com/api/eod/{ticker}",
+                params={"api_token": eodhd_key, "fmt": "json", "from": start, "to": end, "order": "d"},
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                eod = resp.json()
+                if isinstance(eod, list) and len(eod) > 0:
+                    # EODHD JSE prices are in cents
+                    close_cents = eod[0].get("close", 0)
+                    close_rands = close_cents / 100
+
+                    h.current_price = close_rands
+                    if h.shares and h.shares > 0:
+                        h.current_value = round(h.shares * close_rands, 2)
+                    h.last_synced_at = now
+                    logger.info(f"Updated {h.stock_name}: R{close_rands:.2f} × {h.shares:.2f} = R{h.current_value:.2f}")
+        except Exception as e:
+            logger.warning(f"Price fetch failed for {h.stock_name} ({ticker}): {e}")
+
+    db.commit()
+
+
+def refresh_user_prices(db: Session, user: User):
+    """Public function to refresh holdings prices for a user."""
+    _refresh_holdings_prices(db, user)

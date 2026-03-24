@@ -381,5 +381,3 @@ def get_public_note(
         "reshare_count": note.reshare_count or 0,
         "created_at": str(note.created_at),
     }
-
-    return result

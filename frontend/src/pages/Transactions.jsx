@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, ChevronDown, ChevronRight, Upload, FileSpreadsheet, Send, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, Plus, Minus, Upload, FileSpreadsheet, Send, X } from 'lucide-react';
 import api from '../utils/api';
 import ImportPortfolioModal from '../components/ImportPortfolioModal';
 
@@ -191,8 +191,9 @@ export default function Transactions() {
 
                     {hasMultiple && (
                       <button onClick={(e) => { e.stopPropagation(); setExpandedGroup(isExpanded ? null : group.key); }}
-                        className="bg-transparent border-none cursor-pointer p-1 shrink-0" style={{ color: 'var(--text-muted)' }}>
-                        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                        className="w-6 h-6 rounded-full flex items-center justify-center border-none cursor-pointer shrink-0"
+                        style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                        {isExpanded ? <Minus size={12} /> : <Plus size={12} />}
                       </button>
                     )}
                   </div>
@@ -220,7 +221,7 @@ export default function Transactions() {
       {/* Note composer modal — same as feed note with tagged transactions */}
       {showComposer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowComposer(false)}>
-          <div className="w-full max-w-sm rounded-xl p-6" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }} onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-lg rounded-xl p-6" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-semibold m-0" style={{ color: 'var(--text-primary)' }}>Create note</h3>
               <button onClick={() => setShowComposer(false)} className="bg-transparent border-none cursor-pointer p-1" style={{ color: 'var(--text-muted)' }}>

@@ -1,24 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Sliders, Users, Link2, Linkedin, Globe, Save, BookmarkCheck, X } from 'lucide-react';
+import { Sliders, Users, Link2, Save } from 'lucide-react';
 import api from '../utils/api';
 
 export default function Profile() {
   const { user, logout, setUser } = useAuth();
-  const [watchlist, setWatchlist] = useState([]);
-  const [activeSection, setActiveSection] = useState('profile'); // 'profile' | 'watchlist'
 
-  useEffect(() => {
-    api.get('/portfolio/followed-stocks').then(res => setWatchlist(res.data)).catch(() => {});
-  }, []);
-
-  const unfollowStock = async (code) => {
-    try {
-      await api.delete(`/portfolio/follow-stock/${code}`);
-      setWatchlist(w => w.filter(s => s.contract_code !== code));
-    } catch {}
-  };
   const [displayName, setDisplayName] = useState(user?.display_name || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [linkedinUrl, setLinkedinUrl] = useState(user?.linkedin_url || '');
@@ -74,64 +62,6 @@ export default function Profile() {
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-6 py-6">
       <h1 className="text-2xl font-semibold mb-4 m-0" style={{ color: 'var(--text-primary)' }}>Settings</h1>
-
-      {/* Section tabs */}
-      <div className="flex gap-1.5 mb-5">
-        {[
-          { key: 'profile', label: 'Profile' },
-          { key: 'watchlist', label: `Watchlist (${watchlist.length})` },
-        ].map(t => (
-          <button key={t.key} onClick={() => setActiveSection(t.key)}
-            className="px-3.5 py-1.5 rounded-full text-xs font-medium border-none cursor-pointer"
-            style={{
-              backgroundColor: activeSection === t.key ? 'var(--accent-light)' : 'transparent',
-              color: activeSection === t.key ? 'var(--accent)' : 'var(--text-muted)',
-              border: activeSection === t.key ? '1px solid #C7D2FE' : '1px solid var(--border)',
-            }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Watchlist section */}
-      {activeSection === 'watchlist' && (
-        <div className="mb-6">
-          {watchlist.length === 0 ? (
-            <div className="text-center py-12 rounded-xl" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-              <BookmarkCheck size={24} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
-              <p className="text-sm m-0" style={{ color: 'var(--text-muted)' }}>No stocks followed yet</p>
-              <p className="text-xs mt-1 m-0" style={{ color: 'var(--text-muted)' }}>Follow stocks from their detail page to build your watchlist</p>
-            </div>
-          ) : (
-            <div className="rounded-xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-              {watchlist.map((s, i) => (
-                <Link key={s.id} to={`/stock/${s.contract_code}?name=${encodeURIComponent(s.stock_name)}`}
-                  className="flex items-center justify-between px-4 py-3 no-underline transition-colors hover:bg-[var(--bg-hover)]"
-                  style={{ borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-semibold"
-                      style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
-                      {s.stock_name?.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium m-0" style={{ color: 'var(--text-primary)' }}>{s.stock_name}</p>
-                      <p className="text-[11px] m-0" style={{ color: 'var(--text-muted)' }}>{s.contract_code}</p>
-                    </div>
-                  </div>
-                  <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); unfollowStock(s.contract_code); }}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center bg-transparent border-none cursor-pointer"
-                    style={{ color: 'var(--text-muted)' }}>
-                    <X size={14} />
-                  </button>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeSection === 'profile' && (<>
-      {/* Original profile content below */}
 
       {/* Profile editing */}
       <div className="rounded-xl p-5 mb-4" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
@@ -245,7 +175,6 @@ export default function Profile() {
         style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
         Sign Out
       </button>
-      </>)}
     </div>
   );
 }
