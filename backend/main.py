@@ -12,6 +12,24 @@ from routes import auth, portfolio, follow, theses, comments, feed, notes, disco
 # Create all tables
 Base.metadata.create_all(bind=engine)
 
+# Migrate: add new columns to existing tables (PostgreSQL doesn't auto-add)
+try:
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        # Check and add missing columns
+        for col_name, col_sql in [
+            ("portfolio_imported_at", "ALTER TABLE users ADD COLUMN portfolio_imported_at TIMESTAMP"),
+            ("handle", "ALTER TABLE users ADD COLUMN handle VARCHAR UNIQUE"),
+        ]:
+            try:
+                conn.execute(text(col_sql))
+                conn.commit()
+                print(f"Migrated: added {col_name}")
+            except Exception:
+                conn.rollback()  # Column already exists
+except Exception as e:
+    print(f"Migration check: {e}")
+
 # Seed database if empty (runs once on first deploy)
 try:
     from database import SessionLocal
