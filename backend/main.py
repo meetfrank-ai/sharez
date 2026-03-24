@@ -70,7 +70,12 @@ except Exception as e:
 try:
     from models import InstrumentMap
     _db = SessionLocal()
-    if not _db.query(InstrumentMap).first():
+    try:
+        existing = _db.query(InstrumentMap).first()
+    except Exception:
+        _db.rollback()
+        existing = None  # Table might not exist yet
+    if not existing:
         _seed_instruments = [
             # JSE stocks
             ("Prosus N.V", "PRX", "JSE", "stock", "PRX.JSE", "PRX.JO", None, None, "Technology"),

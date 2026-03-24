@@ -144,7 +144,7 @@ class InstrumentMap(Base):
     __tablename__ = "instrument_map"
 
     id = Column(Integer, primary_key=True, index=True)
-    ee_name = Column(String, unique=True, nullable=False)
+    ee_name = Column(String, nullable=False, index=True)
     ticker = Column(String, nullable=True)
     market = Column(String, default="JSE")
     instrument_type = Column(String, default="stock")  # stock, etf, ametf, unit_trust
