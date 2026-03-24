@@ -7,18 +7,18 @@ import api from '../utils/api';
 const INTRO_SLIDES = [
   {
     Icon: BarChart3,
-    title: 'Your portfolio, shared your way',
-    body: 'Connect your EasyEquities account and choose exactly what your followers see — from stock names only, all the way to full Rand amounts.',
+    title: 'See what your friends invest in',
+    body: 'Real, verified portfolios from EasyEquities — not screenshots. See what people you trust are actually holding, buying, and selling.',
   },
   {
     Icon: Lock,
-    title: 'Three tiers of access',
-    body: 'Public for anyone, Inner Circle for approved followers, and Vault for your closest circle or paid subscribers. You control who sees what.',
+    title: 'You control what others see',
+    body: 'Share as much or as little as you want. Followers see percentages, not Rand amounts. You decide who gets deeper access.',
   },
   {
     Icon: MessageSquare,
-    title: 'Notes & Theses',
-    body: 'Share quick thoughts, tag stocks, write investment theses, and see what the people you follow are buying and selling — with AI-powered stock summaries.',
+    title: 'AI-powered stock insights',
+    body: 'Every stock has an AI summary, community sentiment, and notes from investors you follow. See why people are investing and what the risks are.',
   },
 ];
 

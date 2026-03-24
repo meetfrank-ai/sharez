@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, UserTierConfig
+from models import User, UserTierConfig, Follow, FollowStatus, Tier
 from schemas import UserCreate, UserLogin, Token, UserOut, UserProfileUpdate
 from auth import hash_password, verify_password, create_access_token, get_current_user
 
@@ -41,6 +41,19 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
 
     tier_config = UserTierConfig(user_id=user.id)
     db.add(tier_config)
+
+    # Auto-follow demo accounts so new users see content immediately
+    demo_users = db.query(User).filter(
+        User.email.in_(["thabo@sharez.co.za", "sarah@sharez.co.za", "lebo@sharez.co.za"])
+    ).all()
+    for demo in demo_users:
+        if demo.id != user.id:
+            db.add(Follow(
+                follower_id=user.id,
+                following_id=demo.id,
+                tier=Tier.inner_circle,
+                status=FollowStatus.active,
+            ))
 
     db.commit()
     db.refresh(user)
