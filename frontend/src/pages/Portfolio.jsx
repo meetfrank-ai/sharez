@@ -25,14 +25,19 @@ export default function Portfolio() {
   const hasPortfolio = holdings.length > 0;
   const importedAt = user?.portfolio_imported_at;
 
-  const totalValue = holdings.reduce((s, h) => s + (h.current_value || 0), 0);
-  const totalPurchase = holdings.reduce((s, h) => s + (h.purchase_value || 0), 0);
+  // Only include holdings with live prices in totals
+  const pricedHoldings = holdings.filter(h =>
+    h.current_value && h.purchase_value && Math.abs(h.current_value - h.purchase_value) > 1
+  );
+  const unpricedCount = holdings.length - pricedHoldings.length;
+
+  const totalValue = pricedHoldings.reduce((s, h) => s + (h.current_value || 0), 0);
+  const totalPurchase = pricedHoldings.reduce((s, h) => s + (h.purchase_value || 0), 0);
   const totalGain = totalValue - totalPurchase;
   const totalPL = totalPurchase > 0 ? ((totalGain / totalPurchase) * 100).toFixed(2) : null;
   const isPositive = totalGain >= 0;
 
-  const topPerformer = holdings.reduce((best, h) => {
-    if (!h.current_value || !h.purchase_value) return best;
+  const topPerformer = pricedHoldings.reduce((best, h) => {
     const pct = ((h.current_value - h.purchase_value) / h.purchase_value) * 100;
     if (!best || pct > best.pct) return { name: h.stock_name, pct };
     return best;

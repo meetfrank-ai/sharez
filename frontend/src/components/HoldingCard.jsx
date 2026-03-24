@@ -1,7 +1,11 @@
 import { Link } from 'react-router-dom';
 
 export default function HoldingCard({ holding, privacyLevel = 'full', userId }) {
-  const profitLoss = holding.current_value && holding.purchase_value
+  // Only show P&L if current_value differs from purchase_value (price was updated)
+  const hasLivePrice = holding.current_value && holding.purchase_value &&
+    Math.abs(holding.current_value - holding.purchase_value) > 1;
+
+  const profitLoss = hasLivePrice
     ? ((holding.current_value - holding.purchase_value) / holding.purchase_value * 100).toFixed(2)
     : null;
 
@@ -39,14 +43,20 @@ export default function HoldingCard({ holding, privacyLevel = 'full', userId }) 
           </div>
 
           <div className="text-right">
-            {privacyLevel === 'full' && holding.current_value != null && (
+            {privacyLevel === 'full' && (
               <>
-                <p className="text-sm font-semibold m-0" style={{ color: 'var(--text-primary)' }}>
-                  R{holding.current_value.toLocaleString()}
-                </p>
-                {profitLoss && (
-                  <p className="text-xs m-0" style={{ color: isPositive ? 'var(--success)' : 'var(--danger)' }}>
-                    {isPositive ? '+' : ''}{profitLoss}%
+                {hasLivePrice ? (
+                  <>
+                    <p className="text-sm font-semibold m-0" style={{ color: 'var(--text-primary)' }}>
+                      R{holding.current_value.toLocaleString()}
+                    </p>
+                    <p className="text-xs m-0" style={{ color: isPositive ? 'var(--success)' : 'var(--danger)' }}>
+                      {isPositive ? '+' : ''}{profitLoss}%
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xs m-0" style={{ color: 'var(--text-muted)' }}>
+                    Price unavailable
                   </p>
                 )}
               </>
