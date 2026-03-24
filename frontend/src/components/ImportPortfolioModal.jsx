@@ -165,15 +165,22 @@ export default function ImportPortfolioModal({ onClose, onImported }) {
                   Which EasyEquities account is this for?
                 </label>
                 <div className="flex gap-2">
-                  {['ZAR', 'TFSA', 'USD'].map(t => (
-                    <button key={t} onClick={() => setAccountType(t)}
-                      className="flex-1 py-2 rounded-lg text-xs font-medium border-none cursor-pointer transition-all"
+                  {[
+                    { key: 'ZAR', label: 'EasyEquities ZAR' },
+                    { key: 'TFSA', label: 'Tax Free (TFSA)' },
+                    { key: 'USD', label: 'EasyEquities USD' },
+                    { key: 'SATRIX', label: 'Satrix' },
+                    { key: 'PROPERTY', label: 'EasyProperties' },
+                    { key: 'CRYPTO', label: 'EasyCrypto' },
+                  ].map(t => (
+                    <button key={t.key} onClick={() => setAccountType(t.key)}
+                      className="py-2 px-3 rounded-lg text-xs font-medium border-none cursor-pointer transition-all"
                       style={{
-                        backgroundColor: accountType === t ? 'var(--accent-light)' : 'var(--bg-page)',
-                        color: accountType === t ? 'var(--accent)' : 'var(--text-muted)',
-                        border: `1px solid ${accountType === t ? '#C7D2FE' : 'var(--border)'}`,
+                        backgroundColor: accountType === t.key ? 'var(--accent-light)' : 'var(--bg-page)',
+                        color: accountType === t.key ? 'var(--accent)' : 'var(--text-muted)',
+                        border: `1px solid ${accountType === t.key ? '#C7D2FE' : 'var(--border)'}`,
                       }}>
-                      {t === 'ZAR' ? 'EasyEquities ZAR' : t === 'TFSA' ? 'Tax Free (TFSA)' : 'EasyEquities USD'}
+                      {t.label}
                     </button>
                   ))}
                 </div>
@@ -263,17 +270,24 @@ export default function ImportPortfolioModal({ onClose, onImported }) {
               </div>
 
               <div className="mb-4">
-                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Account type</label>
-                <div className="flex gap-2">
-                  {['ZAR', 'TFSA', 'USD'].map(t => (
-                    <button key={t} onClick={() => setAccountType(t)}
-                      className="flex-1 py-1.5 rounded-lg text-xs font-medium border-none cursor-pointer"
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Which account is this from?</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: 'ZAR', label: 'EasyEquities ZAR' },
+                    { key: 'TFSA', label: 'TFSA' },
+                    { key: 'USD', label: 'USD' },
+                    { key: 'SATRIX', label: 'Satrix' },
+                    { key: 'PROPERTY', label: 'EasyProperties' },
+                    { key: 'CRYPTO', label: 'EasyCrypto' },
+                  ].map(t => (
+                    <button key={t.key} onClick={() => setAccountType(t.key)}
+                      className="py-1.5 px-3 rounded-lg text-xs font-medium border-none cursor-pointer"
                       style={{
-                        backgroundColor: accountType === t ? 'var(--accent-light)' : 'var(--bg-page)',
-                        color: accountType === t ? 'var(--accent)' : 'var(--text-muted)',
-                        border: `1px solid ${accountType === t ? '#C7D2FE' : 'var(--border)'}`,
+                        backgroundColor: accountType === t.key ? 'var(--accent-light)' : 'var(--bg-page)',
+                        color: accountType === t.key ? 'var(--accent)' : 'var(--text-muted)',
+                        border: `1px solid ${accountType === t.key ? '#C7D2FE' : 'var(--border)'}`,
                       }}>
-                      {t}
+                      {t.label}
                     </button>
                   ))}
                 </div>

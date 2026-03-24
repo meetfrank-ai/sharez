@@ -16,6 +16,9 @@ class AccountType(str, enum.Enum):
     ZAR = "ZAR"
     TFSA = "TFSA"
     USD = "USD"
+    SATRIX = "SATRIX"
+    PROPERTY = "PROPERTY"
+    CRYPTO = "CRYPTO"
 
 
 class EventType(str, enum.Enum):
