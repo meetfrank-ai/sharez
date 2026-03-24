@@ -229,28 +229,16 @@ def _refresh_holdings_prices(db: Session, user: User):
     import httpx
     from datetime import timedelta
 
-    TICKER_MAP = {
-        "Capitec Bank": "CPI.JSE", "Naspers": "NPN.JSE", "Standard Bank": "SBK.JSE",
-        "Shoprite": "SHP.JSE", "MTN": "MTN.JSE", "Sasol": "SOL.JSE",
-        "FirstRand": "FSR.JSE", "Discovery": "DSY.JSE", "Woolworths": "WHL.JSE",
-        "Absa Group": "ABG.JSE", "Sanlam": "SLM.JSE", "Clicks Group": "CLS.JSE",
-        "Redefine Properties": "RDF.JSE", "Prosus N.V": "PRX.JSE",
-        "Allan Gray Orbis Global Equity Feeder AMETF": None,  # No EODHD ticker
-        "Coronation Global Emerging Markets Prescient Feeder AMETF": None,
-        "36ONE BCI SA Equity Fund Class C": None,
-        "Merchant West SCI Value Fund": None,
-        "EasyETFs Global Equity Actively Managed ETF": None,
-    }
+    from ticker_resolver import resolve_ticker
 
     holdings = db.query(Holding).filter(Holding.user_id == user.id).all()
     now = datetime.now(timezone.utc)
 
     for h in holdings:
-        ticker = TICKER_MAP.get(h.stock_name)
+        ticker = resolve_ticker(h.stock_name)
         if not ticker:
-            # Try to construct from stock name
-            code = re.sub(r'[^A-Z]', '', h.stock_name.upper())[:3]
-            ticker = f"{code}.JSE"
+            logger.info(f"No EODHD ticker found for {h.stock_name} — skipping price update")
+            continue
 
         try:
             end = now.strftime("%Y-%m-%d")
