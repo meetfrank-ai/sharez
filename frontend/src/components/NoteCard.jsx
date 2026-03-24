@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Send, Share2, Lock, Bookmark, Repeat2, LinkIcon, X } from 'lucide-react';
+import { Heart, MessageCircle, Send, Share2, Lock, Bookmark, Repeat2, LinkIcon, X, TrendingUp, TrendingDown } from 'lucide-react';
 import TierBadge from './TierBadge';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
@@ -131,8 +131,24 @@ export default function NoteCard({ note, onReplyPosted }) {
           <p className="text-sm leading-relaxed whitespace-pre-line m-0 mb-3" style={{ color: 'var(--text-primary)' }}>{note.body}</p>
         )}
 
+        {/* Transaction embed */}
+        {note.transaction_ids?.length > 0 && (
+          <div className="rounded-lg p-3 mb-3" style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+            <div className="flex items-center gap-1.5 mb-1">
+              <TrendingUp size={13} style={{ color: '#16A34A' }} />
+              <span className="text-[11px] font-semibold" style={{ color: '#16A34A' }}>Trade</span>
+            </div>
+            <p className="text-sm font-medium m-0" style={{ color: 'var(--text-primary)' }}>
+              {note.stock_name || 'Stock'}
+            </p>
+            <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              {note.transaction_ids.length} transaction{note.transaction_ids.length > 1 ? 's' : ''} · Verified from EasyEquities
+            </p>
+          </div>
+        )}
+
         {/* Stock tag */}
-        {note.stock_name && (
+        {note.stock_name && !note.transaction_ids?.length && (
           <Link to={`/stock/${note.stock_tag}?name=${encodeURIComponent(note.stock_name)}`}
             onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium no-underline mb-3"

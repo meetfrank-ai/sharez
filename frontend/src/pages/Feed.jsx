@@ -5,7 +5,6 @@ import { useAuth } from '../hooks/useAuth';
 import FeedItem from '../components/FeedItem';
 import NoteCard from '../components/NoteCard';
 import TradeCard from '../components/TradeCard';
-import ShareTradeModal from '../components/ShareTradeModal';
 
 const FILTERS = [
   { key: 'all', label: 'For you' },
@@ -20,7 +19,7 @@ export default function Feed() {
   const [scope, setScope] = useState('blend'); // 'blend' | 'community'
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
-  const [showShareTrade, setShowShareTrade] = useState(false);
+  // Trade sharing moved to Transactions page
   const [loading, setLoading] = useState(true);
 
   // Composer
@@ -192,13 +191,7 @@ export default function Feed() {
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                 <DollarSign size={15} /> Stock
               </button>
-              <button onClick={() => setShowShareTrade(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-transparent border-none cursor-pointer"
-                style={{ color: 'var(--text-muted)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                <ArrowLeftRight size={15} /> Trade
-              </button>
+              {/* Trade sharing moved to Transactions page */}
               <button
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-transparent border-none cursor-pointer"
                 style={{ color: 'var(--text-muted)' }}
@@ -296,13 +289,7 @@ export default function Feed() {
         })
       )}
 
-      {/* Share trade modal */}
-      {showShareTrade && (
-        <ShareTradeModal
-          onClose={() => setShowShareTrade(false)}
-          onTradeShared={() => fetchFeed()}
-        />
-      )}
+      {/* Trade sharing moved to Transactions page */}
     </div>
   );
 }

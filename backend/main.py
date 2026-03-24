@@ -20,6 +20,9 @@ try:
         for col_name, col_sql in [
             ("portfolio_imported_at", "ALTER TABLE users ADD COLUMN portfolio_imported_at TIMESTAMP"),
             ("handle", "ALTER TABLE users ADD COLUMN handle VARCHAR UNIQUE"),
+            ("transaction_ids", "ALTER TABLE notes ADD COLUMN transaction_ids JSONB"),
+            ("image_url", "ALTER TABLE notes ADD COLUMN image_url VARCHAR"),
+            ("reshare_count", "ALTER TABLE notes ADD COLUMN reshare_count INTEGER DEFAULT 0"),
         ]:
             try:
                 conn.execute(text(col_sql))

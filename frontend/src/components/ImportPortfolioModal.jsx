@@ -164,26 +164,16 @@ export default function ImportPortfolioModal({ onClose, onImported }) {
                 <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Which EasyEquities account is this for?
                 </label>
-                <div className="flex gap-2">
-                  {[
-                    { key: 'ZAR', label: 'EasyEquities ZAR' },
-                    { key: 'TFSA', label: 'Tax Free (TFSA)' },
-                    { key: 'USD', label: 'EasyEquities USD' },
-                    { key: 'SATRIX', label: 'Satrix' },
-                    { key: 'PROPERTY', label: 'EasyProperties' },
-                    { key: 'CRYPTO', label: 'EasyCrypto' },
-                  ].map(t => (
-                    <button key={t.key} onClick={() => setAccountType(t.key)}
-                      className="py-2 px-3 rounded-lg text-xs font-medium border-none cursor-pointer transition-all"
-                      style={{
-                        backgroundColor: accountType === t.key ? 'var(--accent-light)' : 'var(--bg-page)',
-                        color: accountType === t.key ? 'var(--accent)' : 'var(--text-muted)',
-                        border: `1px solid ${accountType === t.key ? '#C7D2FE' : 'var(--border)'}`,
-                      }}>
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
+                <select value={accountType} onChange={(e) => setAccountType(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none cursor-pointer"
+                  style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
+                  <option value="ZAR">EasyEquities ZAR</option>
+                  <option value="TFSA">Tax Free Savings (TFSA)</option>
+                  <option value="USD">EasyEquities USD</option>
+                  <option value="SATRIX">Satrix</option>
+                  <option value="PROPERTY">EasyProperties</option>
+                  <option value="CRYPTO">EasyCrypto</option>
+                </select>
               </div>
 
               <label
@@ -271,26 +261,16 @@ export default function ImportPortfolioModal({ onClose, onImported }) {
 
               <div className="mb-4">
                 <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Which account is this from?</label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { key: 'ZAR', label: 'EasyEquities ZAR' },
-                    { key: 'TFSA', label: 'TFSA' },
-                    { key: 'USD', label: 'USD' },
-                    { key: 'SATRIX', label: 'Satrix' },
-                    { key: 'PROPERTY', label: 'EasyProperties' },
-                    { key: 'CRYPTO', label: 'EasyCrypto' },
-                  ].map(t => (
-                    <button key={t.key} onClick={() => setAccountType(t.key)}
-                      className="py-1.5 px-3 rounded-lg text-xs font-medium border-none cursor-pointer"
-                      style={{
-                        backgroundColor: accountType === t.key ? 'var(--accent-light)' : 'var(--bg-page)',
-                        color: accountType === t.key ? 'var(--accent)' : 'var(--text-muted)',
-                        border: `1px solid ${accountType === t.key ? '#C7D2FE' : 'var(--border)'}`,
-                      }}>
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
+                <select value={accountType} onChange={(e) => setAccountType(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none cursor-pointer"
+                  style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
+                  <option value="ZAR">EasyEquities ZAR</option>
+                  <option value="TFSA">Tax Free Savings (TFSA)</option>
+                  <option value="USD">EasyEquities USD</option>
+                  <option value="SATRIX">Satrix</option>
+                  <option value="PROPERTY">EasyProperties</option>
+                  <option value="CRYPTO">EasyCrypto</option>
+                </select>
               </div>
 
               {error && (
@@ -333,10 +313,10 @@ export default function ImportPortfolioModal({ onClose, onImported }) {
                 ))}
               </div>
 
-              <div className="rounded-lg p-3 mb-5 flex gap-2 items-start text-left" style={{ backgroundColor: 'var(--accent-light)' }}>
-                <FileSpreadsheet size={14} className="shrink-0 mt-0.5" style={{ color: 'var(--accent)' }} />
+              <div className="rounded-lg p-4 mb-5 text-left" style={{ backgroundColor: 'var(--accent-light)' }}>
+                <p className="text-xs font-semibold m-0 mb-1" style={{ color: 'var(--accent)' }}>How this works going forward</p>
                 <p className="text-xs m-0" style={{ color: 'var(--text-secondary)' }}>
-                  Re-upload monthly to keep your portfolio current. We'll send you a reminder.
+                  When you make new trades on EasyEquities, just download your transactions again and upload here. We'll automatically merge the new ones — no duplicates.
                 </p>
               </div>
 

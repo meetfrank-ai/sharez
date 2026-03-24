@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Award, DollarSign, Upload, FileSpreadsheet, Shield } from 'lucide-react';
+import { TrendingUp, TrendingDown, Award, DollarSign, FileSpreadsheet, Shield } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 import HoldingCard from '../components/HoldingCard';
-import InvestmentReasonModal from '../components/InvestmentReasonModal';
-import ShareTransactionModal from '../components/ShareTransactionModal';
-import ImportPortfolioModal from '../components/ImportPortfolioModal';
+// Import moved to Transactions page
 
 const CHART_COLORS = ['#4F46E5', '#3B82F6', '#10B981', '#D97706', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -14,9 +13,7 @@ export default function Portfolio() {
   const { user } = useAuth();
   const [holdings, setHoldings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [newStocks, setNewStocks] = useState([]);
-  const [pendingTransactions, setPendingTransactions] = useState([]);
-  const [showImport, setShowImport] = useState(false);
+  // Import moved to Transactions page
 
   const fetchHoldings = () => {
     api.get('/portfolio/me')
@@ -94,7 +91,7 @@ export default function Portfolio() {
         )}
       </div>
 
-      {/* Empty state — big import CTA */}
+      {/* Empty state — link to Transactions page */}
       {!hasPortfolio ? (
         <div className="rounded-2xl p-8 text-center" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
@@ -102,24 +99,17 @@ export default function Portfolio() {
             <FileSpreadsheet size={32} style={{ color: 'var(--accent)' }} />
           </div>
           <h2 className="text-lg font-semibold m-0 mb-2" style={{ color: 'var(--text-primary)' }}>
-            Import your portfolio
+            No holdings yet
           </h2>
           <p className="text-sm mb-6 max-w-sm mx-auto" style={{ color: 'var(--text-secondary)' }}>
-            Download your transaction history from EasyEquities and upload it here. We'll build your portfolio automatically from your trades.
+            Import your EasyEquities transaction history to build your portfolio automatically.
           </p>
 
-          <button
-            onClick={() => setShowImport(true)}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90 border-none cursor-pointer"
-            style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF' }}
-          >
-            <Upload size={18} />
-            Import from EasyEquities
-          </button>
-
-          <p className="text-xs mt-4" style={{ color: 'var(--text-muted)' }}>
-            Takes about 2 minutes. Your data stays private.
-          </p>
+          <Link to="/transactions"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold no-underline transition-opacity hover:opacity-90"
+            style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF' }}>
+            Go to Transactions →
+          </Link>
         </div>
       ) : (
         <>
@@ -183,39 +173,7 @@ export default function Portfolio() {
         </>
       )}
 
-      {/* Share transactions modal */}
-      {pendingTransactions.length > 0 && (
-        <ShareTransactionModal
-          transactions={pendingTransactions}
-          onClose={() => {
-            const buys = pendingTransactions.filter(t => t.type === 'buy');
-            setPendingTransactions([]);
-            if (buys.length > 0) setNewStocks(buys);
-          }}
-        />
-      )}
-
-      {/* Investment reasons */}
-      {newStocks.length > 0 && pendingTransactions.length === 0 && (
-        <InvestmentReasonModal stocks={newStocks} onClose={() => setNewStocks([])} />
-      )}
-
-      {/* Import modal */}
-      {showImport && (
-        <ImportPortfolioModal
-          onClose={() => setShowImport(false)}
-          onImported={(result) => {
-            fetchHoldings();
-            // Refresh user data to get updated portfolio_imported_at
-            api.get('/auth/me').then(res => {
-              // Update auth context would be ideal, but for now just refetch
-            }).catch(() => {});
-            if (result.added_stocks?.length > 0) {
-              setPendingTransactions(result.added_stocks);
-            }
-          }}
-        />
-      )}
+      {/* Import moved to Transactions page */}
     </div>
   );
 }

@@ -34,6 +34,8 @@ def _note_to_out(note: Note, current_user_id: int, db: Session) -> NoteOut:
         parent_note_id=note.parent_note_id,
         like_count=note.like_count,
         reply_count=note.reply_count,
+        transaction_ids=note.transaction_ids,
+        image_url=note.image_url,
         reshare_count=note.reshare_count or 0,
         liked_by_me=liked,
         saved_by_me=saved,

@@ -153,6 +153,8 @@ class NoteOut(BaseModel):
     stock_tag: Optional[str] = None
     stock_name: Optional[str] = None
     parent_note_id: Optional[int] = None
+    transaction_ids: Optional[list[int]] = None
+    image_url: Optional[str] = None
     like_count: int = 0
     reply_count: int = 0
     reshare_count: int = 0

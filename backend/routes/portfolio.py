@@ -352,62 +352,82 @@ def get_my_transactions(
     } for t in txs]
 
 
-@router.post("/transactions/{tx_id}/share")
-def share_transaction_from_list(
-    tx_id: int,
-    visibility: str = "public",
-    note_body: str = "",
+@router.post("/transactions/share")
+def share_transactions(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    transaction_ids: list[int] = [],
+    visibility: str = "public",
+    note_body: str = "",
 ):
-    """Share a transaction to the feed with optional note and privacy."""
-    from models import UserTransaction, Trade, Note, Tier
+    """Share one or more transactions as a note with tagged transactions."""
+    from models import UserTransaction, Note, Tier
 
-    tx = db.query(UserTransaction).filter(
-        UserTransaction.id == tx_id, UserTransaction.user_id == user.id
-    ).first()
-    if not tx:
-        raise HTTPException(status_code=404, detail="Transaction not found")
+    if not transaction_ids:
+        raise HTTPException(status_code=400, detail="No transactions selected")
+
+    # Verify all transactions belong to user
+    txs = db.query(UserTransaction).filter(
+        UserTransaction.id.in_(transaction_ids),
+        UserTransaction.user_id == user.id,
+    ).all()
+    if len(txs) != len(transaction_ids):
+        raise HTTPException(status_code=404, detail="Some transactions not found")
 
     vis = Tier(visibility)
 
-    # Create linked note if provided
-    note_id = None
-    if note_body and note_body.strip():
-        note = Note(
-            user_id=user.id,
-            body=note_body[:5000],
-            visibility=vis,
-            stock_tag=tx.contract_code,
-            stock_name=tx.stock_name,
-        )
-        db.add(note)
-        db.flush()
-        note_id = note.id
+    # Use first transaction's stock for the tag
+    first_tx = txs[0]
+    body = note_body.strip() if note_body else ""
 
-    # Create trade record
-    trade = Trade(
+    # Auto-generate body if empty
+    if not body:
+        if len(txs) == 1:
+            body = f"{'Bought' if first_tx.action == 'buy' else 'Sold'} {first_tx.stock_name}"
+        else:
+            stocks = list(set(t.stock_name for t in txs))
+            body = f"{'Bought' if first_tx.action == 'buy' else 'Traded'} {', '.join(stocks)}"
+
+    note = Note(
         user_id=user.id,
-        action=tx.action,
-        stock_name=tx.stock_name,
-        ticker=tx.contract_code,
-        market="JSE",
-        account_type=tx.account_type,
-        trade_date=tx.transaction_date,
-        amount_private=tx.amount,
-        share_price_private=tx.price,
-        shares_private=tx.quantity,
-        ai_confidence="imported",
+        body=body,
         visibility=vis,
-        note_id=note_id,
+        stock_tag=first_tx.contract_code,
+        stock_name=first_tx.stock_name,
+        transaction_ids=[t.id for t in txs],
     )
-    db.add(trade)
+    db.add(note)
 
-    # Increment shared count
-    tx.shared_count = (tx.shared_count or 0) + 1
+    # Increment shared count on each transaction
+    for tx in txs:
+        tx.shared_count = (tx.shared_count or 0) + 1
+
     db.commit()
+    db.refresh(note)
 
-    return {"message": "Transaction shared", "trade_id": trade.id, "note_id": note_id}
+    return {"message": "Shared", "note_id": note.id}
+
+
+@router.get("/transactions/by-ids")
+def get_transactions_by_ids(
+    ids: str = "",
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get transaction details by IDs (for rendering in notes)."""
+    from models import UserTransaction
+    if not ids:
+        return []
+    id_list = [int(i) for i in ids.split(",") if i.strip().isdigit()]
+    txs = db.query(UserTransaction).filter(UserTransaction.id.in_(id_list)).all()
+    return [{
+        "id": t.id,
+        "action": t.action,
+        "stock_name": t.stock_name,
+        "account_type": t.account_type,
+        "quantity": t.quantity,
+        "transaction_date": str(t.transaction_date)[:10] if t.transaction_date else None,
+    } for t in txs]
 
 
 @router.post("/import-preview")
