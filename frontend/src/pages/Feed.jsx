@@ -33,6 +33,9 @@ export default function Feed() {
   const [showStockInput, setShowStockInput] = useState(false);
   const [showTxPicker, setShowTxPicker] = useState(false);
   const [myTransactions, setMyTransactions] = useState([]);
+  const [stockSearchQuery, setStockSearchQuery] = useState('');
+  const [stockSearchResults, setStockSearchResults] = useState([]);
+  const [stockSearchTimer, setStockSearchTimer] = useState(null);
   const [posting, setPosting] = useState(false);
   const textareaRef = useRef(null);
 
@@ -187,21 +190,49 @@ export default function Feed() {
               </div>
             )}
 
-            {/* Stock tag input */}
+            {/* Stock search autocomplete */}
             {showStockInput && !composerStockName && (
-              <div className="mb-3">
-                <input type="text" placeholder="Stock name (e.g. Capitec Bank)" autoFocus
-                  className="w-full px-3 py-2 rounded-lg text-xs outline-none"
-                  style={{ backgroundColor: 'var(--bg-page)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.target.value.trim()) {
-                      const name = e.target.value.trim();
-                      setComposerStockName(name);
-                      setComposerStockTag(`EE_${name.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 10)}`);
-                      setShowStockInput(false);
+              <div className="mb-3 relative">
+                <input type="text" placeholder="Search stocks (e.g. Capitec, Apple)" autoFocus
+                  value={stockSearchQuery}
+                  onChange={(e) => {
+                    const q = e.target.value;
+                    setStockSearchQuery(q);
+                    if (stockSearchTimer) clearTimeout(stockSearchTimer);
+                    if (q.length >= 2) {
+                      setStockSearchTimer(setTimeout(() => {
+                        api.get(`/stocks/search?q=${encodeURIComponent(q)}`).then(r => setStockSearchResults(r.data)).catch(() => {});
+                      }, 300));
+                    } else {
+                      setStockSearchResults([]);
                     }
-                  }} />
-                <p className="text-[10px] mt-1 m-0" style={{ color: 'var(--text-muted)' }}>Press Enter to tag</p>
+                  }}
+                  className="w-full px-3 py-2 rounded-lg text-xs outline-none"
+                  style={{ backgroundColor: 'var(--bg-page)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
+                {stockSearchResults.length > 0 && (
+                  <div className="rounded-lg mt-1 overflow-hidden" style={{ border: '1px solid var(--border)', maxHeight: 180, overflowY: 'auto', backgroundColor: 'var(--bg-card)' }}>
+                    {stockSearchResults.map((s, i) => (
+                      <div key={i}
+                        className="flex items-center justify-between px-3 py-2 cursor-pointer text-xs hover:bg-[var(--bg-hover)]"
+                        style={{ borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}
+                        onClick={() => {
+                          setComposerStockName(s.name);
+                          setComposerStockTag(s.ticker);
+                          setShowStockInput(false);
+                          setStockSearchQuery('');
+                          setStockSearchResults([]);
+                        }}>
+                        <div>
+                          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{s.name}</span>
+                        </div>
+                        <span style={{ color: 'var(--text-muted)' }}>{s.code} · {s.exchange}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {stockSearchQuery.length >= 2 && stockSearchResults.length === 0 && (
+                  <p className="text-[10px] mt-1 m-0" style={{ color: 'var(--text-muted)' }}>No results found</p>
+                )}
               </div>
             )}
 
