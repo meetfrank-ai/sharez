@@ -1,12 +1,19 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Heart, MessageCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Heart, MessageCircle, Send, Share2 } from 'lucide-react';
 import TierBadge from './TierBadge';
 import api from '../utils/api';
+import { useAuth } from '../hooks/useAuth';
 
-export default function NoteCard({ note }) {
+export default function NoteCard({ note, onReplyPosted }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [liked, setLiked] = useState(note.liked_by_me);
   const [likeCount, setLikeCount] = useState(note.like_count);
+  const [replyCount, setReplyCount] = useState(note.reply_count || 0);
+  const [showReply, setShowReply] = useState(false);
+  const [replyBody, setReplyBody] = useState('');
+  const [posting, setPosting] = useState(false);
 
   const toggleLike = async (e) => {
     e.preventDefault();
@@ -24,6 +31,38 @@ export default function NoteCard({ note }) {
     } catch {}
   };
 
+  const handleCommentClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowReply(!showReply);
+  };
+
+  const handlePostReply = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!replyBody.trim() || posting) return;
+    setPosting(true);
+    try {
+      await api.post('/notes/', {
+        body: replyBody.trim(),
+        visibility: note.visibility || 'public',
+        parent_note_id: note.id,
+      });
+      setReplyBody('');
+      setShowReply(false);
+      setReplyCount(replyCount + 1);
+      onReplyPosted?.();
+    } catch {
+      alert('Failed to post reply');
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const handleCardClick = () => {
+    navigate(`/note/${note.id}`);
+  };
+
   const time = new Date(note.created_at).toLocaleDateString('en-ZA', {
     day: 'numeric',
     month: 'short',
@@ -32,20 +71,21 @@ export default function NoteCard({ note }) {
   });
 
   return (
-    <Link to={`/note/${note.id}`} className="block no-underline">
-      <div
-        className="rounded-xl p-5 mb-4 transition-all hover:shadow-md"
-        style={{
-          backgroundColor: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-          boxShadow: 'var(--shadow)',
-        }}
-      >
+    <div
+      className="rounded-xl mb-4 transition-all hover:shadow-md"
+      style={{
+        backgroundColor: 'var(--bg-card)',
+        border: '1px solid var(--border)',
+        boxShadow: 'var(--shadow)',
+      }}
+    >
+      {/* Clickable note content — navigates to thread */}
+      <div className="p-5 pb-0 cursor-pointer" onClick={handleCardClick}>
         {/* Header */}
         <div className="flex items-center gap-2.5 mb-3">
           <Link to={`/user/${note.user_id}`} className="no-underline shrink-0" onClick={(e) => e.stopPropagation()}>
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold hover:opacity-80 transition-opacity"
               style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}
             >
               {note.display_name?.charAt(0).toUpperCase()}
@@ -58,9 +98,7 @@ export default function NoteCard({ note }) {
             {note.handle && (
               <span className="text-xs ml-1.5" style={{ color: 'var(--text-muted)' }}>@{note.handle}</span>
             )}
-            <span className="text-xs ml-1.5" style={{ color: 'var(--text-muted)' }}>
-              · {time}
-            </span>
+            <span className="text-xs ml-1.5" style={{ color: 'var(--text-muted)' }}>· {time}</span>
           </div>
           <TierBadge tier={note.visibility} />
         </div>
@@ -81,23 +119,66 @@ export default function NoteCard({ note }) {
             {note.stock_name}
           </Link>
         )}
-
-        {/* Footer */}
-        <div className="flex items-center gap-5 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-          <button
-            onClick={toggleLike}
-            className="flex items-center gap-1.5 text-xs bg-transparent border-none cursor-pointer p-0"
-            style={{ color: liked ? 'var(--danger)' : 'var(--text-muted)' }}
-          >
-            <Heart size={15} fill={liked ? 'var(--danger)' : 'none'} />
-            {likeCount}
-          </button>
-          <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
-            <MessageCircle size={15} />
-            {note.reply_count}
-          </span>
-        </div>
       </div>
-    </Link>
+
+      {/* Footer — actions (not clickable to navigate) */}
+      <div className="flex items-center gap-5 px-5 py-3" style={{ borderTop: '1px solid var(--border)' }}>
+        <button
+          onClick={toggleLike}
+          className="flex items-center gap-1.5 text-xs bg-transparent border-none cursor-pointer p-0"
+          style={{ color: liked ? 'var(--danger)' : 'var(--text-muted)' }}
+        >
+          <Heart size={15} fill={liked ? 'var(--danger)' : 'none'} />
+          {likeCount}
+        </button>
+        <button
+          onClick={handleCommentClick}
+          className="flex items-center gap-1.5 text-xs bg-transparent border-none cursor-pointer p-0"
+          style={{ color: showReply ? 'var(--accent)' : 'var(--text-muted)' }}
+        >
+          <MessageCircle size={15} fill={showReply ? 'var(--accent-light)' : 'none'} />
+          {replyCount}
+        </button>
+        <button
+          className="flex items-center gap-1.5 text-xs bg-transparent border-none cursor-pointer p-0 ml-auto"
+          style={{ color: 'var(--text-muted)' }}
+          onClick={(e) => { e.stopPropagation(); /* share functionality later */ }}
+        >
+          <Share2 size={14} />
+        </button>
+      </div>
+
+      {/* Inline reply bar */}
+      {showReply && (
+        <div className="px-5 pb-4" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0"
+              style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
+              {user?.display_name?.charAt(0).toUpperCase() || '?'}
+            </div>
+            <div className="flex-1 flex items-center gap-2 rounded-full px-3 py-1.5" style={{ backgroundColor: 'var(--bg-page)', border: '1px solid var(--border)' }}>
+              <input
+                type="text"
+                value={replyBody}
+                onChange={(e) => setReplyBody(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handlePostReply(e); }}
+                placeholder="Write a reply..."
+                autoFocus
+                className="flex-1 text-sm bg-transparent border-none outline-none"
+                style={{ color: 'var(--text-primary)' }}
+              />
+              <button
+                onClick={handlePostReply}
+                disabled={!replyBody.trim() || posting}
+                className="flex items-center justify-center w-7 h-7 rounded-full border-none cursor-pointer disabled:opacity-30"
+                style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+              >
+                <Send size={12} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
