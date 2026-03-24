@@ -207,7 +207,7 @@ export default function Feed() {
 
             {/* Transaction picker — grouped like Transactions page */}
             {showTxPicker && (() => {
-              // Group transactions by stock + date + action
+              // Group transactions by stock + date + action, sort most recent first
               const txGroups = [];
               const txGroupMap = {};
               myTransactions.forEach(tx => {
@@ -219,6 +219,7 @@ export default function Feed() {
                 txGroupMap[key].transactions.push(tx);
                 txGroupMap[key].total_qty += tx.quantity;
               });
+              txGroups.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
               return (
                 <div className="mb-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)', maxHeight: 220, overflowY: 'auto' }}>
@@ -247,7 +248,8 @@ export default function Feed() {
                             {group.stock_name}
                           </span>
                           <span style={{ color: 'var(--text-muted)' }}>
-                            {Number(group.total_qty).toLocaleString(undefined, { maximumFractionDigits: 1 })} shares
+                            {group.date || ''}
+                            {' · '}{Number(group.total_qty).toLocaleString(undefined, { maximumFractionDigits: 1 })} shares
                             {group.transactions.length > 1 && ` · ${group.transactions.length}x`}
                           </span>
                         </div>
