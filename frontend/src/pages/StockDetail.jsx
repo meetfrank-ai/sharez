@@ -128,67 +128,70 @@ export default function StockDetail() {
       </div>
 
       {/* Community Bar */}
-      {summary?.community && (summary.community.total_holders > 0 || summary.community.recent_buys > 0) && (
-        <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Community</span>
-          </div>
+      {summary?.community && (summary.community.total_holders > 0 || summary.community.recent_buys > 0) && (() => {
+        const AVATAR_COLORS = ['#7F77DD', '#D85A30', '#1D9E75', '#378ADD', '#D4537E', '#639922', '#BA7517', '#534AB7'];
+        const getColor = (id) => AVATAR_COLORS[(String(id).split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % AVATAR_COLORS.length];
+        const c = summary.community;
+        const holders = c.following_holders || [];
 
-          {/* Stats row */}
-          <div className="flex gap-3 mb-3">
-            <div className="flex-1 rounded-lg p-2.5 text-center" style={{ backgroundColor: 'var(--bg-page)' }}>
-              <p className="text-lg font-semibold m-0" style={{ color: 'var(--text-primary)' }}>{summary.community.total_holders}</p>
-              <p className="text-[10px] m-0" style={{ color: 'var(--text-muted)' }}>holding</p>
-            </div>
-            <div className="flex-1 rounded-lg p-2.5 text-center" style={{ backgroundColor: 'var(--bg-page)' }}>
-              <p className="text-lg font-semibold m-0" style={{ color: 'var(--success)' }}>{summary.community.recent_buys || 0}</p>
-              <p className="text-[10px] m-0" style={{ color: 'var(--text-muted)' }}>bought recently</p>
-            </div>
-            <div className="flex-1 rounded-lg p-2.5 text-center" style={{ backgroundColor: 'var(--bg-page)' }}>
-              <p className="text-lg font-semibold m-0" style={{ color: 'var(--danger)' }}>{summary.community.recent_sells || 0}</p>
-              <p className="text-[10px] m-0" style={{ color: 'var(--text-muted)' }}>sold recently</p>
-            </div>
-          </div>
-
-          {/* Account breakdown */}
-          {summary.community.account_breakdown && Object.keys(summary.community.account_breakdown).length > 0 && (
-            <div className="flex gap-2 mb-3">
-              {Object.entries(summary.community.account_breakdown).map(([type, count]) => (
-                <span key={type} className="text-[11px] font-medium px-2 py-0.5 rounded-full"
-                  style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-secondary)' }}>
-                  {type}: {count}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* People you follow who hold this */}
-          {summary.community.following_holders?.length > 0 && (
-            <div className="flex items-center gap-1 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
-              <div className="flex -space-x-1.5">
-                {summary.community.following_holders.slice(0, 5).map((h, i) => (
-                  <Link key={h.id} to={`/user/${h.id}`} className="no-underline" style={{ zIndex: 6 - i }}>
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold"
-                      style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)', border: '2px solid var(--bg-card)' }}>
-                      {h.display_name?.charAt(0).toUpperCase()}
-                    </div>
-                  </Link>
-                ))}
-                {summary.community.following_holders.length > 5 && (
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-medium"
-                    style={{ backgroundColor: 'var(--bg-hover)', color: 'var(--text-muted)', border: '2px solid var(--bg-card)' }}>
-                    +{summary.community.following_holders.length - 5}
-                  </div>
-                )}
-              </div>
-              <span className="text-[11px] ml-2" style={{ color: 'var(--text-secondary)' }}>
-                {summary.community.following_holders.map(h => h.display_name?.split(' ')[0]).slice(0, 3).join(', ')}
-                {summary.community.following_holders.length > 3 && ` +${summary.community.following_holders.length - 3} more`}
+        return (
+          <div className="rounded-lg mb-4" style={{ backgroundColor: 'var(--bg-card)', border: '0.5px solid var(--border)', padding: '12px 14px' }}>
+            {/* Header: label + inline stats */}
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
+                People you follow
+              </span>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {c.total_holders} holding
+                {c.recent_buys > 0 && ` · ${c.recent_buys} bought recently`}
+                {c.recent_sells > 0 && ` · ${c.recent_sells} sold recently`}
               </span>
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Avatar stack */}
+            {holders.length > 0 && (
+              <div className="flex items-center mb-2">
+                <div className="flex">
+                  {holders.slice(0, 4).map((h, i) => (
+                    <Link key={h.id} to={`/user/${h.id}`} className="no-underline" style={{ zIndex: 5 - i, marginRight: '-6px' }}>
+                      <div className="flex items-center justify-center rounded-full text-white font-medium"
+                        style={{
+                          width: 28, height: 28, fontSize: 10,
+                          backgroundColor: getColor(h.id),
+                          border: '2px solid var(--bg-card)',
+                        }}>
+                        {h.display_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
+                    </Link>
+                  ))}
+                  {holders.length > 4 && (
+                    <div className="flex items-center justify-center rounded-full font-medium"
+                      style={{
+                        width: 28, height: 28, fontSize: 10, zIndex: 1,
+                        backgroundColor: 'var(--bg-page)', color: 'var(--text-muted)',
+                        border: '2px solid var(--bg-card)',
+                      }}>
+                      +{holders.length - 4}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Account breakdown */}
+            {c.account_breakdown && Object.keys(c.account_breakdown).length > 0 && (
+              <div className="flex gap-2">
+                {Object.entries(c.account_breakdown).map(([type, count]) => (
+                  <span key={type} className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-secondary)' }}>
+                    {type}: {count}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Tabs */}
       <div className="flex gap-1.5 mb-4">
