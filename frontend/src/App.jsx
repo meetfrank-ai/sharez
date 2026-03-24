@@ -14,6 +14,8 @@ import Followers from './pages/Followers';
 import Watchlist from './pages/Watchlist';
 import Transactions from './pages/Transactions';
 import Saved from './pages/Saved';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import NoteThread from './pages/NoteThread';
 
 function ProtectedRoute({ children }) {
@@ -32,6 +34,8 @@ function AppRoutes() {
     return (
       <Routes>
         <Route path="/login" element={user ? <Navigate to={user.has_onboarded ? '/' : '/onboarding'} /> : <Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/onboarding" element={
           <ProtectedRoute>
             {user?.has_onboarded ? <Navigate to="/" /> : <Onboarding />}

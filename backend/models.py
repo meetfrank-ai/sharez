@@ -74,6 +74,8 @@ class User(Base):
 
     has_onboarded = Column(Boolean, default=False)
     portfolio_imported_at = Column(DateTime, nullable=True)
+    password_reset_token = Column(String, nullable=True)
+    password_reset_expires = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utcnow)
 
     # Relationships

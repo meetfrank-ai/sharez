@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User, UserTierConfig, Follow, FollowStatus, Tier
+from pydantic import BaseModel
 from schemas import UserCreate, UserLogin, Token, UserOut, UserProfileUpdate
 from auth import hash_password, verify_password, create_access_token, get_current_user
 
@@ -107,3 +108,95 @@ def update_profile(
     db.commit()
     db.refresh(user)
     return user
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+@router.post("/forgot-password")
+def forgot_password(
+    data: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    """Send password reset email."""
+    import os, secrets
+    from datetime import datetime, timedelta, timezone
+
+    user = db.query(User).filter(User.email == data.email).first()
+    if not user:
+        # Don't reveal if email exists
+        return {"message": "If that email is registered, a reset link has been sent."}
+
+    # Generate token
+    token = secrets.token_urlsafe(32)
+    user.password_reset_token = token
+    user.password_reset_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+    db.commit()
+
+    # Send email via Resend
+    resend_key = os.getenv("RESEND_API_KEY")
+    if resend_key:
+        try:
+            import resend
+            resend.api_key = resend_key
+
+            reset_url = f"https://sharez.onrender.com/reset-password?token={token}"
+
+            resend.Emails.send({
+                "from": "Sharez <onboarding@resend.dev>",
+                "to": [user.email],
+                "subject": "Reset your Sharez password",
+                "html": f"""
+                <div style="font-family: Inter, sans-serif; max-width: 400px; margin: 0 auto; padding: 40px 20px;">
+                    <h2 style="color: #1A1A2E; margin-bottom: 16px;">Reset your password</h2>
+                    <p style="color: #6B7280; font-size: 14px; line-height: 1.6;">
+                        Hi {user.display_name},<br><br>
+                        Click the button below to reset your Sharez password. This link expires in 1 hour.
+                    </p>
+                    <a href="{reset_url}" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; margin: 20px 0;">
+                        Reset Password
+                    </a>
+                    <p style="color: #9CA3AF; font-size: 12px; margin-top: 24px;">
+                        If you didn't request this, you can ignore this email.
+                    </p>
+                </div>
+                """,
+            })
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to send reset email: {e}")
+
+    return {"message": "If that email is registered, a reset link has been sent."}
+
+
+@router.post("/reset-password")
+def reset_password(
+    data: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    """Reset password with token from email."""
+    from datetime import datetime, timezone
+
+    user = db.query(User).filter(User.password_reset_token == data.token).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset link")
+
+    if user.password_reset_expires:
+        expires = user.password_reset_expires.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) > expires:
+            raise HTTPException(status_code=400, detail="Reset link has expired. Request a new one.")
+
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    user.password_hash = hash_password(data.new_password)
+    user.password_reset_token = None
+    user.password_reset_expires = None
+    db.commit()
+
+    return {"message": "Password has been reset. You can now log in."}

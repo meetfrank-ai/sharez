@@ -11,4 +11,5 @@ anthropic==0.39.0
 yfinance==0.2.43
 python-multipart==0.0.12
 psycopg2-binary==2.9.9
+resend==2.0.0
 openpyxl==3.1.5

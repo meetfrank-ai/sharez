@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Login() {
@@ -129,6 +130,14 @@ export default function Login() {
                 style={inputStyle}
               />
             </div>
+
+            {!isRegister && (
+              <div className="text-right">
+                <Link to="/forgot-password" className="text-xs no-underline" style={{ color: 'var(--accent)' }}>
+                  Forgot password?
+                </Link>
+              </div>
+            )}
 
             {error && (
               <div className="rounded-lg px-3 py-2" style={{ backgroundColor: '#FEF2F2' }}>

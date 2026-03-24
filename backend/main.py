@@ -21,6 +21,8 @@ try:
         "users": [
             ("portfolio_imported_at", "ALTER TABLE users ADD COLUMN portfolio_imported_at TIMESTAMP"),
             ("handle", "ALTER TABLE users ADD COLUMN handle VARCHAR"),
+            ("password_reset_token", "ALTER TABLE users ADD COLUMN password_reset_token VARCHAR"),
+            ("password_reset_expires", "ALTER TABLE users ADD COLUMN password_reset_expires TIMESTAMP"),
         ],
         "notes": [
             ("transaction_ids", "ALTER TABLE notes ADD COLUMN transaction_ids JSONB"),
