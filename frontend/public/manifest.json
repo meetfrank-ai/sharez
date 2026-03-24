@@ -1,0 +1,40 @@
+{
+  "name": "Sharez",
+  "short_name": "Sharez",
+  "description": "See what your friends are investing in",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F6FA",
+  "theme_color": "#4F46E5",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "share_target": {
+    "action": "/transactions",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "file",
+          "accept": [".xlsx", ".xls", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
+        }
+      ]
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "/transactions",
+      "accept": {
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+        "application/vnd.ms-excel": [".xls"]
+      }
+    }
+  ]
+}

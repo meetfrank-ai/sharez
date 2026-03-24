@@ -94,9 +94,9 @@ export default function ImportPortfolioModal({ onClose, onImported }) {
                   <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
                     style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>1</div>
                   <div>
-                    <p className="text-sm font-medium m-0" style={{ color: 'var(--text-primary)' }}>Log into EasyEquities</p>
+                    <p className="text-sm font-medium m-0" style={{ color: 'var(--text-primary)' }}>Open EasyEquities</p>
                     <p className="text-xs m-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      Go to <strong>platform.easyequities.io</strong> on your computer
+                      Open the EasyEquities app or go to <strong>platform.easyequities.io</strong>
                     </p>
                   </div>
                 </div>
@@ -104,9 +104,9 @@ export default function ImportPortfolioModal({ onClose, onImported }) {
                   <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
                     style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>2</div>
                   <div>
-                    <p className="text-sm font-medium m-0" style={{ color: 'var(--text-primary)' }}>Go to My Funds → Transactions</p>
+                    <p className="text-sm font-medium m-0" style={{ color: 'var(--text-primary)' }}>Go to Transactions</p>
                     <p className="text-xs m-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      From the home page, click <strong>My Funds</strong> (middle-top) → then click <strong>Transactions</strong>
+                      Tap the <strong>hamburger menu</strong> (☰) → <strong>Transactions</strong>
                     </p>
                   </div>
                 </div>
@@ -116,7 +116,7 @@ export default function ImportPortfolioModal({ onClose, onImported }) {
                   <div>
                     <p className="text-sm font-medium m-0" style={{ color: 'var(--text-primary)' }}>Select your account</p>
                     <p className="text-xs m-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      Choose the account to export (e.g. <strong>EasyEquities ZAR</strong>, <strong>TFSA</strong>, or <strong>USD</strong>). Do each account separately.
+                      Choose which account (e.g. <strong>ZAR</strong>, <strong>TFSA</strong>, or <strong>USD</strong>). Import each account separately.
                     </p>
                   </div>
                 </div>
@@ -124,9 +124,9 @@ export default function ImportPortfolioModal({ onClose, onImported }) {
                   <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
                     style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>4</div>
                   <div>
-                    <p className="text-sm font-medium m-0" style={{ color: 'var(--text-primary)' }}>Download past year's transactions</p>
+                    <p className="text-sm font-medium m-0" style={{ color: 'var(--text-primary)' }}>Download transactions</p>
                     <p className="text-xs m-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      Click <strong>"Download Past Year's Transactions"</strong> to download the .xlsx file
+                      Scroll to the bottom → tap <strong>"Download Past Year's Transactions"</strong>
                     </p>
                   </div>
                 </div>

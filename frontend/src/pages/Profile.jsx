@@ -227,6 +227,19 @@ export default function Profile() {
         {eeMsg && <p className="text-xs mt-2 m-0" style={{ color: 'var(--success)' }}>{eeMsg}</p>}
       </div>
 
+      {/* Install app */}
+      <div className="rounded-xl p-5 mb-4" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
+        <h2 className="text-sm font-semibold mb-2 m-0" style={{ color: 'var(--text-primary)' }}>Install Sharez app</h2>
+        <p className="text-xs mb-3" style={{ color: 'var(--text-secondary)' }}>
+          Add Sharez to your home screen for a native app experience. You'll also be able to share files directly from EasyEquities to Sharez.
+        </p>
+        <div className="space-y-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+          <p className="m-0"><strong>iPhone:</strong> Tap the share button (↑) in Safari → "Add to Home Screen"</p>
+          <p className="m-0"><strong>Android:</strong> Tap the menu (⋮) in Chrome → "Install app" or "Add to Home Screen"</p>
+          <p className="m-0"><strong>Desktop:</strong> Click the install icon (⊕) in the address bar</p>
+        </div>
+      </div>
+
       <button onClick={logout}
         className="w-full py-2.5 rounded-lg text-sm font-medium cursor-pointer"
         style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
