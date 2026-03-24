@@ -172,6 +172,45 @@ Total: ~3 hours
 
 ---
 
+## Current Status (2026-03-24)
+
+| Task | Status | Notes |
+|---|---|---|
+| 1. Instrument map | ✅ Done | 30+ instruments seeded |
+| 2. Waterfall resolver | ✅ Done | EODHD → yfinance → scrape → null |
+| 3. Sanity check | ✅ Done | Blocks wrong P&L values |
+| 4. NAV scraper | ❌ Blocked | See below |
+| 5. UI badges | ✅ Done | "Price unavailable" for unpriced holdings |
+
+### Task 4 Blockers — Unit Trust & AMETF Pricing
+
+**Problem:** No free API covers SA unit trusts or new AMETFs (2024-2026).
+
+**What we tested:**
+- Moneyweb unit trust page → JS-rendered, simple HTTP scrape returns no data
+- Morningstar SA → JS-rendered, empty response
+- Profile Data API → 404 (doesn't exist at tested URL)
+- yfinance for AMETFs (AGOGE.JO, EASYGE.JO, CGEM.JO) → 429 rate-limited from local IP. May work on Render's IP.
+- EODHD → only 4 JSE symbols returned on current plan (not enough for full coverage)
+
+**Instruments affected (from real user portfolio):**
+- 36ONE BCI SA Equity Fund Class C → unit trust, NO data source
+- Merchant West SCI Value Fund → unit trust, NO data source
+- Allan Gray Orbis Global Equity Feeder AMETF → AMETF, yfinance may work (rate-limited when tested)
+- Coronation Global Emerging Markets Prescient Feeder AMETF → AMETF, yfinance may work
+- EasyETFs Global Equity Actively Managed ETF → AMETF, yfinance may work
+
+**Options to explore (tomorrow):**
+1. **Playwright/headless browser** for Moneyweb scraping — works but heavy dependency
+2. **FundsData.co.za API** — SA-specific fund pricing, need to check pricing/availability
+3. **ProfileData API** — find correct endpoint (the URL we tried was wrong)
+4. **EasyEquities internal prices** — when user uploads XLSX, the prices in EE at time of download could be captured
+5. **Upgrade EODHD plan** — higher tier may include more JSE symbols including AMETFs
+6. **yfinance on Render** — test from deployed server where IP isn't rate-limited
+7. **Ask Claude to web-search for current NAV** — use Claude API with web search to find latest fund prices from public sources
+
+---
+
 ## Files to Create/Modify
 
 **New files:**
