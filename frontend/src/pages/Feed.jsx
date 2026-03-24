@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Send, Plus } from 'lucide-react';
+import { Search, Send, Plus, DollarSign, ArrowLeftRight, Image as ImageIcon, X } from 'lucide-react';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 import FeedItem from '../components/FeedItem';
@@ -27,6 +27,9 @@ export default function Feed() {
   const [composerBody, setComposerBody] = useState('');
   const [composerVisibility, setComposerVisibility] = useState('public');
   const [composerExpanded, setComposerExpanded] = useState(false);
+  const [composerStockTag, setComposerStockTag] = useState('');
+  const [composerStockName, setComposerStockName] = useState('');
+  const [showStockInput, setShowStockInput] = useState(false);
   const [posting, setPosting] = useState(false);
   const textareaRef = useRef(null);
 
@@ -54,8 +57,16 @@ export default function Feed() {
     if (!composerBody.trim() || posting) return;
     setPosting(true);
     try {
-      await api.post('/notes/', { body: composerBody.trim(), visibility: composerVisibility });
+      await api.post('/notes/', {
+        body: composerBody.trim(),
+        visibility: composerVisibility,
+        stock_tag: composerStockTag || null,
+        stock_name: composerStockName || null,
+      });
       setComposerBody('');
+      setComposerStockTag('');
+      setComposerStockName('');
+      setShowStockInput(false);
       setComposerExpanded(false);
       fetchFeed();
     } catch (err) {
@@ -125,36 +136,89 @@ export default function Feed() {
           </button>
         ) : (
           <div className="p-5">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold shrink-0"
-                style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
-                {user?.display_name?.charAt(0).toUpperCase() || '?'}
+            {/* Text area */}
+            <textarea
+              ref={textareaRef}
+              value={composerBody}
+              onChange={(e) => setComposerBody(e.target.value)}
+              placeholder="What's happening?"
+              rows={3}
+              className="w-full text-sm outline-none resize-none bg-transparent border-none p-0 mb-3"
+              style={{ color: 'var(--text-primary)' }}
+            />
+
+            {/* Stock tag pill (if set) */}
+            {composerStockName && (
+              <div className="flex items-center gap-1 mb-3">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium"
+                  style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
+                  <DollarSign size={11} />{composerStockName}
+                  <button onClick={() => { setComposerStockTag(''); setComposerStockName(''); }}
+                    className="ml-1 bg-transparent border-none cursor-pointer p-0" style={{ color: 'var(--accent)' }}>
+                    <X size={11} />
+                  </button>
+                </span>
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold m-0 mb-1" style={{ color: 'var(--text-primary)' }}>{user?.display_name}</p>
-                <textarea
-                  ref={textareaRef}
-                  value={composerBody}
-                  onChange={(e) => setComposerBody(e.target.value)}
-                  placeholder="Share a thought, stock pick, or hot take..."
-                  rows={3}
-                  className="w-full text-sm outline-none resize-none bg-transparent border-none p-0"
-                  style={{ color: 'var(--text-primary)' }}
+            )}
+
+            {/* Stock tag input (when toggled) */}
+            {showStockInput && !composerStockName && (
+              <div className="mb-3">
+                <input
+                  type="text"
+                  placeholder="Stock name (e.g. Capitec Bank)"
+                  autoFocus
+                  className="w-full px-3 py-2 rounded-lg text-xs outline-none"
+                  style={{ backgroundColor: 'var(--bg-page)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                      const name = e.target.value.trim();
+                      setComposerStockName(name);
+                      setComposerStockTag(`EE_${name.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 10)}`);
+                      setShowStockInput(false);
+                    }
+                  }}
                 />
+                <p className="text-[10px] mt-1 m-0" style={{ color: 'var(--text-muted)' }}>Press Enter to tag</p>
               </div>
+            )}
+
+            {/* Attachment bar */}
+            <div className="flex items-center gap-1 pb-3 mb-3 flex-wrap" style={{ borderBottom: '1px solid var(--border)' }}>
+              <button onClick={() => setShowStockInput(!showStockInput)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-transparent border-none cursor-pointer transition-colors"
+                style={{ color: showStockInput ? 'var(--accent)' : 'var(--text-muted)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                <DollarSign size={15} /> Stock
+              </button>
+              <button onClick={() => setShowShareTrade(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-transparent border-none cursor-pointer"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                <ArrowLeftRight size={15} /> Trade
+              </button>
+              <button
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-transparent border-none cursor-pointer"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                <ImageIcon size={15} /> Image
+              </button>
             </div>
-            <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-              <div className="flex items-center gap-3">
-                <select value={composerVisibility} onChange={(e) => setComposerVisibility(e.target.value)}
-                  className="text-xs px-2 py-1 rounded-md outline-none cursor-pointer"
-                  style={{ backgroundColor: 'var(--bg-page)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-                  <option value="public">Public</option>
-                  <option value="inner_circle">Inner Circle</option>
-                  <option value="vault">Vault</option>
-                </select>
-              </div>
+
+            {/* Bottom row: visibility + post */}
+            <div className="flex items-center justify-between">
+              <select value={composerVisibility} onChange={(e) => setComposerVisibility(e.target.value)}
+                className="text-xs px-2 py-1 rounded-md outline-none cursor-pointer"
+                style={{ backgroundColor: 'var(--bg-page)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+                <option value="public">Public</option>
+                <option value="inner_circle">Inner Circle</option>
+                <option value="vault">Vault</option>
+              </select>
               <div className="flex items-center gap-2">
-                <button onClick={() => { setComposerExpanded(false); setComposerBody(''); }}
+                <button onClick={() => { setComposerExpanded(false); setComposerBody(''); setComposerStockTag(''); setComposerStockName(''); setShowStockInput(false); }}
                   className="px-3 py-1.5 rounded-lg text-xs bg-transparent border-none cursor-pointer"
                   style={{ color: 'var(--text-muted)' }}>Cancel</button>
                 <button onClick={handlePost} disabled={!composerBody.trim() || posting}
@@ -231,15 +295,6 @@ export default function Feed() {
           return null;
         })
       )}
-
-      {/* FAB — Share trade button */}
-      <button
-        onClick={() => setShowShareTrade(true)}
-        className="fixed bottom-24 md:bottom-8 right-6 w-12 h-12 rounded-full flex items-center justify-center border-none cursor-pointer shadow-lg transition-transform hover:scale-105"
-        style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF', zIndex: 40 }}
-      >
-        <Plus size={22} />
-      </button>
 
       {/* Share trade modal */}
       {showShareTrade && (
