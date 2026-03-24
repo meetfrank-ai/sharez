@@ -8,11 +8,13 @@ import {
   Bell,
   Settings,
   LogOut,
+  ArrowLeftRight,
 } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Feed', icon: Home },
   { path: '/portfolio', label: 'My Portfolio', icon: BarChart3 },
+  { path: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { path: '/watchlist', label: 'Watchlist', icon: Bookmark },
   { path: '/discover', label: 'Discover', icon: Compass },
   { path: '/followers', label: 'Connections', icon: Bell },
@@ -22,7 +24,7 @@ const navItems = [
 const mobileNavItems = [
   { path: '/', label: 'Feed', icon: Home },
   { path: '/portfolio', label: 'Portfolio', icon: BarChart3 },
-  { path: '/watchlist', label: 'Watchlist', icon: Bookmark },
+  { path: '/transactions', label: 'Trades', icon: ArrowLeftRight },
   { path: '/discover', label: 'Discover', icon: Compass },
   { path: '/profile', label: 'Profile', icon: Settings },
 ];

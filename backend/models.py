@@ -138,6 +138,30 @@ class Subscription(Base):
     creator = relationship("User", foreign_keys=[creator_id])
 
 
+class UserTransaction(Base):
+    __tablename__ = "user_transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action = Column(String, nullable=False)  # "buy" or "sell"
+    stock_name = Column(String, nullable=False)
+    contract_code = Column(String, nullable=True)
+    account_type = Column(String, nullable=False, default="ZAR")
+    quantity = Column(Float, nullable=False)
+    price = Column(Float, nullable=True)  # per share
+    amount = Column(Float, nullable=True)  # total cost (private)
+    transaction_date = Column(DateTime, nullable=True)
+    import_hash = Column(String, nullable=True)  # for dedup on re-import
+    shared_count = Column(Integer, default=0)  # how many times shared to feed
+    created_at = Column(DateTime, default=utcnow)
+
+    user = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "import_hash", name="uq_user_transaction_hash"),
+    )
+
+
 class Holding(Base):
     __tablename__ = "holdings"
 

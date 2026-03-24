@@ -294,14 +294,14 @@ async def import_transactions(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Import portfolio from EasyEquities transaction history XLSX."""
-    from ee_import import parse_transaction_xlsx, import_holdings_to_db
+    """Import transactions from EasyEquities XLSX. Stores raw transactions and rebuilds holdings."""
+    from ee_import import parse_transaction_xlsx, import_transactions_to_db
 
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="Please upload an Excel file (.xlsx)")
 
     contents = await file.read()
-    if len(contents) > 10 * 1024 * 1024:  # 10MB limit
+    if len(contents) > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large (max 10MB)")
 
     try:
@@ -309,23 +309,105 @@ async def import_transactions(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to parse file: {str(e)}")
 
-    result = import_holdings_to_db(db, user, parsed, account_type)
+    result = import_transactions_to_db(db, user, parsed, account_type)
 
     # Update portfolio_imported_at timestamp
-    from datetime import datetime, timezone
-    user.portfolio_imported_at = datetime.now(timezone.utc)
+    from datetime import datetime as dt, timezone as tz
+    user.portfolio_imported_at = dt.now(tz.utc)
     db.commit()
 
     return {
         "message": result["message"],
         "holdings_imported": result["count"],
+        "new_transactions": result["new_count"],
         "stocks": result.get("stocks", []),
-        "transactions_found": parsed["total_transactions"],
-        "added_stocks": [
-            {"contract_code": f"EE_{re.sub(r'[^A-Z0-9]', '', h['stock_name'].upper())[:10]}", "stock_name": h["stock_name"], "type": "buy"}
-            for h in parsed["holdings"]
-        ],
+        "transactions_found": result["total_transactions"],
     }
+
+
+@router.get("/transactions")
+def get_my_transactions(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get all your transactions, sorted by date."""
+    from models import UserTransaction
+    txs = (
+        db.query(UserTransaction)
+        .filter(UserTransaction.user_id == user.id)
+        .order_by(UserTransaction.transaction_date.desc())
+        .all()
+    )
+    return [{
+        "id": t.id,
+        "action": t.action,
+        "stock_name": t.stock_name,
+        "contract_code": t.contract_code,
+        "account_type": t.account_type,
+        "quantity": t.quantity,
+        "price": t.price,
+        "transaction_date": str(t.transaction_date)[:10] if t.transaction_date else None,
+        "shared_count": t.shared_count,
+        "created_at": str(t.created_at),
+    } for t in txs]
+
+
+@router.post("/transactions/{tx_id}/share")
+def share_transaction_from_list(
+    tx_id: int,
+    visibility: str = "public",
+    note_body: str = "",
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Share a transaction to the feed with optional note and privacy."""
+    from models import UserTransaction, Trade, Note, Tier
+
+    tx = db.query(UserTransaction).filter(
+        UserTransaction.id == tx_id, UserTransaction.user_id == user.id
+    ).first()
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    vis = Tier(visibility)
+
+    # Create linked note if provided
+    note_id = None
+    if note_body and note_body.strip():
+        note = Note(
+            user_id=user.id,
+            body=note_body[:5000],
+            visibility=vis,
+            stock_tag=tx.contract_code,
+            stock_name=tx.stock_name,
+        )
+        db.add(note)
+        db.flush()
+        note_id = note.id
+
+    # Create trade record
+    trade = Trade(
+        user_id=user.id,
+        action=tx.action,
+        stock_name=tx.stock_name,
+        ticker=tx.contract_code,
+        market="JSE",
+        account_type=tx.account_type,
+        trade_date=tx.transaction_date,
+        amount_private=tx.amount,
+        share_price_private=tx.price,
+        shares_private=tx.quantity,
+        ai_confidence="imported",
+        visibility=vis,
+        note_id=note_id,
+    )
+    db.add(trade)
+
+    # Increment shared count
+    tx.shared_count = (tx.shared_count or 0) + 1
+    db.commit()
+
+    return {"message": "Transaction shared", "trade_id": trade.id, "note_id": note_id}
 
 
 @router.post("/import-preview")

@@ -1,30 +1,28 @@
 """
-EasyEquities file import — parse transaction history XLSX and statement PDFs.
+EasyEquities file import — parse transaction history XLSX,
+store raw transactions, and derive holdings.
 """
 
 import re
+import hashlib
 import logging
 from datetime import datetime, timezone
 from io import BytesIO
 
 from sqlalchemy.orm import Session
 
-from models import User, Holding, AccountType
+from models import User, Holding, UserTransaction, AccountType
 
 logger = logging.getLogger(__name__)
 
 
 def parse_transaction_xlsx(file_bytes: bytes) -> dict:
-    """
-    Parse an EasyEquities Transaction History XLSX file.
-    Returns aggregated holdings and raw transactions.
-    """
+    """Parse an EasyEquities Transaction History XLSX file."""
     import openpyxl
 
     wb = openpyxl.load_workbook(BytesIO(file_bytes), read_only=True)
     ws = wb.active
 
-    stocks = {}
     transactions = []
 
     for row in range(2, ws.max_row + 1):
@@ -32,40 +30,16 @@ def parse_transaction_xlsx(file_bytes: bytes) -> dict:
         comment = str(ws.cell(row, 2).value or '')
         amount = ws.cell(row, 3).value or 0
 
-        # Parse buy/sell transactions
         match = re.match(r'(Bought|Sold) (.+?) ([\d,.]+) @ ([\d,.]+)', comment)
         if match:
-            action = match.group(1).lower()  # "bought" or "sold"
+            action = 'buy' if match.group(1) == 'Bought' else 'sell'
             stock_name = match.group(2).strip()
             quantity = float(match.group(3).replace(',', ''))
             price = float(match.group(4).replace(',', ''))
 
-            # Aggregate into holdings
-            if stock_name not in stocks:
-                stocks[stock_name] = {
-                    'stock_name': stock_name,
-                    'total_qty': 0,
-                    'total_spent': 0,
-                    'buy_count': 0,
-                    'sell_count': 0,
-                    'first_buy': None,
-                    'last_activity': None,
-                }
-
-            if action == 'bought':
-                stocks[stock_name]['total_qty'] += quantity
-                stocks[stock_name]['total_spent'] += abs(amount)
-                stocks[stock_name]['buy_count'] += 1
-            else:
-                stocks[stock_name]['total_qty'] -= quantity
-                stocks[stock_name]['sell_count'] += 1
-
-            # Track dates
-            if date_val:
-                date_str = str(date_val)[:10]
-                if not stocks[stock_name]['first_buy']:
-                    stocks[stock_name]['first_buy'] = date_str
-                stocks[stock_name]['last_activity'] = date_str
+            # Create dedup hash from date + stock + action + quantity + price
+            hash_input = f"{date_val}{stock_name}{action}{quantity}{price}"
+            import_hash = hashlib.md5(hash_input.encode()).hexdigest()
 
             transactions.append({
                 'date': str(date_val)[:19] if date_val else None,
@@ -74,112 +48,137 @@ def parse_transaction_xlsx(file_bytes: bytes) -> dict:
                 'quantity': quantity,
                 'price': price,
                 'amount': abs(amount),
+                'import_hash': import_hash,
             })
 
     wb.close()
 
-    # Build holdings list (only stocks with positive quantity)
-    holdings = []
-    for name, data in sorted(stocks.items()):
-        if data['total_qty'] > 0:
-            avg_price = data['total_spent'] / data['total_qty'] if data['total_qty'] > 0 else 0
-            holdings.append({
-                'stock_name': name,
-                'quantity': round(data['total_qty'], 4),
-                'avg_price': round(avg_price, 2),
-                'total_invested': round(data['total_spent'], 2),
-                'buy_count': data['buy_count'],
-                'sell_count': data['sell_count'],
-                'first_buy': data['first_buy'],
-                'last_activity': data['last_activity'],
-            })
+    # Aggregate for preview
+    stocks = {}
+    for t in transactions:
+        name = t['stock_name']
+        if name not in stocks:
+            stocks[name] = {'stock_name': name, 'total_qty': 0, 'total_spent': 0, 'buy_count': 0, 'sell_count': 0}
+        if t['action'] == 'buy':
+            stocks[name]['total_qty'] += t['quantity']
+            stocks[name]['total_spent'] += t['amount']
+            stocks[name]['buy_count'] += 1
+        else:
+            stocks[name]['total_qty'] -= t['quantity']
+            stocks[name]['sell_count'] += 1
+
+    holdings = [
+        {
+            'stock_name': name,
+            'quantity': round(data['total_qty'], 4),
+            'total_invested': round(data['total_spent'], 2),
+            'buy_count': data['buy_count'],
+            'sell_count': data['sell_count'],
+        }
+        for name, data in sorted(stocks.items()) if data['total_qty'] > 0
+    ]
 
     return {
-        'holdings': holdings,
         'transactions': transactions,
+        'holdings': holdings,
         'total_stocks': len(holdings),
         'total_transactions': len(transactions),
     }
 
 
-def parse_statement_pdf(file_bytes: bytes, password: str = None) -> dict:
-    """
-    Parse an EasyEquities monthly statement PDF.
-    Extracts account info, holdings, and performance.
-    """
-    import subprocess
-    import tempfile
-    import os
-
-    # Write to temp file for pdftotext
-    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as f:
-        f.write(file_bytes)
-        temp_path = f.name
-
-    try:
-        cmd = ['pdftotext', '-layout']
-        if password:
-            cmd.extend(['-upw', password])
-        cmd.extend([temp_path, '-'])
-
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-        if result.returncode != 0:
-            return {'error': 'Failed to read PDF. Check password.', 'raw': result.stderr}
-
-        text = result.stdout
-
-        # Extract account info
-        account_info = {}
-
-        # Account number
-        acc_match = re.search(r'(EE\d+-\d+)', text)
-        if acc_match:
-            account_info['account_number'] = acc_match.group(1)
-
-        # Account type (TFSA, ZAR, USD)
-        if 'TFSA' in text:
-            account_info['account_type'] = 'TFSA'
-        elif 'USD' in text:
-            account_info['account_type'] = 'USD'
-        else:
-            account_info['account_type'] = 'ZAR'
-
-        # Closing value
-        close_match = re.search(r'Closing Value\s+([\d, ]+)', text)
-        if close_match:
-            account_info['closing_value'] = float(close_match.group(1).replace(' ', '').replace(',', ''))
-
-        # Performance
-        perf = {}
-        for period in ['Last Month', 'Last 3 Months', 'Last 6 Months', 'Last 12 Months', 'Since Inception']:
-            match = re.search(rf'{re.escape(period)}\s+([-\d.]+)%', text)
-            if match:
-                perf[period.lower().replace(' ', '_')] = float(match.group(1))
-        account_info['performance'] = perf
-
-        return {
-            'account_info': account_info,
-            'raw_text_preview': text[:500],
-        }
-
-    finally:
-        os.unlink(temp_path)
-
-
-def import_holdings_to_db(
+def import_transactions_to_db(
     db: Session,
     user: User,
     parsed_data: dict,
     account_type: str = "ZAR",
 ) -> dict:
-    """
-    Import parsed holdings into the database for a user.
-    Replaces existing holdings for the given account type.
-    """
-    holdings = parsed_data.get('holdings', [])
+    """Store raw transactions and rebuild holdings from them."""
+    transactions = parsed_data.get('transactions', [])
+    if not transactions:
+        return {'message': 'No transactions found', 'count': 0, 'new_count': 0}
 
-    if not holdings:
-        return {'message': 'No holdings found in file', 'count': 0}
+    new_count = 0
+    for t in transactions:
+        # Check dedup — skip if already imported
+        existing = db.query(UserTransaction).filter(
+            UserTransaction.user_id == user.id,
+            UserTransaction.import_hash == t['import_hash'],
+        ).first()
+        if existing:
+            continue
+
+        # Generate contract code
+        code = re.sub(r'[^A-Z0-9]', '', t['stock_name'].upper())[:10]
+        contract_code = f"EE_{code}"
+
+        # Parse date
+        tx_date = None
+        if t['date']:
+            try:
+                tx_date = datetime.strptime(t['date'][:19], "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                try:
+                    tx_date = datetime.strptime(t['date'][:10], "%Y-%m-%d")
+                except ValueError:
+                    pass
+
+        db.add(UserTransaction(
+            user_id=user.id,
+            action=t['action'],
+            stock_name=t['stock_name'],
+            contract_code=contract_code,
+            account_type=account_type,
+            quantity=t['quantity'],
+            price=t['price'],
+            amount=t['amount'],
+            transaction_date=tx_date,
+            import_hash=t['import_hash'],
+        ))
+        new_count += 1
+
+    db.flush()
+
+    # Rebuild holdings from all transactions for this account type
+    _rebuild_holdings(db, user, account_type)
+
+    db.commit()
+
+    stocks = list(set(t['stock_name'] for t in transactions))
+    return {
+        'message': f'Imported {new_count} new transactions',
+        'count': len(stocks),
+        'new_count': new_count,
+        'total_transactions': len(transactions),
+        'stocks': sorted(stocks),
+    }
+
+
+def _rebuild_holdings(db: Session, user: User, account_type: str):
+    """Derive holdings from all user transactions for an account type."""
+    # Get all transactions for this account
+    all_txs = (
+        db.query(UserTransaction)
+        .filter(UserTransaction.user_id == user.id, UserTransaction.account_type == account_type)
+        .order_by(UserTransaction.transaction_date.asc())
+        .all()
+    )
+
+    # Aggregate per stock
+    stocks = {}
+    for tx in all_txs:
+        name = tx.stock_name
+        if name not in stocks:
+            stocks[name] = {
+                'stock_name': name,
+                'contract_code': tx.contract_code,
+                'shares': 0,
+                'total_cost': 0,
+            }
+        if tx.action == 'buy':
+            stocks[name]['shares'] += tx.quantity
+            stocks[name]['total_cost'] += (tx.amount or 0)
+        else:
+            stocks[name]['shares'] -= tx.quantity
 
     # Map account type
     try:
@@ -187,7 +186,7 @@ def import_holdings_to_db(
     except ValueError:
         acc_type = AccountType.ZAR
 
-    # Remove existing holdings for this account type
+    # Clear existing holdings for this account type and rebuild
     db.query(Holding).filter(
         Holding.user_id == user.id,
         Holding.account_type == acc_type,
@@ -195,29 +194,20 @@ def import_holdings_to_db(
 
     now = datetime.now(timezone.utc)
 
-    # Create contract codes from stock names
-    for h in holdings:
-        # Generate a contract code from stock name
-        code = re.sub(r'[^A-Z0-9]', '', h['stock_name'].upper())[:10]
-        contract_code = f"EE_{code}"
+    for name, data in stocks.items():
+        if data['shares'] <= 0:
+            continue  # Fully sold, don't create holding
 
-        holding = Holding(
+        avg_price = data['total_cost'] / data['shares'] if data['shares'] > 0 else 0
+
+        db.add(Holding(
             user_id=user.id,
             account_type=acc_type,
-            stock_name=h['stock_name'],
-            contract_code=contract_code,
-            purchase_value=h['total_invested'],
-            current_value=h['total_invested'],  # Will be updated with market data later
-            current_price=h['avg_price'],
-            shares=h['quantity'],
+            stock_name=name,
+            contract_code=data['contract_code'],
+            purchase_value=data['total_cost'],
+            current_value=data['total_cost'],  # Updated by EODHD price refresh
+            current_price=avg_price,
+            shares=data['shares'],
             last_synced_at=now,
-        )
-        db.add(holding)
-
-    db.commit()
-
-    return {
-        'message': f'Imported {len(holdings)} holdings',
-        'count': len(holdings),
-        'stocks': [h['stock_name'] for h in holdings],
-    }
+        ))
