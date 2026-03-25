@@ -132,7 +132,7 @@ app = FastAPI(title="Sharez", description="Social investing for friends")
 # CORS — allow the React frontend in dev
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "https://sharez.onrender.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
