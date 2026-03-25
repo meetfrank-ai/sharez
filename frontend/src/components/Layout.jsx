@@ -35,7 +35,7 @@ export default function Layout({ children }) {
   const location = useLocation();
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen w-full overflow-x-hidden">
       {/* Desktop Sidebar */}
       <aside
         className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-60 border-r z-40"
@@ -107,7 +107,7 @@ export default function Layout({ children }) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 md:ml-60 pb-24 md:pb-6">
+      <main className="flex-1 md:ml-60 pb-24 md:pb-6 min-w-0 overflow-x-hidden">
         {children}
       </main>
 
