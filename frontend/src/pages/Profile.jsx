@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Sliders, Users, Link2, Save } from 'lucide-react';
+import { Sliders, Users, Save } from 'lucide-react';
 import api from '../utils/api';
 
 export default function Profile() {
@@ -14,11 +14,6 @@ export default function Profile() {
   const [websiteUrl, setWebsiteUrl] = useState(user?.website_url || '');
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState('');
-
-  const [eeUsername, setEeUsername] = useState('');
-  const [eePassword, setEePassword] = useState('');
-  const [connecting, setConnecting] = useState(false);
-  const [eeMsg, setEeMsg] = useState('');
 
   const inputStyle = { backgroundColor: '#FFFFFF', border: '1px solid var(--border)', color: 'var(--text-primary)' };
 
@@ -43,21 +38,6 @@ export default function Profile() {
     }
   };
 
-  const handleConnectEE = async (e) => {
-    e.preventDefault();
-    setConnecting(true);
-    setEeMsg('');
-    try {
-      await api.post('/portfolio/connect-ee', { ee_username: eeUsername, ee_password: eePassword });
-      setEeMsg('Connected! Portfolio synced.');
-      setEeUsername('');
-      setEePassword('');
-    } catch (err) {
-      setEeMsg(err.response?.data?.detail || 'Connection failed');
-    } finally {
-      setConnecting(false);
-    }
-  };
 
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-6 py-6">
@@ -135,26 +115,6 @@ export default function Profile() {
             <p className="text-xs m-0" style={{ color: 'var(--text-muted)' }}>Followers & following</p>
           </div>
         </Link>
-      </div>
-
-      {/* EE connection */}
-      <div className="rounded-xl p-5 mb-4" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-        <div className="flex items-center gap-2 mb-3">
-          <Link2 size={16} style={{ color: 'var(--accent)' }} />
-          <h2 className="text-sm font-semibold m-0" style={{ color: 'var(--text-primary)' }}>Connect EasyEquities</h2>
-        </div>
-        <form onSubmit={handleConnectEE} className="space-y-3">
-          <input type="text" placeholder="EE Username" value={eeUsername} onChange={(e) => setEeUsername(e.target.value)} required
-            className="w-full px-3 py-2.5 rounded-lg text-sm outline-none" style={inputStyle} />
-          <input type="password" placeholder="EE Password" value={eePassword} onChange={(e) => setEePassword(e.target.value)} required
-            className="w-full px-3 py-2.5 rounded-lg text-sm outline-none" style={inputStyle} />
-          <button type="submit" disabled={connecting}
-            className="w-full py-2.5 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 border-none cursor-pointer"
-            style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF' }}>
-            {connecting ? 'Connecting...' : 'Connect & Sync'}
-          </button>
-        </form>
-        {eeMsg && <p className="text-xs mt-2 m-0" style={{ color: 'var(--success)' }}>{eeMsg}</p>}
       </div>
 
       {/* Install app */}
