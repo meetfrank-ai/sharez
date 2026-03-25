@@ -56,6 +56,24 @@ def get_my_holdings(
     return holdings
 
 
+@router.post("/refresh-prices")
+def refresh_prices(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Force refresh all holdings prices using the waterfall resolver."""
+    from ee_import import refresh_user_prices
+    refresh_user_prices(db, user)
+    holdings = db.query(Holding).filter(Holding.user_id == user.id).all()
+    return [{
+        "stock_name": h.stock_name,
+        "purchase_value": h.purchase_value,
+        "current_value": h.current_value,
+        "current_price": h.current_price,
+        "updated": h.last_synced_at is not None,
+    } for h in holdings]
+
+
 @router.get("/user/{user_id}", response_model=list[HoldingOut])
 def get_user_holdings(
     user_id: int,
