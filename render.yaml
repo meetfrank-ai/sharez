@@ -13,6 +13,10 @@ services:
         value: "3.11.11"
       - key: NODE_VERSION
         value: "20"
+      - key: GOOGLE_CLIENT_ID
+        value: "834694676276-lps1on59n5dbdhqkqbeqq7e63hltquch.apps.googleusercontent.com"
+      - key: FRONTEND_URL
+        value: "https://sharez.onrender.com"
 
   - type: cron
     name: sharez-daily-scrape

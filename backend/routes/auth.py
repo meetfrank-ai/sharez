@@ -226,7 +226,8 @@ def forgot_password(
             import resend
             resend.api_key = resend_key
 
-            reset_url = f"https://sharez.onrender.com/reset-password?token={token}"
+            frontend_url = os.getenv("FRONTEND_URL", "https://sharez.onrender.com")
+            reset_url = f"{frontend_url}/reset-password?token={token}"
 
             resend.Emails.send({
                 "from": "Sharez <onboarding@resend.dev>",

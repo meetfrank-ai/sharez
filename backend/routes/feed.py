@@ -36,9 +36,10 @@ def get_feed(
 
     # Fetch notes (top-level only, exclude trade-linked notes that render inside TradeCards)
     if filter in ("all", "notes"):
+        from sqlalchemy import or_
         note_query = db.query(Note).filter(
             Note.parent_note_id.is_(None),
-            Note.trade_linked != True,
+            or_(Note.trade_linked.is_(None), Note.trade_linked == False),
         )
         if community_only:
             note_query = note_query.filter(Note.user_id.in_(following_ids))
