@@ -35,21 +35,21 @@ export default function Layout({ children }) {
   const location = useLocation();
 
   return (
-    <div className="flex min-h-screen w-full overflow-x-hidden">
-      {/* Desktop Sidebar — STAK dark */}
+    <div className="flex min-h-screen w-full overflow-x-hidden" style={{ backgroundColor: '#F7F7FA' }}>
+      {/* Desktop Sidebar */}
       <aside
         className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-60 z-40"
-        style={{ backgroundColor: '#0F0F14', borderRight: '0.5px solid #2a2a35' }}
+        style={{ backgroundColor: '#FFFFFF', borderRight: '1px solid #EDEDF0' }}
       >
         {/* Logo */}
-        <NavLink to="/" className="block px-5 py-5 no-underline" style={{ borderBottom: '0.5px solid #2a2a35' }}>
-          <h1 className="text-lg font-semibold m-0" style={{ color: '#7F77DD' }}>
+        <NavLink to="/" className="block px-5 py-5 no-underline" style={{ borderBottom: '1px solid #EDEDF0' }}>
+          <h1 className="text-lg font-semibold m-0" style={{ color: '#4F46E5' }}>
             Sharez
           </h1>
         </NavLink>
 
         {/* User info */}
-        <div className="px-5 py-4" style={{ borderBottom: '0.5px solid #2a2a35' }}>
+        <div className="px-5 py-4" style={{ borderBottom: '1px solid #EDEDF0' }}>
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold"
@@ -58,10 +58,10 @@ export default function Layout({ children }) {
               {user?.display_name?.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium m-0 truncate" style={{ color: '#FFFFFF' }}>
+              <p className="text-sm font-medium m-0 truncate" style={{ color: '#1A1A2E' }}>
                 {user?.display_name}
               </p>
-              <p className="text-xs m-0 truncate" style={{ color: '#7a7888' }}>
+              <p className="text-xs m-0 truncate" style={{ color: '#9CA3AF' }}>
                 {user?.handle ? `@${user.handle}` : user?.email}
               </p>
             </div>
@@ -80,11 +80,11 @@ export default function Layout({ children }) {
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm no-underline mb-0.5 transition-colors"
                 style={{
                   fontWeight: isActive ? 500 : 400,
-                  backgroundColor: isActive ? '#1f1a30' : 'transparent',
-                  color: isActive ? '#7F77DD' : '#7a7888',
-                  borderLeft: isActive ? '3px solid #7F77DD' : '3px solid transparent',
+                  backgroundColor: isActive ? '#EEF2FF' : 'transparent',
+                  color: isActive ? '#4F46E5' : '#6B7280',
+                  borderLeft: isActive ? '3px solid #4F46E5' : '3px solid transparent',
                 }}
-                onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = '#18181f'; }}
+                onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = '#F9FAFB'; }}
                 onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}
               >
                 <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
@@ -95,11 +95,11 @@ export default function Layout({ children }) {
         </nav>
 
         {/* Bottom links */}
-        <div className="px-5 py-4 space-y-1" style={{ borderTop: '0.5px solid #2a2a35' }}>
+        <div className="px-5 py-4 space-y-1" style={{ borderTop: '1px solid #EDEDF0' }}>
           <button
             onClick={logout}
             className="flex items-center gap-2 text-xs bg-transparent border-none cursor-pointer p-0"
-            style={{ color: '#4a4958' }}
+            style={{ color: '#9CA3AF' }}
           >
             <LogOut size={14} />
             Sign out
@@ -112,12 +112,12 @@ export default function Layout({ children }) {
         {children}
       </main>
 
-      {/* Mobile bottom tab bar — STAK style */}
+      {/* Mobile bottom tab bar */}
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 flex justify-around items-center z-50"
         style={{
-          backgroundColor: '#0F0F14',
-          borderTop: '0.5px solid #2a2a35',
+          backgroundColor: '#FFFFFF',
+          borderTop: '1px solid #EDEDF0',
           padding: '6px 12px calc(env(safe-area-inset-bottom, 8px) + 6px)',
         }}
       >
@@ -132,15 +132,15 @@ export default function Layout({ children }) {
               style={{
                 padding: isActive ? '6px 14px' : '6px 8px',
                 borderRadius: isActive ? 14 : 0,
-                backgroundColor: isActive ? '#1f1a30' : 'transparent',
+                backgroundColor: isActive ? '#EEF2FF' : 'transparent',
                 transition: 'all 150ms ease',
               }}
             >
-              <Icon size={21} strokeWidth={isActive ? 2 : 1.5} style={{ color: isActive ? '#7F77DD' : '#4a4958' }} />
+              <Icon size={21} strokeWidth={isActive ? 2 : 1.5} style={{ color: isActive ? '#4F46E5' : '#9CA3AF' }} />
               <span style={{
                 fontSize: 9,
                 fontWeight: isActive ? 600 : 500,
-                color: isActive ? '#7F77DD' : '#4a4958',
+                color: isActive ? '#4F46E5' : '#9CA3AF',
                 marginTop: 2,
               }}>
                 {item.label}
