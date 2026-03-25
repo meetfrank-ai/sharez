@@ -304,6 +304,7 @@ def share_transaction(
             visibility=Tier.public,
             stock_tag=data.contract_code,
             stock_name=data.stock_name,
+            trade_linked=True,
         )
         db.add(note)
         db.flush()

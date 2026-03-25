@@ -34,9 +34,12 @@ def get_feed(
 
     items = []
 
-    # Fetch notes (top-level only)
+    # Fetch notes (top-level only, exclude trade-linked notes that render inside TradeCards)
     if filter in ("all", "notes"):
-        note_query = db.query(Note).filter(Note.parent_note_id.is_(None))
+        note_query = db.query(Note).filter(
+            Note.parent_note_id.is_(None),
+            Note.trade_linked != True,
+        )
         if community_only:
             note_query = note_query.filter(Note.user_id.in_(following_ids))
         notes = note_query.order_by(Note.created_at.desc()).limit(limit * 2).all()

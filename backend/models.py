@@ -299,6 +299,7 @@ class Note(Base):
     transaction_ids = Column(JSON, nullable=True)  # array of UserTransaction IDs
     image_url = Column(String, nullable=True)
     parent_note_id = Column(Integer, ForeignKey("notes.id"), nullable=True)
+    trade_linked = Column(Boolean, default=False)  # True = only renders inside parent TradeCard
     like_count = Column(Integer, default=0)
     reply_count = Column(Integer, default=0)
     reshare_count = Column(Integer, default=0)

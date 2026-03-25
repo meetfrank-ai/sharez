@@ -20,30 +20,23 @@ def resolve_price(db: Session, stock_name: str, avg_buy_price: float = None, ins
     """
     from models import InstrumentMap, ScrapedPrice
 
-    # Look up instrument mapping
+    # Look up instrument mapping — EXACT match only for API sources.
+    # Fuzzy matching caused wrong prices (e.g., partial name → wrong ticker).
     mapping = db.query(InstrumentMap).filter(InstrumentMap.ee_name == stock_name).first()
 
-    if not mapping:
-        # Try fuzzy match
-        mapping = _fuzzy_match(db, stock_name)
-
-    eodhd_symbol = mapping.eodhd_symbol if mapping else None
-    yf_symbol = mapping.yfinance_symbol if mapping else None
     inst_type = mapping.instrument_type if mapping else instrument_type
-    scrape_source = mapping.scrape_source if mapping else None
-    scrape_code = mapping.scrape_code if mapping else None
 
-    # Source 1: EODHD
-    if eodhd_symbol:
-        price = _fetch_eodhd(eodhd_symbol)
+    # Source 1: EODHD (exact mapping required)
+    if mapping and mapping.eodhd_symbol:
+        price = _fetch_eodhd(mapping.eodhd_symbol)
         if price and _sanity_check(price, avg_buy_price, inst_type):
             return {"price": price, "source": "eodhd", "confidence": "high"}
         elif price:
             _log_anomaly(db, stock_name, "eodhd", price, avg_buy_price)
 
-    # Source 2: yfinance
-    if yf_symbol:
-        price = _fetch_yfinance(yf_symbol)
+    # Source 2: yfinance (exact mapping required)
+    if mapping and mapping.yfinance_symbol:
+        price = _fetch_yfinance(mapping.yfinance_symbol)
         if price and _sanity_check(price, avg_buy_price, inst_type):
             return {"price": price, "source": "yfinance", "confidence": "high"}
         elif price:
@@ -65,7 +58,11 @@ def resolve_price(db: Session, stock_name: str, avg_buy_price: float = None, ins
         else:
             _log_anomaly(db, stock_name, "scrape", scraped.nav_price, avg_buy_price)
 
-    # No price available
+    # No price available — log for visibility
+    if not mapping:
+        logger.info(f"No instrument mapping for '{stock_name}' — needs manual mapping")
+    else:
+        logger.info(f"No valid price found for '{stock_name}' from any source")
     return {"price": None, "source": "none", "confidence": "none"}
 
 

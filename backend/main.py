@@ -29,6 +29,7 @@ try:
             ("image_url", "ALTER TABLE notes ADD COLUMN image_url VARCHAR"),
             ("reshare_count", "ALTER TABLE notes ADD COLUMN reshare_count INTEGER DEFAULT 0"),
             ("restacked_note_id", "ALTER TABLE notes ADD COLUMN restacked_note_id INTEGER"),
+            ("trade_linked", "ALTER TABLE notes ADD COLUMN trade_linked BOOLEAN DEFAULT FALSE"),
         ],
     }
 
