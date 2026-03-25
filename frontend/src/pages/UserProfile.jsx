@@ -1,269 +1,379 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Linkedin, Globe, ExternalLink, TrendingUp, TrendingDown, Shield } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { Settings, RefreshCw } from 'lucide-react';
 import api from '../utils/api';
+import { useAuth } from '../hooks/useAuth';
 import NoteCard from '../components/NoteCard';
-import TierBadge from '../components/TierBadge';
 import FollowButton from '../components/FollowButton';
-import ThesisCard from '../components/ThesisCard';
 
-const CHART_COLORS = ['#4F46E5', '#3B82F6', '#10B981', '#D97706', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'];
+/* ── Design tokens (STAK system) ── */
+const T = {
+  bg: '#F6F7FB', card: '#FFFFFF', border: '#E6E9F2', surface: '#F1F3F9',
+  purple: '#7C5CE0', purpleLight: '#F0EEFF', purpleHover: '#6B4ED0',
+  green: '#10B981', greenDark: '#34D399', red: '#EF4444',
+  t1: '#111318', t2: '#6B7280', t3: '#9AA1AC', t4: '#CCC',
+  shadow: '0 4px 12px rgba(0,0,0,0.04)', shadowH: '0 6px 16px rgba(0,0,0,0.06)',
+  heroShadow: '0 8px 24px rgba(26,26,62,0.2)',
+};
+const GREENS = ['#34D399','#6EE7B7','#A7F3D0','#D1FAE5','#B6F0D8','#86EFAC','#BBF7D0','#ECFDF5'];
+const ICON_TINTS = [
+  { bg: '#F0EEFF', fg: '#7C5CE0' }, { bg: '#ECFDF5', fg: '#059669' },
+  { bg: '#FEF3CD', fg: '#92600A' }, { bg: '#DBEAFE', fg: '#1D4ED8' },
+  { bg: '#EBEBF0', fg: '#666' }, { bg: '#F0EEFF', fg: '#7C5CE0' },
+];
+
+const SHORT = {
+  'Prosus N.V': 'Prosus', 'Naspers Limited': 'Naspers', 'Capitec Bank Holdings Limited': 'Capitec',
+  'Shoprite Holdings Limited': 'Shoprite', 'Standard Bank Group Limited': 'Standard Bank',
+  'Allan Gray Orbis Global Equity Feeder AMETF': 'Allan Gray AGOGE',
+  'Coronation Global Emerging Markets Prescient Feeder AMETF': 'Coronation EM',
+  'EasyETFs Global Equity Actively Managed ETF': 'EasyETFs Global',
+  '36ONE BCI SA Equity Fund Class C': '36ONE SA Equity', 'Merchant West SCI Value Fund': 'Merchant West',
+  'Satrix Top 40 ETF': 'Satrix Top 40', 'Satrix S&P 500 ETF': 'Satrix S&P 500',
+  'CoreShares S&P 500 ETF': 'CoreShares S&P 500',
+};
+const shortName = n => SHORT[n] || n?.replace(/ (Limited|Holdings|PLC|Inc|Corporation|N\.V\.?|Group)\.?/gi, '').split(' ').slice(0, 3).join(' ');
+const abbrev = n => { const s = shortName(n); return s?.length <= 3 ? s.toUpperCase() : s?.slice(0, 2).toUpperCase(); };
+
+/* ── Donut SVG ── */
+function HeroDonut({ segments, totalPL, isPos, holdingCount, highlightIdx, setHighlightIdx }) {
+  const R = 100, CX = 130, CY = 130, SW = 36;
+  const circ = 2 * Math.PI * R;
+  let off = 0;
+
+  return (
+    <div style={{ position: 'relative', width: 260, height: 260, flexShrink: 0 }}>
+      <svg width="260" height="260" viewBox="0 0 260 260" style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={SW} />
+        {segments.map((s, i) => {
+          const arc = (s.weight / 100) * circ;
+          const gap = segments.length > 1 ? 1.5 : 0;
+          const da = `${Math.max(arc - gap, 1)} ${circ - Math.max(arc - gap, 1)}`;
+          const seg = (
+            <circle key={s.id} cx={CX} cy={CY} r={R} fill="none"
+              stroke={GREENS[i % GREENS.length]} strokeWidth={highlightIdx === i ? SW + 6 : SW}
+              strokeDasharray={da} strokeDashoffset={-off} strokeLinecap="round"
+              style={{ opacity: highlightIdx !== null && highlightIdx !== i ? 0.25 : 1, transition: 'stroke-width 200ms ease, opacity 200ms ease', cursor: 'pointer' }}
+              onMouseEnter={() => setHighlightIdx(i)} onMouseLeave={() => setHighlightIdx(null)}
+            />
+          );
+          off += arc;
+          return seg;
+        })}
+      </svg>
+      {/* Centre text */}
+      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', textAlign: 'center', pointerEvents: 'none', transition: 'opacity 200ms' }}>
+        {highlightIdx === null ? (
+          <>
+            <div style={{ fontSize: 38, fontWeight: 700, letterSpacing: -1.5, color: '#fff', lineHeight: 1 }}>
+              {totalPL !== null ? `${isPos ? '+' : '\u2212'}${Math.abs(totalPL).toFixed(1)}%` : '0.0%'}
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 500, color: T.greenDark, marginTop: 4 }}>all time</div>
+            <div style={{ fontSize: 10, color: '#4A4A6A', marginTop: 3 }}>{holdingCount} holdings</div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{shortName(segments[highlightIdx]?.stock_name)}</div>
+            <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: -1, color: GREENS[highlightIdx % GREENS.length], marginTop: 2 }}>
+              {segments[highlightIdx]?.weight.toFixed(1)}%
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 500, color: T.greenDark, marginTop: 2 }}>
+              {segments[highlightIdx]?.pnl !== null ? `${segments[highlightIdx].pnl >= 0 ? '+' : ''}${segments[highlightIdx].pnl.toFixed(1)}%` : ''}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function UserProfile() {
   const { userId } = useParams();
+  const { user: currentUser } = useAuth();
   const [profile, setProfile] = useState(null);
   const [holdings, setHoldings] = useState([]);
-  const [theses, setTheses] = useState([]);
   const [notes, setNotes] = useState([]);
-  const [tab, setTab] = useState('portfolio');
+  const [tab, setTab] = useState('notes');
   const [loading, setLoading] = useState(true);
+  const [highlightIdx, setHighlightIdx] = useState(null);
+
+  const isOwnProfile = currentUser && String(currentUser.id) === String(userId);
 
   useEffect(() => {
+    setLoading(true);
     Promise.all([
       api.get(`/profile/${userId}`),
       api.get(`/portfolio/user/${userId}`),
-      api.get(`/theses/user/${userId}`),
       api.get(`/notes/user/${userId}`),
     ])
-      .then(([p, h, t, n]) => { setProfile(p.data); setHoldings(h.data); setTheses(t.data); setNotes(n.data); })
+      .then(([p, h, n]) => { setProfile(p.data); setHoldings(h.data); setNotes(n.data); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [userId]);
 
-  if (loading || !profile) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--border)', borderTopColor: 'transparent' }} />
-      </div>
-    );
-  }
+  if (loading || !profile) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: T.border, borderTopColor: 'transparent' }} />
+    </div>
+  );
 
-  // Calculate portfolio percentages
-  const totalValue = holdings.reduce((s, h) => s + (h.current_value || 0), 0);
-  const holdingsWithPct = holdings.map(h => ({
-    ...h,
-    pct: totalValue > 0 && h.current_value ? ((h.current_value / totalValue) * 100) : 0,
-    returnPct: h.purchase_value && h.current_value
-      ? (((h.current_value - h.purchase_value) / h.purchase_value) * 100)
-      : null,
-  })).sort((a, b) => b.pct - a.pct);
+  /* ── Calculations ── */
+  const totalVal = holdings.reduce((s, h) => s + (h.current_value || 0), 0);
+  const totalCost = holdings.reduce((s, h) => s + (h.purchase_value || 0), 0);
+  const totalPL = totalCost > 0 ? (totalVal - totalCost) / totalCost * 100 : null;
+  const isPos = totalPL !== null && totalPL >= 0;
 
-  // Dual-market split
-  const jseSummary = holdingsWithPct.filter(h => h.account_type !== 'USD');
-  const usdSummary = holdingsWithPct.filter(h => h.account_type === 'USD');
-  const jsePct = jseSummary.reduce((s, h) => s + h.pct, 0);
-  const usdPct = usdSummary.reduce((s, h) => s + h.pct, 0);
+  const withWeights = holdings.map(h => {
+    const hasPrice = h.current_value && h.purchase_value && Math.abs(h.current_value - h.purchase_value) > 1;
+    const pnl = hasPrice ? (h.current_value - h.purchase_value) / h.purchase_value * 100 : null;
+    const weight = totalVal > 0 && h.current_value ? h.current_value / totalVal * 100 : 0;
+    return { ...h, pnl, hasPrice, weight };
+  }).sort((a, b) => b.weight - a.weight);
 
-  // Overall return
-  const totalPurchase = holdings.reduce((s, h) => s + (h.purchase_value || 0), 0);
-  const overallReturn = totalPurchase > 0 ? (((totalValue - totalPurchase) / totalPurchase) * 100) : null;
+  const segments = withWeights.filter(h => h.weight > 0);
 
-  const pieData = holdingsWithPct.filter(h => h.pct > 0).map(h => ({
-    name: h.stock_name,
-    value: parseFloat(h.pct.toFixed(1)),
-  }));
+  const priced = holdings.filter(h => h.current_value && h.purchase_value && Math.abs(h.current_value - h.purchase_value) > 1);
+  const winning = priced.filter(h => h.current_value >= h.purchase_value).length;
+  const best = priced.reduce((b, h) => {
+    const p = (h.current_value - h.purchase_value) / h.purchase_value * 100;
+    return (!b || p > b.pnl) ? { name: shortName(h.stock_name), pnl: p } : b;
+  }, null);
+
+  const card = { background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, boxShadow: T.shadow };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 md:px-6 py-6">
-      {/* Profile Header */}
-      <div className="rounded-xl p-6 mb-5 text-center" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-        <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-semibold mx-auto mb-3"
-          style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
-          {profile.display_name?.charAt(0).toUpperCase()}
-        </div>
-        <h2 className="text-lg font-semibold m-0" style={{ color: 'var(--text-primary)' }}>{profile.display_name}</h2>
-        {profile.handle && <p className="text-xs m-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>@{profile.handle}</p>}
-        {profile.bio && <p className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>{profile.bio}</p>}
+    <div style={{ backgroundColor: T.bg, minHeight: '100vh', fontFamily: "'Inter', -apple-system, sans-serif" }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 16px 120px' }}>
 
-        <div className="flex justify-center gap-5 mt-3 mb-3">
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>{profile.follower_count}</strong> followers
-          </span>
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>{profile.following_count}</strong> following
-          </span>
-        </div>
+        {/* ── 3-column grid (desktop) / single column (mobile) ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 20 }}
+          className="md:!grid-cols-[260px_1fr_280px]">
 
-        {/* Social links */}
-        {(profile.linkedin_url || profile.twitter_url || profile.website_url) && (
-          <div className="flex justify-center gap-3 mb-3">
-            {profile.linkedin_url && (
-              <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer"
-                className="w-8 h-8 rounded-lg flex items-center justify-center no-underline" style={{ backgroundColor: 'var(--bg-hover)', color: 'var(--text-secondary)' }}>
-                <Linkedin size={15} />
-              </a>
-            )}
-            {profile.twitter_url && (
-              <a href={profile.twitter_url} target="_blank" rel="noopener noreferrer"
-                className="w-8 h-8 rounded-lg flex items-center justify-center no-underline" style={{ backgroundColor: 'var(--bg-hover)', color: 'var(--text-secondary)' }}>
-                <ExternalLink size={15} />
-              </a>
-            )}
-            {profile.website_url && (
-              <a href={profile.website_url} target="_blank" rel="noopener noreferrer"
-                className="w-8 h-8 rounded-lg flex items-center justify-center no-underline" style={{ backgroundColor: 'var(--bg-hover)', color: 'var(--text-secondary)' }}>
-                <Globe size={15} />
-              </a>
-            )}
-          </div>
-        )}
-
-        <div className="flex items-center justify-center gap-2">
-          <TierBadge tier={profile.your_tier || 'public'} />
-          <FollowButton userId={profile.id} profile={profile} />
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1.5 mb-5">
-        {['portfolio', 'notes'].map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className="flex-1 py-2 rounded-lg text-xs font-medium capitalize transition-all border-none cursor-pointer"
-            style={{
-              backgroundColor: tab === t ? 'var(--accent-light)' : 'var(--bg-card)',
-              color: tab === t ? 'var(--accent)' : 'var(--text-muted)',
-              border: `1px solid ${tab === t ? '#C7D2FE' : 'var(--border)'}`,
-            }}>
-            {t}
-          </button>
-        ))}
-      </div>
-
-      {/* === PORTFOLIO TAB === */}
-      {tab === 'portfolio' && (
-        holdings.length === 0 ? (
-          <div className="text-center py-12 rounded-xl" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-            <Shield size={24} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
-            <p className="text-sm m-0" style={{ color: 'var(--text-muted)' }}>Portfolio not visible at your access tier</p>
-            <p className="text-xs mt-1 m-0" style={{ color: 'var(--text-muted)' }}>Follow to see more</p>
-          </div>
-        ) : (
-          <>
-            {/* Verified badge */}
-            <div className="flex items-center gap-1.5 mb-4">
-              <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--success)' }}>
-                <Shield size={10} color="#fff" />
-              </div>
-              <span className="text-xs font-medium" style={{ color: 'var(--success)' }}>Verified portfolio · Synced from EasyEquities</span>
-            </div>
-
-            {/* Return summary */}
-            {overallReturn !== null && (
-              <div className="rounded-xl p-4 mb-4 flex items-center justify-between" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-                <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>All-time return</span>
-                <div className="flex items-center gap-1">
-                  {overallReturn >= 0
-                    ? <TrendingUp size={14} style={{ color: 'var(--success)' }} />
-                    : <TrendingDown size={14} style={{ color: 'var(--danger)' }} />
-                  }
-                  <span className="text-base font-semibold" style={{ color: overallReturn >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                    {overallReturn >= 0 ? '+' : ''}{overallReturn.toFixed(1)}%
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Dual-market split */}
-            {usdPct > 0 && jsePct > 0 && (
-              <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-                <p className="text-[11px] font-medium uppercase tracking-wider mb-2 m-0" style={{ color: 'var(--text-muted)' }}>Market Split</p>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-hover)' }}>
-                    <div className="h-full rounded-full" style={{ width: `${jsePct}%`, backgroundColor: 'var(--accent)' }} />
+          {/* === LEFT SIDEBAR (desktop only) === */}
+          <div className="hidden md:flex flex-col gap-4">
+            {/* Quick stats */}
+            <div style={{ ...card, padding: 16 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: T.t1, marginBottom: 12 }}>Quick stats</div>
+              {[
+                ['Holdings', String(holdings.length)],
+                ['Win rate', `${winning}/${priced.length}`],
+                ['Trades', String(holdings.reduce((s, h) => s + (h.trade_count || 0), 0) || '—')],
+              ].map(([l, v], i) => (
+                <div key={i}>
+                  {i > 0 && <div style={{ height: 1, background: T.border, margin: '4px 0' }} />}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 13 }}>
+                    <span style={{ color: T.t3 }}>{l}</span>
+                    <span style={{ color: T.t1, fontWeight: 500 }}>{v}</span>
                   </div>
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span style={{ color: 'var(--accent)' }}>JSE {jsePct.toFixed(0)}%</span>
-                  <span style={{ color: 'var(--tier-vault)' }}>USD {usdPct.toFixed(0)}%</span>
-                </div>
+              ))}
+            </div>
+
+            {/* Best performer */}
+            {best && (
+              <div style={{ background: '#ECFDF5', borderRadius: 14, padding: '14px 16px' }}>
+                <div style={{ fontSize: 11, color: T.t3, marginBottom: 6 }}>Best performer</div>
+                <div style={{ fontSize: 18, fontWeight: 600, color: T.t1 }}>{best.name}</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: T.green }}>+{best.pnl.toFixed(1)}% all time</div>
               </div>
             )}
+          </div>
 
-            {/* Allocation pie chart + holdings list */}
-            <div className="grid md:grid-cols-2 gap-4 mb-4">
-              {/* Pie chart */}
-              {pieData.length > 0 && (
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-                  <p className="text-[11px] font-medium uppercase tracking-wider mb-2 m-0" style={{ color: 'var(--text-muted)' }}>Allocation</p>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <PieChart>
-                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={2} dataKey="value">
-                        {pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                      </Pie>
-                      <Tooltip formatter={(val) => `${val}%`} contentStyle={{ backgroundColor: '#fff', border: '1px solid #E8ECF1', borderRadius: '8px', fontSize: '12px' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
+          {/* === CENTRE COLUMN === */}
+          <div className="flex flex-col gap-5">
+
+            {/* Profile header */}
+            <div style={{ ...card, padding: 24 }}>
+              <div style={{ display: 'flex', gap: 18, marginBottom: 16 }}>
+                <div style={{ width: 72, height: 72, borderRadius: '50%', background: T.purpleLight, color: T.purple, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 700, flexShrink: 0 }}>
+                  {profile.display_name?.charAt(0).toUpperCase()}
                 </div>
-              )}
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                    <span style={{ fontSize: 20, fontWeight: 700, color: T.t1 }}>{profile.display_name}</span>
+                    {profile.portfolio_imported_at && (
+                      <div style={{ width: 16, height: 16, borderRadius: '50%', background: T.purple, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="9" height="9" viewBox="0 0 16 16" fill="none"><path d="M13.3 4.3L6.5 11.1 2.7 7.3" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 13, color: T.t3, marginBottom: 8 }}>@{profile.handle}</div>
+                  {profile.bio && <div style={{ fontSize: 13, color: T.t2, lineHeight: 1.5, marginBottom: 12 }}>{profile.bio}</div>}
+                  <div style={{ display: 'flex', gap: 20, marginBottom: 14 }}>
+                    <div style={{ fontSize: 13, color: T.t3 }}><strong style={{ color: T.t1 }}>{profile.follower_count || 0}</strong> followers</div>
+                    <div style={{ fontSize: 13, color: T.t3 }}><strong style={{ color: T.t1 }}>{profile.following_count || 0}</strong> following</div>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                    {profile.portfolio_imported_at && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 500, background: '#ECFDF5', color: '#059669' }}>
+                        <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M13.3 4.3L6.5 11.1 2.7 7.3" stroke="#059669" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        EE verified
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {isOwnProfile ? (
+                      <Link to="/profile" className="no-underline" style={{ border: `1.5px solid ${T.border}`, borderRadius: 12, padding: '10px 20px', fontSize: 13, fontWeight: 500, color: T.t1, background: T.card, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <Settings size={14} /> Edit profile
+                      </Link>
+                    ) : (
+                      <>
+                        <FollowButton userId={profile.id} profile={profile} />
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
 
-              {/* Holdings by weight */}
-              <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-                <p className="text-[11px] font-medium uppercase tracking-wider mb-3 m-0" style={{ color: 'var(--text-muted)' }}>Holdings by weight</p>
-                <div className="space-y-2.5">
-                  {holdingsWithPct.map((h, i) => (
-                    <Link key={h.id} to={`/stock/${h.contract_code}?name=${encodeURIComponent(h.stock_name)}&user=${userId}`} className="no-underline block">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>{h.stock_name}</span>
-                            <span className="text-xs font-semibold ml-2" style={{ color: 'var(--text-primary)' }}>{h.pct.toFixed(1)}%</span>
-                          </div>
-                          <div className="flex items-center justify-between mt-0.5">
-                            <div className="flex-1 h-1 rounded-full mr-2 overflow-hidden" style={{ backgroundColor: 'var(--bg-hover)' }}>
-                              <div className="h-full rounded-full" style={{ width: `${h.pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                            </div>
-                            {h.returnPct !== null && (
-                              <span className="text-[10px] font-medium whitespace-nowrap" style={{ color: h.returnPct >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                                {h.returnPct >= 0 ? '+' : ''}{h.returnPct.toFixed(1)}%
-                              </span>
-                            )}
-                          </div>
+            {/* Hero donut card */}
+            {segments.length > 0 && (
+              <div style={{
+                background: 'linear-gradient(155deg, #1A1A3E 0%, #1E1E4A 45%, #181840 100%)',
+                borderRadius: 20, boxShadow: T.heroShadow, overflow: 'hidden',
+              }}>
+                <div style={{ padding: '24px 28px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 12, color: '#8080A8', letterSpacing: 0.2 }}>Portfolio allocation</span>
+                  <span style={{ fontSize: 10, padding: '3px 9px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', color: '#34D399', fontWeight: 600 }}>
+                    EE verified
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', padding: '20px 28px 24px', gap: 32, flexWrap: 'wrap', justifyContent: 'center' }}>
+                  <HeroDonut segments={segments} totalPL={totalPL} isPos={isPos} holdingCount={holdings.length}
+                    highlightIdx={highlightIdx} setHighlightIdx={setHighlightIdx} />
+
+                  {/* Legend */}
+                  <div style={{ flex: 1, minWidth: 180, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {segments.map((s, i) => (
+                      <div key={s.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 10,
+                        cursor: 'pointer', transition: 'background 150ms, opacity 200ms',
+                        background: highlightIdx === i ? 'rgba(255,255,255,0.06)' : 'transparent',
+                        opacity: highlightIdx !== null && highlightIdx !== i ? 0.35 : 1,
+                      }}
+                        onMouseEnter={() => setHighlightIdx(i)} onMouseLeave={() => setHighlightIdx(null)}>
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: GREENS[i % GREENS.length], flexShrink: 0 }} />
+                        <div style={{ fontSize: 13, fontWeight: 500, color: '#E0E0F0', flex: 1 }}>{shortName(s.stock_name)}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', minWidth: 48, textAlign: 'right' }}>{s.weight.toFixed(1)}%</div>
+                        <div style={{ fontSize: 11, fontWeight: 500, minWidth: 42, textAlign: 'right', color: s.pnl !== null && s.pnl >= 0 ? T.greenDark : '#F87171' }}>
+                          {s.pnl !== null ? `${s.pnl >= 0 ? '+' : ''}${s.pnl.toFixed(1)}%` : ''}
                         </div>
                       </div>
-                    </Link>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Footer stats */}
+                <div style={{ background: 'rgba(255,255,255,0.04)', borderTop: '0.5px solid rgba(255,255,255,0.06)', padding: '14px 28px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr' }}>
+                  {[
+                    { l: 'Holdings', v: String(holdings.length) },
+                    { l: 'Win rate', v: `${winning}/${priced.length}` },
+                    { l: 'Best', v: best ? `${best.name.split(' ')[0]} +${best.pnl.toFixed(1)}%` : '—', green: true },
+                    { l: 'Since', v: profile.portfolio_imported_at ? new Date(profile.portfolio_imported_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' }) : '—' },
+                  ].map((s, i) => (
+                    <div key={i} style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 10, color: '#8080A8', marginBottom: 3 }}>{s.l}</div>
+                      <div style={{ fontSize: s.green ? 13 : 16, fontWeight: 700, color: s.green ? T.greenDark : '#fff' }}>{s.v}</div>
+                    </div>
                   ))}
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Account type breakdown */}
-            <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-              <p className="text-[11px] font-medium uppercase tracking-wider mb-2 m-0" style={{ color: 'var(--text-muted)' }}>By Account</p>
-              <div className="flex gap-3">
-                {['TFSA', 'ZAR', 'USD'].map(type => {
-                  const count = holdings.filter(h => h.account_type === type).length;
-                  if (count === 0) return null;
-                  const typePct = holdingsWithPct.filter(h => h.account_type === type).reduce((s, h) => s + h.pct, 0);
+            {/* Holdings card */}
+            {withWeights.length > 0 && (
+              <div style={{ ...card, padding: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: T.t1 }}>Holdings</div>
+                </div>
+                {withWeights.map((h, i) => {
+                  const tint = ICON_TINTS[i % ICON_TINTS.length];
+                  const pos = h.pnl !== null && h.pnl >= 0;
                   return (
-                    <div key={type} className="flex-1 rounded-lg p-2.5 text-center" style={{ backgroundColor: 'var(--bg-page)' }}>
-                      <p className="text-[10px] m-0 mb-0.5" style={{ color: 'var(--text-muted)' }}>{type}</p>
-                      <p className="text-sm font-semibold m-0" style={{ color: 'var(--text-primary)' }}>{typePct.toFixed(0)}%</p>
-                      <p className="text-[10px] m-0" style={{ color: 'var(--text-muted)' }}>{count} stock{count !== 1 ? 's' : ''}</p>
-                    </div>
+                    <Link key={h.id} to={`/stock/${h.contract_code}?name=${encodeURIComponent(h.stock_name)}`} className="block no-underline">
+                      <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
+                        transition: 'background 150ms',
+                        background: highlightIdx === i ? T.purpleLight : 'transparent',
+                      }}
+                        onMouseEnter={() => setHighlightIdx(i)} onMouseLeave={() => setHighlightIdx(null)}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div style={{ width: 40, height: 40, borderRadius: 12, background: tint.bg, color: tint.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
+                            {abbrev(h.stock_name)}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: T.t1 }}>{shortName(h.stock_name)}</div>
+                            <div style={{ fontSize: 11, color: T.t3, marginTop: 1 }}>{h.account_type}</div>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          {h.hasPrice ? (
+                            <>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: T.t1 }}>{h.weight.toFixed(1)}%</div>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: pos ? T.green : T.red, marginTop: 1 }}>
+                                {pos ? '+' : '\u2212'}{Math.abs(h.pnl).toFixed(1)}%
+                              </div>
+                            </>
+                          ) : (
+                            <span style={{ fontSize: 10, fontWeight: 500, color: T.t3, background: T.surface, borderRadius: 8, padding: '3px 8px' }}>No price</span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
                   );
                 })}
               </div>
-            </div>
+            )}
 
-            {/* Privacy note */}
-            <div className="flex items-center gap-1.5 mb-2">
-              <Shield size={12} style={{ color: 'var(--text-muted)' }} />
-              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                Dollar amounts hidden · Showing percentage allocation only
-              </span>
+            {/* Tabs: Notes / Trades */}
+            <div style={{ ...card, padding: 0 }}>
+              <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, padding: '0 20px' }}>
+                {['notes', 'trades'].map(t => (
+                  <div key={t} onClick={() => setTab(t)} style={{
+                    padding: '10px 16px', fontSize: 13, fontWeight: tab === t ? 600 : 500, cursor: 'pointer',
+                    color: tab === t ? T.purple : T.t3, borderBottom: `2px solid ${tab === t ? T.purple : 'transparent'}`,
+                    transition: 'all 150ms', textTransform: 'capitalize',
+                  }}>{t}</div>
+                ))}
+              </div>
+              <div style={{ padding: notes.length > 0 ? 0 : 20 }}>
+                {tab === 'notes' && (
+                  notes.length > 0
+                    ? notes.map(n => <NoteCard key={n.id} note={n} />)
+                    : <p style={{ fontSize: 13, color: T.t3, textAlign: 'center' }}>No notes yet</p>
+                )}
+                {tab === 'trades' && (
+                  <p style={{ fontSize: 13, color: T.t3, textAlign: 'center', padding: 20 }}>Coming soon</p>
+                )}
+              </div>
             </div>
-          </>
-        )
-      )}
+          </div>
 
-      {/* === NOTES TAB === */}
-      {tab === 'notes' && (
-        notes.length === 0
-          ? <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>No visible notes</p>
-          : notes.map((n) => <NoteCard key={n.id} note={n} />)
-      )}
+          {/* === RIGHT SIDEBAR (desktop only) === */}
+          <div className="hidden md:flex flex-col gap-4">
+            {/* Vault CTA */}
+            <div style={{ ...card, padding: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: T.t1 }}>Vault</div>
+                <span style={{ fontSize: 10, fontWeight: 500, padding: '4px 10px', borderRadius: 8, background: T.purpleLight, color: T.purple }}>Coming soon</span>
+              </div>
+              <p style={{ fontSize: 12, color: T.t2, lineHeight: 1.5, marginBottom: 12 }}>
+                Exclusive notes, trade reasoning, and AI portfolio comparison.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Responsive grid override */}
+      <style>{`
+        @media (min-width: 768px) {
+          .md\\:!grid-cols-\\[260px_1fr_280px\\] { grid-template-columns: 260px 1fr 280px !important; }
+        }
+      `}</style>
     </div>
   );
 }
