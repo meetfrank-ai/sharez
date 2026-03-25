@@ -139,6 +139,8 @@ class NoteCreate(BaseModel):
     visibility: str = "public"
     stock_tag: Optional[str] = None
     stock_name: Optional[str] = None
+    stock_tags: Optional[list] = None       # multiple stocks: [{ticker, name}, ...]
+    transaction_ids: Optional[list] = None  # multiple transaction IDs
     parent_note_id: Optional[int] = None
 
 

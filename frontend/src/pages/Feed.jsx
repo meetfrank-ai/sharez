@@ -22,12 +22,11 @@ export default function Feed() {
   const [showSearch, setShowSearch] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Composer
+  // Composer — supports multiple stocks + multiple transactions
   const [composerBody, setComposerBody] = useState('');
   const [composerVisibility, setComposerVisibility] = useState('public');
   const [composerExpanded, setComposerExpanded] = useState(false);
-  const [composerStockTag, setComposerStockTag] = useState('');
-  const [composerStockName, setComposerStockName] = useState('');
+  const [composerStocks, setComposerStocks] = useState([]);   // [{ticker, name}, ...]
   const [composerTxIds, setComposerTxIds] = useState([]);
   const [composerTxNames, setComposerTxNames] = useState([]);
   const [showStockInput, setShowStockInput] = useState(false);
@@ -63,22 +62,16 @@ export default function Feed() {
     if (!composerBody.trim() || posting) return;
     setPosting(true);
     try {
-      if (composerTxIds.length > 0) {
-        // Post as note with tagged transactions
-        await api.post('/portfolio/transactions/share', {
-          transaction_ids: composerTxIds, visibility: composerVisibility, note_body: composerBody.trim(),
-        });
-      } else {
-        await api.post('/notes/', {
-          body: composerBody.trim(),
-          visibility: composerVisibility,
-          stock_tag: composerStockTag || null,
-          stock_name: composerStockName || null,
-        });
-      }
+      await api.post('/notes/', {
+        body: composerBody.trim(),
+        visibility: composerVisibility,
+        stock_tags: composerStocks.length > 0 ? composerStocks : null,
+        stock_tag: composerStocks.length === 1 ? composerStocks[0].ticker : null,
+        stock_name: composerStocks.length === 1 ? composerStocks[0].name : null,
+        transaction_ids: composerTxIds.length > 0 ? composerTxIds : null,
+      });
       setComposerBody('');
-      setComposerStockTag('');
-      setComposerStockName('');
+      setComposerStocks([]);
       setComposerTxIds([]);
       setComposerTxNames([]);
       setShowStockInput(false);
@@ -164,24 +157,27 @@ export default function Feed() {
             />
 
             {/* Tagged items pills */}
-            {(composerStockName || composerTxNames.length > 0) && (
+            {(composerStocks.length > 0 || composerTxNames.length > 0) && (
               <div className="flex flex-wrap items-center gap-1.5 mb-3">
-                {composerStockName && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium"
+                {composerStocks.map((s, i) => (
+                  <span key={`s-${i}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium"
                     style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
-                    <DollarSign size={11} />{composerStockName}
-                    <button onClick={() => { setComposerStockTag(''); setComposerStockName(''); }}
+                    <DollarSign size={11} />{s.name}
+                    <button onClick={() => setComposerStocks(composerStocks.filter((_, j) => j !== i))}
                       className="ml-0.5 bg-transparent border-none cursor-pointer p-0" style={{ color: 'var(--accent)' }}>
                       <X size={10} />
                     </button>
                   </span>
-                )}
+                ))}
                 {composerTxNames.map((name, i) => (
-                  <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium"
+                  <span key={`t-${i}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium"
                     style={{ backgroundColor: '#D1FAE5', color: '#16A34A' }}>
                     ↑ {name}
                     <button onClick={() => {
-                      setComposerTxIds([]); setComposerTxNames([]);
+                      // Remove this specific stock's transactions
+                      const idsToRemove = myTransactions.filter(t => t.stock_name === name).map(t => t.id);
+                      setComposerTxIds(composerTxIds.filter(id => !idsToRemove.includes(id)));
+                      setComposerTxNames(composerTxNames.filter(n => n !== name));
                     }} className="ml-0.5 bg-transparent border-none cursor-pointer p-0" style={{ color: '#16A34A' }}>
                       <X size={10} />
                     </button>
@@ -191,7 +187,7 @@ export default function Feed() {
             )}
 
             {/* Stock search autocomplete */}
-            {showStockInput && !composerStockName && (
+            {showStockInput && (
               <div className="mb-3 relative">
                 <input type="text" placeholder="Search stocks (e.g. Capitec, Apple)" autoFocus
                   value={stockSearchQuery}
@@ -216,9 +212,9 @@ export default function Feed() {
                         className="flex items-center justify-between px-3 py-2 cursor-pointer text-xs hover:bg-[var(--bg-hover)]"
                         style={{ borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}
                         onClick={() => {
-                          setComposerStockName(s.name);
-                          setComposerStockTag(s.ticker);
-                          setShowStockInput(false);
+                          if (!composerStocks.some(x => x.ticker === s.ticker)) {
+                            setComposerStocks([...composerStocks, { ticker: s.ticker, name: s.name }]);
+                          }
                           setStockSearchQuery('');
                           setStockSearchResults([]);
                         }}>
@@ -325,7 +321,7 @@ export default function Feed() {
                 <option value="vault">Vault</option>
               </select>
               <div className="flex items-center gap-2">
-                <button onClick={() => { setComposerExpanded(false); setComposerBody(''); setComposerStockTag(''); setComposerStockName(''); setShowStockInput(false); }}
+                <button onClick={() => { setComposerExpanded(false); setComposerBody(''); setComposerStocks([]); setComposerTxIds([]); setComposerTxNames([]); setShowStockInput(false); setShowTxPicker(false); }}
                   className="px-3 py-2.5 rounded-lg text-xs bg-transparent border-none cursor-pointer min-h-[44px]"
                   style={{ color: 'var(--text-muted)' }}>Cancel</button>
                 <button onClick={handlePost} disabled={!composerBody.trim() || posting}

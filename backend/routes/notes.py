@@ -88,12 +88,22 @@ def create_note(
         if TIER_RANK[visibility] < TIER_RANK[parent.visibility]:
             visibility = parent.visibility
 
+    # Support both single stock_tag and multiple stock_tags
+    stock_tag = data.stock_tag
+    stock_name = data.stock_name
+    if data.stock_tags and len(data.stock_tags) > 0:
+        # Use first stock as primary tag, store all in stock_tags
+        first = data.stock_tags[0]
+        stock_tag = stock_tag or (first.get('ticker') if isinstance(first, dict) else first)
+        stock_name = stock_name or (first.get('name') if isinstance(first, dict) else first)
+
     note = Note(
         user_id=user.id,
         body=data.body,
         visibility=visibility,
-        stock_tag=data.stock_tag,
-        stock_name=data.stock_name,
+        stock_tag=stock_tag,
+        stock_name=stock_name,
+        transaction_ids=data.transaction_ids,
         parent_note_id=data.parent_note_id,
     )
     db.add(note)
