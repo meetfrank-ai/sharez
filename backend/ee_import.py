@@ -319,6 +319,12 @@ def _rebuild_holdings(db: Session, user: User, account_type: str):
             last_synced_at=now,
         ))
 
+    # Auto-map any unmapped holdings to EODHD tickers
+    try:
+        _auto_map_instruments(db, stocks.keys())
+    except Exception as e:
+        logger.warning(f"Auto-map instruments failed: {e}")
+
     # Try to update with live prices
     try:
         _refresh_holdings_prices(db, user)
@@ -355,6 +361,61 @@ def _refresh_holdings_prices(db: Session, user: User):
             logger.info(f"No price available for {h.stock_name}")
 
     db.commit()
+
+
+def _auto_map_instruments(db: Session, stock_names):
+    """Auto-create instrument_map entries for unmapped stocks using JSE symbol list."""
+    from models import InstrumentMap
+    from ticker_resolver import resolve_ticker, get_jse_symbols
+
+    jse_symbols = get_jse_symbols()
+    jse_by_code = {s.get("Code", "").upper(): s for s in jse_symbols}
+
+    mapped = 0
+    for name in stock_names:
+        # Skip if already mapped
+        existing = db.query(InstrumentMap).filter(InstrumentMap.ee_name == name).first()
+        if existing:
+            continue
+
+        ticker = resolve_ticker(name)
+        if not ticker:
+            logger.info(f"Auto-map: no ticker found for '{name}'")
+            continue
+
+        # ticker is like "PRX.JSE" — extract code
+        code = ticker.replace(".JSE", "")
+        jse_info = jse_by_code.get(code, {})
+
+        # Determine instrument type from EODHD type field
+        eodhd_type = jse_info.get("Type", "").lower()
+        if "etf" in eodhd_type or "fund" in eodhd_type:
+            inst_type = "etf"
+        elif "ametf" in name.lower():
+            inst_type = "ametf"
+        elif any(kw in name.lower() for kw in ("fund", "trust", "bci", "sci")):
+            inst_type = "unit_trust"
+        else:
+            inst_type = "stock"
+
+        yf_symbol = f"{code}.JO"  # yfinance uses .JO for JSE
+
+        db.add(InstrumentMap(
+            ee_name=name,
+            ticker=code,
+            market="JSE",
+            instrument_type=inst_type,
+            eodhd_symbol=ticker,
+            yfinance_symbol=yf_symbol,
+            sector=jse_info.get("Sector", None),
+            is_verified=False,  # auto-mapped, not manually verified
+        ))
+        mapped += 1
+        logger.info(f"Auto-mapped: '{name}' → {ticker} ({inst_type})")
+
+    if mapped:
+        db.flush()
+        logger.info(f"Auto-mapped {mapped} new instruments")
 
 
 def refresh_user_prices(db: Session, user: User):

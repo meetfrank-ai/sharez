@@ -62,7 +62,10 @@ def refresh_prices(
     db: Session = Depends(get_db),
 ):
     """Force refresh all holdings prices using the waterfall resolver."""
-    from ee_import import refresh_user_prices
+    from ee_import import refresh_user_prices, _auto_map_instruments
+    # Auto-map any unmapped holdings before refreshing prices
+    stock_names = [h.stock_name for h in db.query(Holding).filter(Holding.user_id == user.id).all()]
+    _auto_map_instruments(db, stock_names)
     refresh_user_prices(db, user)
     holdings = db.query(Holding).filter(Holding.user_id == user.id).all()
     return [{
