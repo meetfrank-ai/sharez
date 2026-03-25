@@ -36,6 +36,85 @@ function formatUpdated(d) {
   return `Updated ${Math.floor(h / 24)}d ago`;
 }
 
+/* ── Donut SVG component ── */
+function AllocationDonut({ segments, totalPL, isPos, showValues, holdings }) {
+  const R = 80, CX = 110, CY = 110, STROKE = 28;
+  const circumference = 2 * Math.PI * R;
+  let offset = 0;
+
+  // Label positions around the donut
+  const labelR = R + STROKE / 2 + 28;
+
+  return (
+    <div className="flex justify-center" style={{ position: 'relative' }}>
+      <svg width="220" height="220" viewBox="0 0 220 220">
+        {/* Background ring */}
+        <circle cx={CX} cy={CY} r={R} fill="none" stroke="#F0F0F3" strokeWidth={STROKE} />
+
+        {/* Segments */}
+        <g style={{ transform: 'rotate(-90deg)', transformOrigin: '110px 110px' }}>
+          {segments.map((seg, i) => {
+            const arc = (seg.weight / 100) * circumference;
+            const gap = segments.length > 1 ? 3 : 0;
+            const dashArray = `${Math.max(arc - gap, 1)} ${circumference - Math.max(arc - gap, 1)}`;
+            const dashOffset = -offset;
+            offset += arc;
+
+            return (
+              <circle key={seg.id} cx={CX} cy={CY} r={R}
+                fill="none" stroke={ALLOC[i % ALLOC.length]} strokeWidth={STROKE}
+                strokeDasharray={dashArray} strokeDashoffset={dashOffset}
+                strokeLinecap="round"
+                style={{ transition: 'stroke-dasharray 600ms ease, stroke-dashoffset 600ms ease' }}
+              />
+            );
+          })}
+        </g>
+
+        {/* Center text */}
+        <text x={CX} y={showValues ? CY - 6 : CY + 4} textAnchor="middle" dominantBaseline="middle"
+          style={{
+            fontSize: showValues ? 28 : 20, fontWeight: 600, letterSpacing: -1,
+            fill: totalPL === null ? '#C4C4C4' : isPos ? '#10B981' : '#EF4444',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+          }}>
+          {showValues
+            ? (totalPL !== null ? `${isPos ? '+' : '\u2212'}${Math.abs(totalPL).toFixed(1)}%` : '0.0%')
+            : '••••'
+          }
+        </text>
+        {showValues && (
+          <text x={CX} y={CY + 16} textAnchor="middle" style={{ fontSize: 11, fill: '#9CA3AF' }}>
+            all time
+          </text>
+        )}
+      </svg>
+
+      {/* Floating labels around donut — show top 4 */}
+      {segments.slice(0, 4).map((seg, i) => {
+        // Position labels at corners around the donut
+        const positions = [
+          { top: -2, right: -8 },    // top-right
+          { bottom: 8, right: -8 },   // bottom-right
+          { bottom: 8, left: -8 },    // bottom-left
+          { top: -2, left: -8 },      // top-left
+        ];
+        const pos = positions[i];
+        return (
+          <div key={seg.id} className="absolute flex items-center gap-1 px-2 py-1 rounded-lg"
+            style={{
+              ...pos, backgroundColor: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+              fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap',
+            }}>
+            <span style={{ color: ALLOC[i % ALLOC.length] }}>{seg.weight.toFixed(0)}%</span>
+            <span style={{ color: '#6B7280', fontWeight: 400 }}>{abbrev(seg.stock_name)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Portfolio() {
   const { user } = useAuth();
   const [holdings, setHoldings] = useState([]);
@@ -83,7 +162,7 @@ export default function Portfolio() {
     : b.weight - a.weight
   );
 
-  const barData = [...withWeights].sort((a, b) => b.weight - a.weight).filter(h => h.weight > 0);
+  const donutData = [...withWeights].sort((a, b) => b.weight - a.weight).filter(h => h.weight > 0);
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -113,7 +192,7 @@ export default function Portfolio() {
         ) : (
           <>
             {/* ── Header ── */}
-            <div className="flex items-center justify-between mb-5"
+            <div className="flex items-center justify-between mb-4"
               style={{ opacity: ready ? 1 : 0, transition: 'opacity 300ms ease' }}>
               <div className="flex items-center gap-3 min-w-0">
                 <div className="shrink-0 rounded-full flex items-center justify-center"
@@ -134,67 +213,36 @@ export default function Portfolio() {
                   </div>
                 </div>
               </div>
-              <button onClick={handleRefresh} disabled={refreshing}
-                className="border-none cursor-pointer flex items-center justify-center shrink-0 min-h-[44px]"
-                style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#F3F4F6', color: '#9CA3AF' }}>
-                <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-              </button>
-            </div>
-
-            {/* ── Dark hero card — Portfolio return ── */}
-            <div className="rounded-[20px] p-5 mb-5"
-              style={{
-                background: 'linear-gradient(135deg, #1A1A2E 0%, #2D1B69 100%)',
-                opacity: ready ? 1 : 0, transform: ready ? 'translateY(0)' : 'translateY(16px)',
-                transition: 'all 400ms ease 80ms',
-              }}>
-              <div className="flex items-center justify-between mb-1">
-                <span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.3 }}>Portfolio return</span>
+              <div className="flex items-center gap-2">
                 <button onClick={() => setShowValues(v => !v)}
-                  className="border-none cursor-pointer flex items-center justify-center min-h-[44px]"
-                  style={{ background: 'none', color: 'rgba(255,255,255,0.4)', padding: 4 }}>
+                  className="border-none cursor-pointer flex items-center justify-center shrink-0 min-h-[44px]"
+                  style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#F3F4F6', color: '#9CA3AF' }}>
                   {showValues ? <Eye size={16} /> : <EyeOff size={16} />}
                 </button>
+                <button onClick={handleRefresh} disabled={refreshing}
+                  className="border-none cursor-pointer flex items-center justify-center shrink-0 min-h-[44px]"
+                  style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#F3F4F6', color: '#9CA3AF' }}>
+                  <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+                </button>
               </div>
-              <div className="flex items-baseline gap-2 mb-0.5">
-                <span style={{
-                  fontSize: 38, fontWeight: 600, letterSpacing: -1.5,
-                  color: totalPL === null ? 'rgba(255,255,255,0.3)' : isPos ? '#5DCAA5' : '#F09595',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
-                }}>
-                  {showValues
-                    ? (totalPL !== null ? `${isPos ? '+' : '\u2212'}${Math.abs(totalPL).toFixed(1)}%` : '0.0%')
-                    : '••••'
-                  }
-                </span>
-                {showValues && (
-                  <span style={{ fontSize: 13, color: totalPL === null ? 'rgba(255,255,255,0.3)' : isPos ? '#5DCAA5' : '#F09595' }}>
-                    all time
-                  </span>
-                )}
-              </div>
-              <p className="m-0" style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+            </div>
+
+            {/* ── Donut hero ── */}
+            <div className="rounded-[24px] p-6 mb-4"
+              style={{
+                backgroundColor: '#FFFFFF', boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                opacity: ready ? 1 : 0, transform: ready ? 'translateY(0)' : 'translateY(16px)',
+                transition: 'all 500ms ease 80ms',
+              }}>
+              <AllocationDonut segments={donutData} totalPL={totalPL} isPos={isPos} showValues={showValues} holdings={holdings} />
+              <p className="m-0 mt-3 text-center" style={{ fontSize: 11, color: '#C4C4C4' }}>
                 {formatUpdated(user?.portfolio_imported_at)}
               </p>
-
-              {/* Allocation bar */}
-              {barData.length > 0 && (
-                <div className="flex gap-0.5 rounded mt-4 overflow-hidden" style={{ height: 6 }}>
-                  {barData.map((h, i) => (
-                    <div key={h.id} style={{
-                      width: `${h.weight}%`, backgroundColor: ALLOC[i % ALLOC.length],
-                      borderRadius: i === 0 ? '3px 0 0 3px' : i === barData.length - 1 ? '0 3px 3px 0' : 0,
-                      opacity: ready ? 1 : 0, transform: ready ? 'scaleX(1)' : 'scaleX(0)',
-                      transformOrigin: 'left', transition: `all 500ms ease ${300 + i * 60}ms`,
-                    }} />
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* ── Stat pills ── */}
             <div className="flex gap-2.5 mb-5"
-              style={{ opacity: ready ? 1 : 0, transform: ready ? 'translateY(0)' : 'translateY(12px)', transition: 'all 400ms ease 150ms' }}>
+              style={{ opacity: ready ? 1 : 0, transform: ready ? 'translateY(0)' : 'translateY(12px)', transition: 'all 400ms ease 200ms' }}>
               {[
                 { label: 'Holdings', value: String(holdings.length), color: '#1A1A2E' },
                 { label: 'Best', value: best ? `${best.name.split(' ')[0]} ${best.pnl >= 0 ? '+' : ''}${best.pnl.toFixed(0)}%` : '—', color: best?.pnl >= 0 ? '#10B981' : '#EF4444', small: true },
@@ -209,7 +257,7 @@ export default function Portfolio() {
             </div>
 
             {/* ── Holdings ── */}
-            <div className="mb-5" style={{ opacity: ready ? 1 : 0, transform: ready ? 'translateY(0)' : 'translateY(12px)', transition: 'all 400ms ease 200ms' }}>
+            <div className="mb-5" style={{ opacity: ready ? 1 : 0, transform: ready ? 'translateY(0)' : 'translateY(12px)', transition: 'all 400ms ease 250ms' }}>
               <div className="flex items-center justify-between mb-3 px-1">
                 <span style={{ fontSize: 14, fontWeight: 600, color: '#1A1A2E' }}>Holdings</span>
                 <div className="flex rounded-lg overflow-hidden" style={{ backgroundColor: '#F3F4F6' }}>
@@ -231,14 +279,14 @@ export default function Portfolio() {
               <div className="flex flex-col" style={{ gap: 6 }}>
                 {withWeights.map((h, i) => {
                   const pos = h.pnl !== null && h.pnl >= 0;
-                  const cIdx = barData.findIndex(b => b.id === h.id);
+                  const cIdx = donutData.findIndex(b => b.id === h.id);
                   const col = cIdx >= 0 ? ALLOC[cIdx % ALLOC.length] : '#E5E7EB';
 
                   return (
                     <Link key={h.id}
                       to={`/stock/${h.contract_code}?name=${encodeURIComponent(h.stock_name)}`}
                       className="block no-underline"
-                      style={{ opacity: ready ? 1 : 0, transform: ready ? 'translateY(0)' : 'translateY(12px)', transition: `all 300ms ease ${250 + i * 40}ms` }}>
+                      style={{ opacity: ready ? 1 : 0, transform: ready ? 'translateY(0)' : 'translateY(12px)', transition: `all 300ms ease ${300 + i * 40}ms` }}>
                       <div className="flex items-center gap-3 rounded-2xl px-4 py-3.5"
                         style={{ backgroundColor: '#FFFFFF', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', transition: 'box-shadow 150ms ease' }}
                         onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'}
