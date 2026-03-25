@@ -1,20 +1,11 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import {
-  Home,
-  BarChart3,
-  Compass,
-  Bookmark,
-  Bell,
-  Settings,
-  LogOut,
-  ArrowLeftRight,
-} from 'lucide-react';
+import { Home, BarChart3, Compass, Bookmark, Bell, Settings, LogOut, ArrowLeftRight, Layers } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Feed', icon: Home },
-  { path: '/portfolio', label: 'My Portfolio', icon: BarChart3 },
-  { path: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
+  { path: '/portfolio', label: 'Portfolio', icon: BarChart3 },
+  { path: '/transactions', label: 'Transactions', icon: Layers },
   { path: '/watchlist', label: 'Watchlist', icon: Bookmark },
   { path: '/discover', label: 'Discover', icon: Compass },
   { path: '/saved', label: 'Saved', icon: Bookmark },
@@ -25,7 +16,7 @@ const navItems = [
 const mobileNavItems = [
   { path: '/', label: 'Feed', icon: Home },
   { path: '/portfolio', label: 'Portfolio', icon: BarChart3 },
-  { path: '/transactions', label: 'Trades', icon: ArrowLeftRight },
+  { path: '/transactions', label: 'Trades', icon: Layers },
   { path: '/discover', label: 'Discover', icon: Compass },
   { path: '/profile', label: 'Profile', icon: Settings },
 ];
@@ -35,58 +26,46 @@ export default function Layout({ children }) {
   const location = useLocation();
 
   return (
-    <div className="flex min-h-screen w-full overflow-x-hidden" style={{ backgroundColor: '#F7F7FA' }}>
+    <div className="flex min-h-screen w-full overflow-x-hidden" style={{ backgroundColor: '#F6F7FB' }}>
       {/* Desktop Sidebar */}
       <aside
         className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-60 z-40"
-        style={{ backgroundColor: '#FFFFFF', borderRight: '1px solid #EDEDF0' }}
+        style={{ backgroundColor: '#FFFFFF', borderRight: '1px solid #E6E9F2' }}
       >
-        {/* Logo */}
-        <NavLink to="/" className="block px-5 py-5 no-underline" style={{ borderBottom: '1px solid #EDEDF0' }}>
-          <h1 className="text-lg font-semibold m-0" style={{ color: '#4F46E5' }}>
+        <NavLink to="/" className="block px-5 py-5 no-underline" style={{ borderBottom: '1px solid #E6E9F2' }}>
+          <h1 className="m-0" style={{ fontSize: 18, fontWeight: 600, color: '#7C5CE0', fontFamily: "'Inter', -apple-system, sans-serif" }}>
             Sharez
           </h1>
         </NavLink>
 
-        {/* User info */}
-        <div className="px-5 py-4" style={{ borderBottom: '1px solid #EDEDF0' }}>
+        <div className="px-5 py-4" style={{ borderBottom: '1px solid #E6E9F2' }}>
           <div className="flex items-center gap-3">
-            <div
-              className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold"
-              style={{ background: 'linear-gradient(135deg, #7F77DD, #534AB7)', color: '#fff' }}
-            >
+            <div className="shrink-0 flex items-center justify-center"
+              style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#F0EEFF', color: '#7C5CE0', fontSize: 15, fontWeight: 700 }}>
               {user?.display_name?.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium m-0 truncate" style={{ color: '#1A1A2E' }}>
-                {user?.display_name}
-              </p>
-              <p className="text-xs m-0 truncate" style={{ color: '#9CA3AF' }}>
-                {user?.handle ? `@${user.handle}` : user?.email}
-              </p>
+              <p className="m-0 truncate" style={{ fontSize: 14, fontWeight: 500, color: '#111318' }}>{user?.display_name}</p>
+              <p className="m-0 truncate" style={{ fontSize: 12, fontWeight: 400, color: '#9AA1AC' }}>{user?.handle ? `@${user.handle}` : user?.email}</p>
             </div>
           </div>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 px-3 py-3">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm no-underline mb-0.5 transition-colors"
+              <NavLink key={item.path} to={item.path}
+                className="flex items-center gap-3 px-3 py-2.5 no-underline mb-1"
                 style={{
-                  fontWeight: isActive ? 500 : 400,
-                  backgroundColor: isActive ? '#EEF2FF' : 'transparent',
-                  color: isActive ? '#4F46E5' : '#6B7280',
-                  borderLeft: isActive ? '3px solid #4F46E5' : '3px solid transparent',
+                  borderRadius: 12, fontSize: 14, fontWeight: isActive ? 500 : 400,
+                  backgroundColor: isActive ? '#F0EEFF' : 'transparent',
+                  color: isActive ? '#7C5CE0' : '#6B7280',
+                  transition: 'all 150ms ease',
                 }}
-                onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = '#F9FAFB'; }}
-                onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}
-              >
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.backgroundColor = '#F6F7FB'; }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}>
                 <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
                 <span>{item.label}</span>
               </NavLink>
@@ -94,55 +73,38 @@ export default function Layout({ children }) {
           })}
         </nav>
 
-        {/* Bottom links */}
-        <div className="px-5 py-4 space-y-1" style={{ borderTop: '1px solid #EDEDF0' }}>
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 text-xs bg-transparent border-none cursor-pointer p-0"
-            style={{ color: '#9CA3AF' }}
-          >
-            <LogOut size={14} />
-            Sign out
+        <div className="px-5 py-4" style={{ borderTop: '1px solid #E6E9F2' }}>
+          <button onClick={logout}
+            className="flex items-center gap-2 bg-transparent border-none cursor-pointer p-0"
+            style={{ fontSize: 13, fontWeight: 500, color: '#9AA1AC' }}>
+            <LogOut size={14} /> Sign out
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 md:ml-60 pb-24 md:pb-6 min-w-0 overflow-x-hidden">
+      {/* Main */}
+      <main className="flex-1 md:ml-60 pb-28 md:pb-6 min-w-0 overflow-x-hidden">
         {children}
       </main>
 
-      {/* Mobile bottom tab bar */}
-      <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 flex justify-around items-center z-50"
-        style={{
-          backgroundColor: '#FFFFFF',
-          borderTop: '1px solid #EDEDF0',
-          padding: '6px 12px calc(env(safe-area-inset-bottom, 8px) + 6px)',
-        }}
-      >
+      {/* Mobile bottom nav */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 flex justify-around items-center z-50"
+        style={{ backgroundColor: '#FFFFFF', borderTop: '1px solid #E6E9F2', padding: '8px 20px calc(env(safe-area-inset-bottom, 8px) + 8px)' }}>
         {mobileNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
           return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className="flex flex-col items-center no-underline"
-              style={{
-                padding: isActive ? '6px 14px' : '6px 8px',
-                borderRadius: isActive ? 14 : 0,
-                backgroundColor: isActive ? '#EEF2FF' : 'transparent',
-                transition: 'all 150ms ease',
-              }}
-            >
-              <Icon size={21} strokeWidth={isActive ? 2 : 1.5} style={{ color: isActive ? '#4F46E5' : '#9CA3AF' }} />
-              <span style={{
-                fontSize: 9,
-                fontWeight: isActive ? 600 : 500,
-                color: isActive ? '#4F46E5' : '#9CA3AF',
-                marginTop: 2,
-              }}>
+            <NavLink key={item.path} to={item.path}
+              className="flex flex-col items-center no-underline" style={{ gap: 4 }}>
+              {isActive ? (
+                <div className="flex items-center justify-center"
+                  style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#7C5CE0' }}>
+                  <Icon size={20} strokeWidth={2} style={{ color: '#FFFFFF' }} />
+                </div>
+              ) : (
+                <Icon size={22} strokeWidth={1.5} style={{ color: '#CCCCCC' }} />
+              )}
+              <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 500, color: isActive ? '#7C5CE0' : '#CCCCCC' }}>
                 {item.label}
               </span>
             </NavLink>
