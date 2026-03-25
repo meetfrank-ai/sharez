@@ -36,32 +36,32 @@ export default function Layout({ children }) {
 
   return (
     <div className="flex min-h-screen w-full overflow-x-hidden">
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar — STAK dark */}
       <aside
-        className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-60 border-r z-40"
-        style={{ backgroundColor: 'var(--bg-sidebar)', borderColor: 'var(--border)' }}
+        className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-60 z-40"
+        style={{ backgroundColor: '#0F0F14', borderRight: '0.5px solid #2a2a35' }}
       >
         {/* Logo */}
-        <NavLink to="/" className="block px-5 py-5 border-b no-underline" style={{ borderColor: 'var(--border)' }}>
-          <h1 className="text-lg font-semibold m-0" style={{ color: 'var(--accent)' }}>
+        <NavLink to="/" className="block px-5 py-5 no-underline" style={{ borderBottom: '0.5px solid #2a2a35' }}>
+          <h1 className="text-lg font-semibold m-0" style={{ color: '#7F77DD' }}>
             Sharez
           </h1>
         </NavLink>
 
         {/* User info */}
-        <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="px-5 py-4" style={{ borderBottom: '0.5px solid #2a2a35' }}>
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold"
-              style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}
+              style={{ background: 'linear-gradient(135deg, #7F77DD, #534AB7)', color: '#fff' }}
             >
               {user?.display_name?.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold m-0 truncate" style={{ color: 'var(--text-primary)' }}>
+              <p className="text-sm font-medium m-0 truncate" style={{ color: '#FFFFFF' }}>
                 {user?.display_name}
               </p>
-              <p className="text-xs m-0 truncate" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-xs m-0 truncate" style={{ color: '#7a7888' }}>
                 {user?.handle ? `@${user.handle}` : user?.email}
               </p>
             </div>
@@ -77,16 +77,17 @@ export default function Layout({ children }) {
               <NavLink
                 key={item.path}
                 to={item.path}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium no-underline mb-0.5 transition-colors"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm no-underline mb-0.5 transition-colors"
                 style={{
-                  backgroundColor: isActive ? 'var(--accent-light)' : 'transparent',
-                  color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                  borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
+                  fontWeight: isActive ? 500 : 400,
+                  backgroundColor: isActive ? '#1f1a30' : 'transparent',
+                  color: isActive ? '#7F77DD' : '#7a7888',
+                  borderLeft: isActive ? '3px solid #7F77DD' : '3px solid transparent',
                 }}
-                onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
+                onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = '#18181f'; }}
                 onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}
               >
-                <Icon size={20} />
+                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
                 <span>{item.label}</span>
               </NavLink>
             );
@@ -94,11 +95,11 @@ export default function Layout({ children }) {
         </nav>
 
         {/* Bottom links */}
-        <div className="px-5 py-4 border-t space-y-1" style={{ borderColor: 'var(--border)' }}>
+        <div className="px-5 py-4 space-y-1" style={{ borderTop: '0.5px solid #2a2a35' }}>
           <button
             onClick={logout}
             className="flex items-center gap-2 text-xs bg-transparent border-none cursor-pointer p-0"
-            style={{ color: 'var(--text-muted)' }}
+            style={{ color: '#4a4958' }}
           >
             <LogOut size={14} />
             Sign out
