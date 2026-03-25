@@ -32,6 +32,22 @@ def get_feed(
     # Determine which users to show content from
     community_only = scope == "community"
 
+    # Batch: get all vault user IDs (users the viewer has vault access to)
+    # With simplified tiers (free + vault), only vault matters for gating
+    from models import Subscription, SubscriptionStatus
+    vault_user_ids = set()
+    vault_user_ids.add(user.id)  # own content always visible
+    # VIP follows
+    vip_follows = db.query(Follow.following_id).filter(
+        Follow.follower_id == user.id, Follow.status == FollowStatus.active, Follow.is_vip == True
+    ).all()
+    vault_user_ids.update(f[0] for f in vip_follows)
+    # Paid subs
+    paid_subs = db.query(Subscription.creator_id).filter(
+        Subscription.subscriber_id == user.id, Subscription.status == SubscriptionStatus.active
+    ).all()
+    vault_user_ids.update(s[0] for s in paid_subs)
+
     items = []
 
     # Fetch notes (top-level only, exclude trade-linked notes that render inside TradeCards)
@@ -44,13 +60,20 @@ def get_feed(
         if community_only:
             note_query = note_query.filter(Note.user_id.in_(following_ids))
         notes = note_query.order_by(Note.created_at.desc()).limit(limit * 2).all()
+
+        # Batch: get all note IDs the user has liked
+        note_ids = [n.id for n in notes]
+        liked_ids = set(
+            r[0] for r in db.query(NoteLike.note_id).filter(
+                NoteLike.note_id.in_(note_ids), NoteLike.user_id == user.id
+            ).all()
+        ) if note_ids else set()
+
         for n in notes:
-            access = get_access_tier(db, user.id, n.user_id)
-            if not can_view(access, n.visibility):
+            # Inline access check (no extra query)
+            if n.visibility.value == 'vault' and n.user_id not in vault_user_ids:
                 continue
-            liked = db.query(NoteLike).filter(
-                NoteLike.note_id == n.id, NoteLike.user_id == user.id
-            ).first() is not None
+            liked = n.id in liked_ids
             items.append(UnifiedFeedItem(
                 item_type="note",
                 id=n.id,
@@ -76,8 +99,7 @@ def get_feed(
             thesis_query = thesis_query.filter(Thesis.user_id.in_(following_ids))
         theses = thesis_query.order_by(Thesis.created_at.desc()).limit(limit * 2).all()
         for t in theses:
-            access = get_access_tier(db, user.id, t.user_id)
-            if not can_view(access, t.visibility):
+            if t.visibility.value == 'vault' and t.user_id not in vault_user_ids:
                 continue
             items.append(UnifiedFeedItem(
                 item_type="thesis",
@@ -107,11 +129,13 @@ def get_feed(
             .limit(limit * 2)
             .all()
         )
+        # Batch fetch users for events
+        event_user_ids = list(set(e.user_id for e in events))
+        event_users = {u.id: u for u in db.query(User).filter(User.id.in_(event_user_ids)).all()} if event_user_ids else {}
         for e in events:
-            access = get_access_tier(db, user.id, e.user_id)
-            if not can_view(access, e.visibility):
+            if e.visibility.value == 'vault' and e.user_id not in vault_user_ids:
                 continue
-            event_user = db.query(User).filter(User.id == e.user_id).first()
+            event_user = event_users.get(e.user_id)
             items.append(UnifiedFeedItem(
                 item_type="transaction",
                 id=e.id,
@@ -133,17 +157,16 @@ def get_feed(
         if community_only:
             trade_query = trade_query.filter(Trade.user_id.in_(following_ids))
         verified_trades = trade_query.order_by(Trade.created_at.desc()).limit(limit * 2).all()
+        # Batch fetch users and linked notes for trades
+        trade_user_ids = list(set(t.user_id for t in verified_trades))
+        trade_users = {u.id: u for u in db.query(User).filter(User.id.in_(trade_user_ids)).all()} if trade_user_ids else {}
+        trade_note_ids = [t.note_id for t in verified_trades if t.note_id]
+        trade_notes = {n.id: n.body for n in db.query(Note).filter(Note.id.in_(trade_note_ids)).all()} if trade_note_ids else {}
         for t in verified_trades:
-            access = get_access_tier(db, user.id, t.user_id)
-            if not can_view(access, t.visibility):
+            if t.visibility.value == 'vault' and t.user_id not in vault_user_ids:
                 continue
-            trade_user = db.query(User).filter(User.id == t.user_id).first()
-            # Get linked note body
-            note_body = None
-            if t.note_id:
-                linked_note = db.query(Note).filter(Note.id == t.note_id).first()
-                if linked_note:
-                    note_body = linked_note.body
+            trade_user = trade_users.get(t.user_id)
+            note_body = trade_notes.get(t.note_id)
             items.append(UnifiedFeedItem(
                 item_type="trade",
                 id=t.id,
@@ -176,8 +199,7 @@ def get_feed(
             note = db.query(Note).filter(Note.id == r.note_id).first()
             if not note:
                 continue
-            access = get_access_tier(db, user.id, note.user_id)
-            if not can_view(access, note.visibility):
+            if note.visibility.value == 'vault' and note.user_id not in vault_user_ids:
                 continue
             resharer = db.query(User).filter(User.id == r.user_id).first()
             liked = db.query(NoteLike).filter(NoteLike.note_id == note.id, NoteLike.user_id == user.id).first() is not None

@@ -38,21 +38,6 @@ def get_my_holdings(
     db: Session = Depends(get_db),
 ):
     holdings = db.query(Holding).filter(Holding.user_id == user.id).all()
-
-    # Auto-refresh prices if stale (older than 1 hour)
-    if holdings:
-        from datetime import datetime, timezone, timedelta
-        oldest_sync = min((h.last_synced_at for h in holdings if h.last_synced_at), default=None)
-        if oldest_sync:
-            age = datetime.now(timezone.utc) - oldest_sync.replace(tzinfo=timezone.utc)
-            if age > timedelta(hours=1):
-                try:
-                    from ee_import import refresh_user_prices
-                    refresh_user_prices(db, user)
-                    holdings = db.query(Holding).filter(Holding.user_id == user.id).all()
-                except Exception:
-                    pass
-
     return holdings
 
 
