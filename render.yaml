@@ -13,3 +13,23 @@ services:
         value: "3.11.11"
       - key: NODE_VERSION
         value: "20"
+
+  - type: cron
+    name: sharez-daily-scrape
+    runtime: python
+    buildCommand: bash build.sh
+    schedule: "0 6 * * *"
+    startCommand: cd backend && python scraper_job.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.11"
+      - key: DATABASE_URL
+        fromService:
+          name: sharez
+          type: web
+          property: DATABASE_URL
+      - key: EODHD_API_KEY
+        fromService:
+          name: sharez
+          type: web
+          property: EODHD_API_KEY

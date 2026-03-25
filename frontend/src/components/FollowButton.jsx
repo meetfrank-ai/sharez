@@ -71,7 +71,7 @@ export default function FollowButton({ userId, profile }) {
       <button
         onClick={handleFollow}
         disabled={loading}
-        className="px-4 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 border-none cursor-pointer"
+        className="px-4 py-2.5 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 border-none cursor-pointer min-h-[44px]"
         style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF' }}
       >
         {loading ? '...' : 'Follow'}
@@ -85,7 +85,7 @@ export default function FollowButton({ userId, profile }) {
       <button
         onClick={handleUnfollow}
         disabled={loading}
-        className="px-4 py-2 rounded-lg text-xs font-medium border cursor-pointer"
+        className="px-4 py-2.5 rounded-lg text-xs font-medium border cursor-pointer min-h-[44px]"
         style={{ backgroundColor: 'transparent', borderColor: 'var(--border)', color: 'var(--text-muted)' }}
       >
         Requested
@@ -99,7 +99,7 @@ export default function FollowButton({ userId, profile }) {
       <button
         onClick={handleUnfollow}
         disabled={loading}
-        className="flex items-center gap-1 px-4 py-2 rounded-lg text-xs font-semibold border-none cursor-pointer"
+        className="flex items-center gap-1 px-4 py-2.5 rounded-lg text-xs font-semibold border-none cursor-pointer min-h-[44px]"
         style={{ backgroundColor: '#FFFBEB', color: 'var(--tier-vault)', border: '1px solid #FDE68A' }}
       >
         <Lock size={12} /> Vault Member

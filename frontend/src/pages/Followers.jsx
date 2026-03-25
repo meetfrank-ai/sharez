@@ -83,16 +83,16 @@ export default function Followers() {
           {isPending && isFollower && (
             <>
               <button onClick={() => handleApprove(f.follower_id)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center border-none cursor-pointer"
-                style={{ backgroundColor: '#D1FAE5', color: 'var(--success)' }}><Check size={14} /></button>
+                className="w-11 h-11 rounded-lg flex items-center justify-center border-none cursor-pointer"
+                style={{ backgroundColor: '#D1FAE5', color: 'var(--success)' }}><Check size={16} /></button>
               <button onClick={() => handleReject(f.follower_id)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center border-none cursor-pointer"
-                style={{ backgroundColor: '#FEE2E2', color: 'var(--danger)' }}><X size={14} /></button>
+                className="w-11 h-11 rounded-lg flex items-center justify-center border-none cursor-pointer"
+                style={{ backgroundColor: '#FEE2E2', color: 'var(--danger)' }}><X size={16} /></button>
             </>
           )}
           {!isPending && isFollower && !isVault && (
             <button onClick={() => handleGrantVIP(f.follower_id)}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border-none cursor-pointer"
+              className="flex items-center gap-1 px-3 py-2 rounded-md text-[11px] font-medium border-none cursor-pointer min-h-[44px]"
               style={{ backgroundColor: '#FFFBEB', color: 'var(--tier-vault)' }}>
               <Crown size={11} /> VIP
             </button>

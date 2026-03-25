@@ -109,7 +109,7 @@ export default function Feed() {
         <h1 className="text-2xl font-semibold m-0" style={{ color: 'var(--text-primary)' }}>Feed</h1>
         <button
           onClick={() => setShowSearch(!showSearch)}
-          className="w-9 h-9 rounded-lg flex items-center justify-center border-none cursor-pointer transition-colors"
+          className="w-11 h-11 rounded-lg flex items-center justify-center border-none cursor-pointer transition-colors"
           style={{
             backgroundColor: showSearch ? 'var(--accent-light)' : 'transparent',
             color: showSearch ? 'var(--accent)' : 'var(--text-muted)',
@@ -222,10 +222,10 @@ export default function Feed() {
                           setStockSearchQuery('');
                           setStockSearchResults([]);
                         }}>
-                        <div>
-                          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{s.name}</span>
+                        <div className="min-w-0 flex-1">
+                          <span className="font-medium truncate block" style={{ color: 'var(--text-primary)' }}>{s.name}</span>
                         </div>
-                        <span style={{ color: 'var(--text-muted)' }}>{s.code} · {s.exchange}</span>
+                        <span className="shrink-0 ml-2" style={{ color: 'var(--text-muted)' }}>{s.code} · {s.exchange}</span>
                       </div>
                     ))}
                   </div>
@@ -297,7 +297,7 @@ export default function Feed() {
             {/* Attachment bar */}
             <div className="flex items-center gap-1 pb-3 mb-3 flex-wrap" style={{ borderBottom: '1px solid var(--border)' }}>
               <button onClick={() => { setShowStockInput(!showStockInput); setShowTxPicker(false); }}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-transparent border-none cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs bg-transparent border-none cursor-pointer min-h-[44px]"
                 style={{ color: showStockInput ? 'var(--accent)' : 'var(--text-muted)' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
@@ -307,7 +307,7 @@ export default function Feed() {
                   setShowTxPicker(!showTxPicker); setShowStockInput(false);
                   if (myTransactions.length === 0) api.get('/portfolio/transactions').then(r => setMyTransactions(r.data)).catch(() => {});
                 }}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-transparent border-none cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs bg-transparent border-none cursor-pointer min-h-[44px]"
                 style={{ color: showTxPicker ? 'var(--accent)' : 'var(--text-muted)' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
@@ -326,10 +326,10 @@ export default function Feed() {
               </select>
               <div className="flex items-center gap-2">
                 <button onClick={() => { setComposerExpanded(false); setComposerBody(''); setComposerStockTag(''); setComposerStockName(''); setShowStockInput(false); }}
-                  className="px-3 py-1.5 rounded-lg text-xs bg-transparent border-none cursor-pointer"
+                  className="px-3 py-2.5 rounded-lg text-xs bg-transparent border-none cursor-pointer min-h-[44px]"
                   style={{ color: 'var(--text-muted)' }}>Cancel</button>
                 <button onClick={handlePost} disabled={!composerBody.trim() || posting}
-                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40 border-none cursor-pointer"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-40 border-none cursor-pointer min-h-[44px]"
                   style={{ backgroundColor: 'var(--accent)', color: '#FFFFFF' }}>
                   <Send size={13} />{posting ? '...' : 'Post'}
                 </button>
@@ -349,7 +349,7 @@ export default function Feed() {
           <button
             key={s.key}
             onClick={() => handleScopeChange(s.key)}
-            className="px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border-none cursor-pointer"
+            className="px-3.5 py-2.5 rounded-full text-xs font-medium whitespace-nowrap border-none cursor-pointer min-h-[44px]"
             style={{
               backgroundColor: scope === s.key ? 'var(--accent-light)' : 'transparent',
               color: scope === s.key ? 'var(--accent)' : 'var(--text-muted)',
@@ -367,7 +367,7 @@ export default function Feed() {
           <button
             key={f.key}
             onClick={() => handleFilterChange(filter === f.key ? 'all' : f.key)}
-            className="px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border-none cursor-pointer"
+            className="px-3.5 py-2.5 rounded-full text-xs font-medium whitespace-nowrap border-none cursor-pointer min-h-[44px]"
             style={{
               backgroundColor: filter === f.key ? 'var(--accent-light)' : 'transparent',
               color: filter === f.key ? 'var(--accent)' : 'var(--text-muted)',

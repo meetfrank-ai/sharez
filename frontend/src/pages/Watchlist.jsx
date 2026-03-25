@@ -56,9 +56,9 @@ export default function Watchlist() {
                 </div>
               </Link>
               <button onClick={() => unfollow(s.contract_code)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center bg-transparent border-none cursor-pointer hover:opacity-70"
+                className="w-11 h-11 rounded-lg flex items-center justify-center bg-transparent border-none cursor-pointer hover:opacity-70"
                 style={{ color: 'var(--text-muted)' }}>
-                <X size={14} />
+                <X size={16} />
               </button>
             </div>
           ))}

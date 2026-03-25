@@ -29,13 +29,15 @@ export default function TradeCard({ trade }) {
           </div>
         </Link>
         <div className="flex-1 min-w-0">
-          <Link to={`/user/${trade.user_id}`} className="text-sm font-semibold no-underline hover:underline" style={{ color: 'var(--text-primary)' }}>
-            {trade.display_name}
-          </Link>
-          {trade.handle && (
-            <span className="text-xs ml-1.5" style={{ color: 'var(--text-muted)' }}>@{trade.handle}</span>
-          )}
-          <span className="text-xs ml-1.5" style={{ color: 'var(--text-muted)' }}>· {time}</span>
+          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+            <Link to={`/user/${trade.user_id}`} className="text-sm font-semibold no-underline hover:underline truncate" style={{ color: 'var(--text-primary)' }}>
+              {trade.display_name}
+            </Link>
+            {trade.handle && (
+              <span className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>@{trade.handle}</span>
+            )}
+            <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>· {time}</span>
+          </div>
         </div>
       </div>
 
@@ -61,10 +63,10 @@ export default function TradeCard({ trade }) {
             </span>
           )}
         </div>
-        <p className="text-sm font-semibold m-0" style={{ color: 'var(--text-primary)' }}>
+        <p className="text-sm font-semibold m-0 truncate" style={{ color: 'var(--text-primary)' }}>
           {trade.stock_name}
         </p>
-        <p className="text-xs m-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>
+        <p className="text-xs m-0 mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>
           {ticker && `${ticker}.${market}`}{tradeDate && ` · ${tradeDate}`}
         </p>
       </div>

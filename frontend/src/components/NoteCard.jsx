@@ -92,11 +92,13 @@ export default function NoteCard({ note, onReplyPosted }) {
             </div>
           </Link>
           <div className="flex-1 min-w-0">
-            <Link to={`/user/${note.user_id}`} className="text-sm font-semibold no-underline hover:underline" style={{ color: 'var(--text-primary)' }} onClick={(e) => e.stopPropagation()}>
-              {note.display_name}
-            </Link>
-            {note.handle && <span className="text-xs ml-1.5" style={{ color: 'var(--text-muted)' }}>@{note.handle}</span>}
-            <span className="text-xs ml-1.5" style={{ color: 'var(--text-muted)' }}>· {time}</span>
+            <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+              <Link to={`/user/${note.user_id}`} className="text-sm font-semibold no-underline hover:underline truncate" style={{ color: 'var(--text-primary)' }} onClick={(e) => e.stopPropagation()}>
+                {note.display_name}
+              </Link>
+              {note.handle && <span className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>@{note.handle}</span>}
+              <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>· {time}</span>
+            </div>
           </div>
           <TierBadge tier={note.visibility} />
         </div>
@@ -175,24 +177,24 @@ export default function NoteCard({ note, onReplyPosted }) {
       {!note.locked && (
         <div className="flex items-center px-5 py-3 relative" style={{ borderTop: '1px solid var(--border)' }}>
           <button onClick={toggleLike}
-            className="flex items-center gap-1.5 text-xs bg-transparent border-none cursor-pointer p-0 mr-5"
+            className="flex items-center gap-1.5 text-xs bg-transparent border-none cursor-pointer py-2 pr-4 mr-1 min-h-[44px]"
             style={{ color: liked ? 'var(--danger)' : 'var(--text-muted)' }}>
-            <Heart size={15} fill={liked ? 'var(--danger)' : 'none'} /> {likeCount}
+            <Heart size={16} fill={liked ? 'var(--danger)' : 'none'} /> {likeCount}
           </button>
           <button onClick={handleCommentClick}
-            className="flex items-center gap-1.5 text-xs bg-transparent border-none cursor-pointer p-0 mr-5"
+            className="flex items-center gap-1.5 text-xs bg-transparent border-none cursor-pointer py-2 pr-4 mr-1 min-h-[44px]"
             style={{ color: showReply ? 'var(--accent)' : 'var(--text-muted)' }}>
-            <MessageCircle size={15} /> {replyCount}
+            <MessageCircle size={16} /> {replyCount}
           </button>
           <button onClick={toggleReshare}
-            className="flex items-center gap-1.5 text-xs bg-transparent border-none cursor-pointer p-0 mr-5"
+            className="flex items-center gap-1.5 text-xs bg-transparent border-none cursor-pointer py-2 pr-4 mr-1 min-h-[44px]"
             style={{ color: reshared ? 'var(--success)' : 'var(--text-muted)' }}>
-            <Repeat2 size={15} /> {reshareCount}
+            <Repeat2 size={16} /> {reshareCount}
           </button>
           <button onClick={toggleSave}
-            className="bg-transparent border-none cursor-pointer p-0 ml-auto"
+            className="bg-transparent border-none cursor-pointer p-2 ml-auto min-h-[44px] flex items-center"
             style={{ color: saved ? 'var(--accent)' : 'var(--text-muted)' }}>
-            <Bookmark size={15} fill={saved ? 'var(--accent)' : 'none'} />
+            <Bookmark size={16} fill={saved ? 'var(--accent)' : 'none'} />
           </button>
         </div>
       )}
@@ -211,7 +213,7 @@ export default function NoteCard({ note, onReplyPosted }) {
                 placeholder="Write a reply..." autoFocus
                 className="flex-1 text-sm bg-transparent border-none outline-none" style={{ color: 'var(--text-primary)' }} />
               <button onClick={handlePostReply} disabled={!replyBody.trim() || posting}
-                className="flex items-center justify-center w-7 h-7 rounded-full border-none cursor-pointer disabled:opacity-30"
+                className="flex items-center justify-center w-9 h-9 rounded-full border-none cursor-pointer disabled:opacity-30"
                 style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>
                 <Send size={12} />
               </button>

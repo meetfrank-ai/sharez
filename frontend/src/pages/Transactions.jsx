@@ -88,7 +88,7 @@ export default function Transactions() {
         <h1 className="text-2xl font-semibold m-0" style={{ color: 'var(--text-primary)' }}>Transactions</h1>
         {hasTransactions && (
           <button onClick={() => setShowImport(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border-none cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold border-none cursor-pointer min-h-[44px]"
             style={{ backgroundColor: 'var(--bg-card)', color: 'var(--accent)', border: '1px solid var(--border)' }}>
             <Upload size={14} /> Import more
           </button>
@@ -123,7 +123,7 @@ export default function Transactions() {
               { key: 'sells', label: 'Sells' },
             ].map(f => (
               <button key={f.key} onClick={() => setFilter(f.key)}
-                className="px-3 py-1.5 rounded-full text-xs font-medium border-none cursor-pointer"
+                className="px-3 py-2.5 rounded-full text-xs font-medium border-none cursor-pointer min-h-[44px]"
                 style={{
                   backgroundColor: filter === f.key ? 'var(--accent-light)' : 'transparent',
                   color: filter === f.key ? 'var(--accent)' : 'var(--text-muted)',
@@ -191,7 +191,7 @@ export default function Transactions() {
 
                     {hasMultiple && (
                       <button onClick={(e) => { e.stopPropagation(); setExpandedGroup(isExpanded ? null : group.key); }}
-                        className="w-6 h-6 rounded-full flex items-center justify-center border-none cursor-pointer shrink-0"
+                        className="w-9 h-9 rounded-full flex items-center justify-center border-none cursor-pointer shrink-0"
                         style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
                         {isExpanded ? <Minus size={12} /> : <Plus size={12} />}
                       </button>
