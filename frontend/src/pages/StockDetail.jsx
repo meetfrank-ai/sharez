@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { Send, AlertTriangle, Sparkles, TrendingUp, TrendingDown, Share2, BookmarkPlus } from 'lucide-react';
-import { LineChart, Line, ResponsiveContainer } from 'recharts';
+
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 import NoteCard from '../components/NoteCard';

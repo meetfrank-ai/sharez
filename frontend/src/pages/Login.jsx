@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../hooks/useAuth';
 import api from '../utils/api';
@@ -38,7 +38,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6" style={{ backgroundColor: 'var(--bg-page)' }}>
+    <div className="min-h-screen flex items-center justify-center px-4 md:px-6" style={{ backgroundColor: 'var(--bg-page)' }}>
       <div className="w-full max-w-sm">
         {/* Brand */}
         <div className="text-center mb-8">

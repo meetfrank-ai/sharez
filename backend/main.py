@@ -49,6 +49,23 @@ try:
                     except Exception as e:
                         conn.rollback()
                         print(f"Migration skip {col_name}: {e}")
+    # Create indexes on frequently queried columns
+    indexes = [
+        "CREATE INDEX IF NOT EXISTS ix_follows_follower_id ON follows (follower_id)",
+        "CREATE INDEX IF NOT EXISTS ix_follows_following_id ON follows (following_id)",
+        "CREATE INDEX IF NOT EXISTS ix_follows_status ON follows (status)",
+        "CREATE INDEX IF NOT EXISTS ix_notes_user_id ON notes (user_id)",
+        "CREATE INDEX IF NOT EXISTS ix_holdings_user_id ON holdings (user_id)",
+        "CREATE INDEX IF NOT EXISTS ix_user_transactions_user_id ON user_transactions (user_id)",
+        "CREATE INDEX IF NOT EXISTS ix_trades_user_id ON trades (user_id)",
+    ]
+    with engine.connect() as conn:
+        for idx_sql in indexes:
+            try:
+                conn.execute(text(idx_sql))
+                conn.commit()
+            except Exception:
+                conn.rollback()
 except Exception as e:
     print(f"Migration check: {e}")
 

@@ -110,10 +110,10 @@ class Follow(Base):
     __tablename__ = "follows"
 
     id = Column(Integer, primary_key=True, index=True)
-    follower_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    following_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    follower_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    following_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     tier = Column(Enum(Tier), default=Tier.inner_circle)
-    status = Column(Enum(FollowStatus), default=FollowStatus.pending)
+    status = Column(Enum(FollowStatus), default=FollowStatus.pending, index=True)
     is_vip = Column(Boolean, default=False)
     created_at = Column(DateTime, default=utcnow)
 
@@ -185,7 +185,7 @@ class UserTransaction(Base):
     __tablename__ = "user_transactions"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     action = Column(String, nullable=False)  # "buy" or "sell"
     stock_name = Column(String, nullable=False)
     contract_code = Column(String, nullable=True)
@@ -209,7 +209,7 @@ class Holding(Base):
     __tablename__ = "holdings"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     account_type = Column(Enum(AccountType), nullable=False)
 
     stock_name = Column(String, nullable=False)
@@ -290,7 +290,7 @@ class Note(Base):
     __tablename__ = "notes"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     body = Column(Text, nullable=False)
     visibility = Column(Enum(Tier), default=Tier.public)
 
@@ -316,7 +316,7 @@ class Trade(Base):
     __tablename__ = "trades"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     action = Column(String, nullable=False)  # "buy" or "sell"
     stock_name = Column(String, nullable=False)
     ticker = Column(String, nullable=True)
