@@ -111,10 +111,14 @@ export default function Layout({ children }) {
         {children}
       </main>
 
-      {/* Mobile bottom tab bar */}
+      {/* Mobile bottom tab bar — STAK style */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 border-t flex z-50"
-        style={{ backgroundColor: 'var(--bg-sidebar)', borderColor: 'var(--border)' }}
+        className="md:hidden fixed bottom-0 left-0 right-0 flex justify-around items-center z-50"
+        style={{
+          backgroundColor: '#0F0F14',
+          borderTop: '0.5px solid #2a2a35',
+          padding: '6px 12px calc(env(safe-area-inset-bottom, 8px) + 6px)',
+        }}
       >
         {mobileNavItems.map((item) => {
           const Icon = item.icon;
@@ -123,13 +127,23 @@ export default function Layout({ children }) {
             <NavLink
               key={item.path}
               to={item.path}
-              className="flex-1 flex flex-col items-center py-2 text-[10px] no-underline transition-colors"
+              className="flex flex-col items-center no-underline"
               style={{
-                color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                padding: isActive ? '6px 14px' : '6px 8px',
+                borderRadius: isActive ? 14 : 0,
+                backgroundColor: isActive ? '#1f1a30' : 'transparent',
+                transition: 'all 150ms ease',
               }}
             >
-              <Icon size={20} />
-              <span className="mt-0.5">{item.label}</span>
+              <Icon size={21} strokeWidth={isActive ? 2 : 1.5} style={{ color: isActive ? '#7F77DD' : '#4a4958' }} />
+              <span style={{
+                fontSize: 9,
+                fontWeight: isActive ? 600 : 500,
+                color: isActive ? '#7F77DD' : '#4a4958',
+                marginTop: 2,
+              }}>
+                {item.label}
+              </span>
             </NavLink>
           );
         })}
