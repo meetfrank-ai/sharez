@@ -12,8 +12,8 @@ from models import Follow, Subscription, Tier, FollowStatus, SubscriptionStatus
 # Tier hierarchy for comparison
 TIER_RANK = {
     Tier.public: 0,
-    Tier.inner_circle: 1,
-    Tier.vault: 2,
+    Tier.inner_circle: 0,  # same as public — only two tiers now (free + vault)
+    Tier.vault: 1,
 }
 
 
@@ -54,7 +54,7 @@ def get_access_tier(db: Session, viewer_id: int, creator_id: int) -> Tier:
     if sub:
         return Tier.vault
 
-    return Tier.inner_circle
+    return Tier.public  # followers get free access, vault requires payment/VIP
 
 
 def can_view(viewer_tier: Tier, content_tier: Tier) -> bool:

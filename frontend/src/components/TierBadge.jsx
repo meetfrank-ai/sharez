@@ -1,6 +1,6 @@
 const tierStyles = {
-  public: { bg: '#F3F4F6', text: '#6B7280', label: 'Public' },
-  inner_circle: { bg: '#EFF6FF', text: '#3B82F6', label: 'Inner Circle' },
+  public: { bg: '#F3F4F6', text: '#6B7280', label: 'Free' },
+  inner_circle: { bg: '#F3F4F6', text: '#6B7280', label: 'Free' },  // treated same as public
   vault: { bg: '#FFFBEB', text: '#D97706', label: 'Vault' },
 };
 

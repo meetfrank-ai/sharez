@@ -58,8 +58,7 @@ export default function NoteComposer({ stockTag, stockName, parentNoteId, onPost
                 color: 'var(--text-secondary)',
               }}
             >
-              <option value="public">Public</option>
-              <option value="inner_circle">Inner Circle</option>
+              <option value="public">Free</option>
               <option value="vault">Vault</option>
             </select>
           )}

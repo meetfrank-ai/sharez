@@ -28,7 +28,7 @@ export default function StockDetail() {
   const [notes, setNotes] = useState([]);
   const [tab, setTab] = useState('summary');
   const [newThesis, setNewThesis] = useState('');
-  const [thesisVisibility, setThesisVisibility] = useState('inner_circle');
+  const [thesisVisibility, setThesisVisibility] = useState('public');
   const [loadingSummary, setLoadingSummary] = useState(true);
   const [posting, setPosting] = useState(false);
   const [viewingUser, setViewingUser] = useState(null);
@@ -396,8 +396,7 @@ export default function StockDetail() {
                   <select value={thesisVisibility} onChange={(e) => setThesisVisibility(e.target.value)}
                     className="text-xs px-2 py-1 rounded-md outline-none cursor-pointer"
                     style={{ backgroundColor: 'var(--bg-page)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-                    <option value="public">Public</option>
-                    <option value="inner_circle">Inner Circle</option>
+                    <option value="public">Free</option>
                     <option value="vault">Vault</option>
                   </select>
                   <button type="submit" disabled={posting || !newThesis.trim()}

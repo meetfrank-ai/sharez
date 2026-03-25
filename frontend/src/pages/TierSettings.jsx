@@ -38,8 +38,7 @@ const OPTION_GROUPS = [
 ];
 
 const TIERS = [
-  { key: 'public_shows', label: 'Public', desc: 'Anyone on the platform — no follow needed', icon: Eye, color: 'var(--text-muted)', bg: '#F3F4F6' },
-  { key: 'inner_circle_shows', label: 'Inner Circle', desc: 'Approved followers · Free', icon: Users, color: 'var(--tier-inner)', bg: '#EFF6FF' },
+  { key: 'public_shows', label: 'Free', desc: 'Anyone on the platform', icon: Eye, color: 'var(--text-muted)', bg: '#F3F4F6' },
   { key: 'vault_shows', label: 'Vault', desc: 'Paid subscribers or invited VIPs', icon: Lock, color: 'var(--tier-vault)', bg: '#FFFBEB' },
 ];
 
@@ -76,7 +75,7 @@ export default function TierSettings() {
     try {
       await api.put('/portfolio/tier-config', {
         public_shows: config.public_shows,
-        inner_circle_shows: config.inner_circle_shows,
+        inner_circle_shows: config.public_shows,  // same as public now
         vault_shows: config.vault_shows,
         vault_price_cents: Math.round(parseFloat(vaultPrice || '0') * 100),
         auto_accept_followers: autoAccept,
@@ -197,7 +196,7 @@ export default function TierSettings() {
                 })}
 
                 {/* Per-tier settings */}
-                {tier.key === 'inner_circle_shows' && (
+                {tier.key === 'public_shows' && (
                   <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
                     <label className="flex items-center gap-2.5 cursor-pointer">
                       <input type="checkbox" checked={autoAccept} onChange={(e) => setAutoAccept(e.target.checked)}

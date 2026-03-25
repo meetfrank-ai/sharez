@@ -29,7 +29,7 @@ export default function FollowButton({ userId, profile }) {
     try {
       await api.post(`/follow/${userId}`);
       if (profile?.auto_accept_followers) {
-        setTier('inner_circle');
+        setTier('public');
         setStatus('active');
       } else {
         setStatus('pending');

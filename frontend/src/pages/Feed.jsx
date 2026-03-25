@@ -316,8 +316,7 @@ export default function Feed() {
               <select value={composerVisibility} onChange={(e) => setComposerVisibility(e.target.value)}
                 className="text-xs px-2 py-1 rounded-md outline-none cursor-pointer"
                 style={{ backgroundColor: 'var(--bg-page)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-                <option value="public">Public</option>
-                <option value="inner_circle">Inner Circle</option>
+                <option value="public">Free</option>
                 <option value="vault">Vault</option>
               </select>
               <div className="flex items-center gap-2">

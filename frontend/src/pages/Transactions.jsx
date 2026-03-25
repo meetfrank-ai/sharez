@@ -251,7 +251,7 @@ export default function Transactions() {
             <div className="mb-4">
               <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Who can see this?</label>
               <div className="flex gap-2">
-                {['public', 'inner_circle', 'vault'].map(v => (
+                {['public', 'vault'].map(v => (
                   <button key={v} onClick={() => setVisibility(v)}
                     className="flex-1 py-1.5 rounded-lg text-xs font-medium border-none cursor-pointer capitalize"
                     style={{
@@ -259,7 +259,7 @@ export default function Transactions() {
                       color: visibility === v ? 'var(--accent)' : 'var(--text-muted)',
                       border: `1px solid ${visibility === v ? '#C7D2FE' : 'var(--border)'}`,
                     }}>
-                    {v === 'inner_circle' ? 'Inner Circle' : v === 'vault' ? 'Vault' : 'Public'}
+                    {v === 'vault' ? 'Vault' : 'Free'}
                   </button>
                 ))}
               </div>

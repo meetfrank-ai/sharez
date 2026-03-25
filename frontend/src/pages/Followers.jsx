@@ -39,14 +39,13 @@ export default function Followers() {
 
   const pending = followers.filter(f => f.status === 'pending');
   const active = followers.filter(f => f.status === 'active');
-  const innerCircle = active.filter(f => !f.is_vip && f.tier !== 'vault');
+  const freeMembers = active.filter(f => !f.is_vip && f.tier !== 'vault');
   const vaultMembers = active.filter(f => f.is_vip || f.tier === 'vault');
 
-  // Filter followers based on selected tier
   let displayFollowers = [];
   if (tierFilter === 'all') displayFollowers = [...pending, ...active];
   else if (tierFilter === 'pending') displayFollowers = pending;
-  else if (tierFilter === 'inner_circle') displayFollowers = innerCircle;
+  else if (tierFilter === 'free') displayFollowers = freeMembers;
   else if (tierFilter === 'vault') displayFollowers = vaultMembers;
 
   const renderPerson = (f, isFollower = true) => {
@@ -72,7 +71,7 @@ export default function Followers() {
             {isPending ? (
               <span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: '#FEF3C7', color: '#D97706' }}>Pending</span>
             ) : (
-              <TierBadge tier={isVault ? 'vault' : 'inner_circle'} />
+              <TierBadge tier={isVault ? 'vault' : 'public'} />
             )}
             {isVault && !isPending && <span className="text-[10px] font-medium" style={{ color: 'var(--tier-vault)' }}>VIP</span>}
           </div>
@@ -127,7 +126,7 @@ export default function Followers() {
           {[
             { key: 'all', label: 'All', count: followers.length },
             { key: 'pending', label: 'Requests', count: pending.length, color: '#D97706' },
-            { key: 'inner_circle', label: 'Inner Circle', count: innerCircle.length, color: 'var(--tier-inner)' },
+            { key: 'free', label: 'Free', count: freeMembers.length },
             { key: 'vault', label: 'Vault', count: vaultMembers.length, color: 'var(--tier-vault)' },
           ].map(f => (
             <button key={f.key} onClick={() => setTierFilter(f.key)}

@@ -32,7 +32,7 @@ class EventType(str, enum.Enum):
 
 class Tier(str, enum.Enum):
     public = "public"
-    inner_circle = "inner_circle"
+    inner_circle = "inner_circle"  # kept for DB compatibility, treated same as public
     vault = "vault"
 
 
