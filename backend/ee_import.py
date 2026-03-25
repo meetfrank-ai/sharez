@@ -339,11 +339,18 @@ def _refresh_holdings_prices(db: Session, user: User):
         result = resolve_price(db, h.stock_name, avg_buy_price=avg_price)
 
         if result["price"] and result["source"] != "none":
-            h.current_price = result["price"]
-            if h.shares and h.shares > 0:
-                h.current_value = round(h.shares * result["price"], 2)
-            h.last_synced_at = now
-            logger.info(f"Updated {h.stock_name}: R{result['price']:.2f} × {h.shares:.2f} = R{h.current_value:.2f} [{result['source']}]")
+            if result.get("unit_mismatch"):
+                # Unit trust: NAV scale doesn't match EE units — can't calculate current_value
+                # Keep purchase_value as current_value (no P&L shown)
+                h.current_price = result["price"]  # Store NAV for reference
+                h.last_synced_at = now
+                logger.info(f"NAV ref for {h.stock_name}: R{result['price']:.2f} (unit mismatch, no P&L) [{result['source']}]")
+            else:
+                h.current_price = result["price"]
+                if h.shares and h.shares > 0:
+                    h.current_value = round(h.shares * result["price"], 2)
+                h.last_synced_at = now
+                logger.info(f"Updated {h.stock_name}: R{result['price']:.2f} × {h.shares:.2f} = R{h.current_value:.2f} [{result['source']}]")
         else:
             logger.info(f"No price available for {h.stock_name}")
 

@@ -56,6 +56,10 @@ def resolve_price(db: Session, stock_name: str, avg_buy_price: float = None, ins
     if scraped and scraped.nav_price:
         age_hours = (datetime.now(timezone.utc) - scraped.scraped_at.replace(tzinfo=timezone.utc)).total_seconds() / 3600
         confidence = "medium" if age_hours < 48 else "low"
+        # For unit trusts: EE and ProfileData use different unit scales.
+        # Return the NAV but flag that it can't be used to calculate current_value directly.
+        if inst_type == "unit_trust":
+            return {"price": scraped.nav_price, "source": "scrape", "confidence": confidence, "unit_mismatch": True}
         if _sanity_check(scraped.nav_price, avg_buy_price, inst_type):
             return {"price": scraped.nav_price, "source": "scrape", "confidence": confidence}
         else:
