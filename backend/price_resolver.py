@@ -49,9 +49,15 @@ def resolve_price(db: Session, stock_name: str, avg_buy_price: float = None, ins
     if scraped and scraped.nav_price:
         age_hours = (datetime.now(timezone.utc) - scraped.scraped_at.replace(tzinfo=timezone.utc)).total_seconds() / 3600
         confidence = "medium" if age_hours < 48 else "low"
-        # For unit trusts: EE and ProfileData use different unit scales.
+        # For unit trusts / funds: EE and ProfileData use different unit scales.
         # Return the NAV but flag that it can't be used to calculate current_value directly.
-        if inst_type == "unit_trust":
+        # If no InstrumentMap exists and the match came from ProfileData (fund-only source),
+        # assume it's a fund with potential unit scale mismatch.
+        is_fund_type = inst_type in ("unit_trust", "ametf")
+        if not mapping and not _sanity_check(scraped.nav_price, avg_buy_price, "unit_trust"):
+            # No mapping + sanity fails = likely a fund with unit scale mismatch
+            is_fund_type = True
+        if is_fund_type:
             return {"price": scraped.nav_price, "source": "scrape", "confidence": confidence, "unit_mismatch": True}
         if _sanity_check(scraped.nav_price, avg_buy_price, inst_type):
             return {"price": scraped.nav_price, "source": "scrape", "confidence": confidence}
