@@ -72,6 +72,89 @@ def resolve_price(db: Session, stock_name: str, avg_buy_price: float = None, ins
     return {"price": None, "source": "none", "confidence": "none"}
 
 
+def resolve_historical_price(db: Session, symbol: str, target_date, yf_symbol: str = None):
+    """
+    Get the closing price for a symbol on a specific date.
+    Checks cache first, then EODHD, then yfinance.
+    Caches permanently (historical prices don't change).
+    Returns: {price, source, date} or {price: None}
+    """
+    from models import HistoricalPrice
+
+    if not symbol or not target_date:
+        return {"price": None, "source": "none"}
+
+    date_str = str(target_date)[:10]
+
+    # 1. Check cache
+    cached = db.query(HistoricalPrice).filter(
+        HistoricalPrice.symbol == symbol,
+        HistoricalPrice.price_date == date_str,
+    ).first()
+    if cached:
+        return {"price": cached.close_price, "source": cached.source, "date": date_str, "cached": True}
+
+    # 2. EODHD historical
+    eodhd_key = os.getenv("EODHD_API_KEY")
+    if eodhd_key:
+        try:
+            import httpx
+            # Try exact date, then look back 5 days for weekends/holidays
+            from_date = (datetime.strptime(date_str, "%Y-%m-%d") - timedelta(days=5)).strftime("%Y-%m-%d")
+            resp = httpx.get(
+                f"https://eodhd.com/api/eod/{symbol}",
+                params={"api_token": eodhd_key, "fmt": "json", "from": from_date, "to": date_str, "order": "d"},
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if isinstance(data, list) and len(data) > 0:
+                    # Take the most recent entry (closest to target date)
+                    close = data[0].get("close", 0)
+                    actual_date = data[0].get("date", date_str)
+                    if ".JSE" in symbol:
+                        close = close / 100
+                    price = round(close, 4)
+                    # Cache permanently
+                    try:
+                        db.add(HistoricalPrice(symbol=symbol, price_date=date_str, close_price=price, source="eodhd"))
+                        db.flush()
+                    except Exception:
+                        db.rollback()
+                    logger.info(f"Historical {symbol} on {date_str}: R{price} [eodhd]")
+                    return {"price": price, "source": "eodhd", "date": actual_date, "cached": False}
+        except Exception as e:
+            logger.warning(f"EODHD historical failed for {symbol} on {date_str}: {e}")
+
+    # 3. yfinance fallback
+    if yf_symbol:
+        try:
+            import yfinance as yf
+            target = datetime.strptime(date_str, "%Y-%m-%d")
+            start = target - timedelta(days=5)
+            end = target + timedelta(days=1)
+            ticker = yf.Ticker(yf_symbol)
+            hist = ticker.history(start=start.strftime("%Y-%m-%d"), end=end.strftime("%Y-%m-%d"))
+            if not hist.empty:
+                close = hist["Close"].iloc[-1]
+                currency = getattr(ticker, "info", {}).get("currency", "")
+                if currency in ("ZAc", "ZAC"):
+                    close = close / 100
+                price = round(close, 4)
+                try:
+                    db.add(HistoricalPrice(symbol=symbol, price_date=date_str, close_price=price, source="yfinance"))
+                    db.flush()
+                except Exception:
+                    db.rollback()
+                logger.info(f"Historical {symbol} on {date_str}: R{price} [yfinance]")
+                return {"price": price, "source": "yfinance", "date": date_str, "cached": False}
+        except Exception as e:
+            logger.warning(f"yfinance historical failed for {yf_symbol} on {date_str}: {e}")
+
+    logger.info(f"No historical price for {symbol} on {date_str}")
+    return {"price": None, "source": "none"}
+
+
 def _fetch_eodhd(symbol):
     """Fetch latest price from EODHD."""
     eodhd_key = os.getenv("EODHD_API_KEY")

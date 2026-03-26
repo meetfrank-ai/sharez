@@ -270,8 +270,9 @@ def _rebuild_holdings(db: Session, user: User, account_type: str):
         .all()
     )
 
-    # Aggregate per stock
+    # Aggregate per stock + collect buy transactions for historical pricing
     stocks = {}
+    buy_txs_by_stock = {}  # stock_name → [{date, amount}, ...]
     for tx in all_txs:
         name = tx.stock_name
         if name not in stocks:
@@ -284,6 +285,13 @@ def _rebuild_holdings(db: Session, user: User, account_type: str):
         if tx.action == 'buy':
             stocks[name]['shares'] += tx.quantity
             stocks[name]['total_cost'] += (tx.amount or 0)
+            if name not in buy_txs_by_stock:
+                buy_txs_by_stock[name] = []
+            if tx.transaction_date and tx.amount:
+                buy_txs_by_stock[name].append({
+                    'date': tx.transaction_date,
+                    'amount': tx.amount,
+                })
         else:
             stocks[name]['shares'] -= tx.quantity
 
@@ -325,6 +333,12 @@ def _rebuild_holdings(db: Session, user: User, account_type: str):
     except Exception as e:
         logger.warning(f"Auto-map instruments failed: {e}")
 
+    # Fetch historical prices for buy transactions → compute external_avg_buy_price
+    try:
+        _compute_external_buy_prices(db, user, buy_txs_by_stock)
+    except Exception as e:
+        logger.warning(f"Historical price fetch failed: {e}")
+
     # Try to update with live prices
     try:
         _refresh_holdings_prices(db, user)
@@ -332,31 +346,86 @@ def _rebuild_holdings(db: Session, user: User, account_type: str):
         logger.warning(f"Price refresh failed for user {user.id}: {e}")
 
 
+def _compute_external_buy_prices(db: Session, user: User, buy_txs_by_stock: dict):
+    """Fetch historical prices for each buy transaction and compute weighted avg external buy price."""
+    import time
+    from models import InstrumentMap
+    from price_resolver import resolve_historical_price
+
+    holdings = db.query(Holding).filter(Holding.user_id == user.id).all()
+    holdings_by_name = {h.stock_name: h for h in holdings}
+
+    fetched = 0
+    for stock_name, txs in buy_txs_by_stock.items():
+        holding = holdings_by_name.get(stock_name)
+        if not holding or not txs:
+            continue
+
+        # Look up instrument mapping for EODHD symbol
+        mapping = db.query(InstrumentMap).filter(InstrumentMap.ee_name == stock_name).first()
+        if not mapping or not mapping.eodhd_symbol:
+            continue
+
+        # Fetch historical price for each buy transaction date
+        total_weighted_price = 0
+        total_amount = 0
+        resolved_count = 0
+
+        for tx in txs:
+            result = resolve_historical_price(
+                db, mapping.eodhd_symbol, tx['date'],
+                yf_symbol=mapping.yfinance_symbol,
+            )
+            if result["price"]:
+                total_weighted_price += tx['amount'] * result["price"]
+                total_amount += tx['amount']
+                resolved_count += 1
+
+            fetched += 1
+            if fetched % 5 == 0:
+                time.sleep(0.2)  # Rate limit
+
+        if total_amount > 0 and resolved_count > 0:
+            # Weighted average: sum(amount_i × price_i) / sum(amount_i)
+            holding.external_avg_buy_price = round(total_weighted_price / total_amount, 4)
+            logger.info(f"External avg buy for {stock_name}: R{holding.external_avg_buy_price:.4f} ({resolved_count}/{len(txs)} trades resolved)")
+
+    db.flush()
+
+
 def _refresh_holdings_prices(db: Session, user: User):
-    """Refresh prices using the waterfall resolver."""
+    """Refresh current prices and calculate P&L using external historical prices where available."""
     from price_resolver import resolve_price
 
     holdings = db.query(Holding).filter(Holding.user_id == user.id).all()
     now = datetime.now(timezone.utc)
 
     for h in holdings:
-        avg_price = h.purchase_value / h.shares if (h.shares and h.shares > 0 and h.purchase_value) else None
+        # Use external_avg_buy_price for sanity check if available, else fall back to EE avg
+        avg_price = h.external_avg_buy_price
+        if not avg_price:
+            avg_price = h.purchase_value / h.shares if (h.shares and h.shares > 0 and h.purchase_value) else None
 
         result = resolve_price(db, h.stock_name, avg_buy_price=avg_price)
 
         if result["price"] and result["source"] != "none":
-            if result.get("unit_mismatch"):
-                # Unit trust: NAV scale doesn't match EE units — can't calculate current_value
-                # Keep purchase_value as current_value (no P&L shown)
-                h.current_price = result["price"]  # Store NAV for reference
-                h.last_synced_at = now
-                logger.info(f"NAV ref for {h.stock_name}: R{result['price']:.2f} (unit mismatch, no P&L) [{result['source']}]")
-            else:
-                h.current_price = result["price"]
+            h.current_price = result["price"]
+            h.price_source = result["source"]
+            h.last_synced_at = now
+
+            if h.external_avg_buy_price and h.external_avg_buy_price > 0:
+                # Use external prices for P&L — same scale, correct calculation
+                pnl_pct = (result["price"] - h.external_avg_buy_price) / h.external_avg_buy_price
+                h.current_value = round(h.purchase_value * (1 + pnl_pct), 2)
+                logger.info(f"Updated {h.stock_name}: ext_buy=R{h.external_avg_buy_price:.2f} curr=R{result['price']:.2f} P&L={pnl_pct*100:+.1f}% [{result['source']}]")
+            elif not result.get("unit_mismatch"):
+                # No external buy price, not a unit trust — use old method
                 if h.shares and h.shares > 0:
                     h.current_value = round(h.shares * result["price"], 2)
-                h.last_synced_at = now
-                logger.info(f"Updated {h.stock_name}: R{result['price']:.2f} × {h.shares:.2f} = R{h.current_value:.2f} [{result['source']}]")
+                logger.info(f"Updated {h.stock_name}: R{result['price']:.2f} (no ext buy, using shares×price) [{result['source']}]")
+            else:
+                # Unit trust with unit mismatch — keep purchase_value as current_value
+                logger.info(f"NAV ref for {h.stock_name}: R{result['price']:.2f} (unit mismatch) [{result['source']}]")
         else:
             logger.info(f"No price available for {h.stock_name}")
 
