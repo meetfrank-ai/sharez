@@ -60,6 +60,9 @@ class UserProfile(BaseModel):
     website_url: Optional[str] = None
     follower_count: int = 0
     following_count: int = 0
+    notes_count: int = 0
+    trade_count: int = 0
+    total_holdings_count: int = 0
     your_tier: Optional[str] = None
     follow_status: Optional[str] = None
     vault_price_cents: int = 0
@@ -90,6 +93,8 @@ class HoldingOut(BaseModel):
     current_value: Optional[float] = None
     current_price: Optional[float] = None
     shares: Optional[float] = None
+    trade_count: Optional[int] = None
+    price_source: Optional[str] = None
     logo_url: Optional[str] = None
     last_synced_at: Optional[datetime] = None
 

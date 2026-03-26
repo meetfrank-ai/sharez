@@ -177,11 +177,22 @@ def get_user_profile(
     if not target:
         raise HTTPException(status_code=404, detail="User not found")
 
+    from models import Note, UserTransaction, Holding
+
     follower_count = db.query(Follow).filter(
         Follow.following_id == user_id, Follow.status == FollowStatus.active
     ).count()
     following_count = db.query(Follow).filter(
         Follow.follower_id == user_id, Follow.status == FollowStatus.active
+    ).count()
+    notes_count = db.query(Note).filter(
+        Note.user_id == user_id, Note.parent_note_id.is_(None)
+    ).count()
+    trade_count = db.query(UserTransaction).filter(
+        UserTransaction.user_id == user_id
+    ).count()
+    total_holdings_count = db.query(Holding).filter(
+        Holding.user_id == user_id
     ).count()
 
     access = get_access_tier(db, current_user.id, user_id)
@@ -207,6 +218,9 @@ def get_user_profile(
         website_url=target.website_url,
         follower_count=follower_count,
         following_count=following_count,
+        notes_count=notes_count,
+        trade_count=trade_count,
+        total_holdings_count=total_holdings_count,
         your_tier=access.value,
         follow_status=follow_status,
         vault_price_cents=vault_price,

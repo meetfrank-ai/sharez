@@ -152,6 +152,7 @@ class InstrumentMap(Base):
     yfinance_symbol = Column(String, nullable=True)
     scrape_source = Column(String, nullable=True)  # moneyweb, allangray, easyetfs, coronation
     scrape_code = Column(String, nullable=True)
+    fundsdata_code = Column(String, nullable=True)
     sector = Column(String, nullable=True)
     is_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=utcnow)
@@ -179,6 +180,22 @@ class PriceAnomaly(Base):
     avg_buy_price = Column(Float)
     implied_pnl_pct = Column(Float)
     flagged_at = Column(DateTime, default=utcnow)
+
+
+class HistoricalPrice(Base):
+    __tablename__ = "historical_prices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String, nullable=False, index=True)  # e.g. PRX.JSE, AGOGE.JSE
+    price_date = Column(DateTime, nullable=False)
+    close_price = Column(Float, nullable=False)
+    source = Column(String, nullable=False, default="eodhd")  # eodhd, yfinance, fundsdata
+    currency = Column(String, default="ZAR")
+    fetched_at = Column(DateTime, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("symbol", "price_date", name="uq_hist_price_symbol_date"),
+    )
 
 
 class UserTransaction(Base):
@@ -220,6 +237,8 @@ class Holding(Base):
     current_value = Column(Float, nullable=True)
     current_price = Column(Float, nullable=True)
     shares = Column(Float, nullable=True)
+    external_avg_buy_price = Column(Float, nullable=True)  # from EODHD/FundsData historical
+    price_source = Column(String, nullable=True)  # eodhd, yfinance, fundsdata, scrape
 
     logo_url = Column(String, nullable=True)
     last_synced_at = Column(DateTime, default=utcnow)

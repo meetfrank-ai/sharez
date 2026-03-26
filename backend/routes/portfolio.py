@@ -37,7 +37,17 @@ def get_my_holdings(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    from models import UserTransaction
+    from sqlalchemy import func
     holdings = db.query(Holding).filter(Holding.user_id == user.id).all()
+    # Batch: trade counts per stock
+    tc = dict(
+        db.query(UserTransaction.stock_name, func.count())
+        .filter(UserTransaction.user_id == user.id)
+        .group_by(UserTransaction.stock_name).all()
+    )
+    for h in holdings:
+        h.trade_count = tc.get(h.stock_name, 0)
     return holdings
 
 
@@ -76,7 +86,16 @@ def get_user_holdings(
     access = get_access_tier(db, current_user.id, user_id)
     config = target.tier_config
 
+    from models import UserTransaction
+    from sqlalchemy import func as sqlfunc
     holdings = db.query(Holding).filter(Holding.user_id == user_id).all()
+    tc = dict(
+        db.query(UserTransaction.stock_name, sqlfunc.count())
+        .filter(UserTransaction.user_id == user_id)
+        .group_by(UserTransaction.stock_name).all()
+    )
+    for h in holdings:
+        h.trade_count = tc.get(h.stock_name, 0)
 
     # Self-view: return everything unmodified
     if is_self:

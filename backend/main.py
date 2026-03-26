@@ -31,6 +31,13 @@ try:
             ("restacked_note_id", "ALTER TABLE notes ADD COLUMN restacked_note_id INTEGER"),
             ("trade_linked", "ALTER TABLE notes ADD COLUMN trade_linked BOOLEAN DEFAULT FALSE"),
         ],
+        "holdings": [
+            ("external_avg_buy_price", "ALTER TABLE holdings ADD COLUMN external_avg_buy_price FLOAT"),
+            ("price_source", "ALTER TABLE holdings ADD COLUMN price_source VARCHAR"),
+        ],
+        "instrument_map": [
+            ("fundsdata_code", "ALTER TABLE instrument_map ADD COLUMN fundsdata_code VARCHAR"),
+        ],
     }
 
     with engine.connect() as conn:
