@@ -315,7 +315,7 @@ export default function Portfolio() {
                                 {h.weight.toFixed(1)}%
                               </p>
                               <p className="m-0 mt-0.5 tabular-nums" style={{ fontSize: 11, fontWeight: 600, color: pos ? T.green : T.red }}>
-                                {pos ? '+' : '\u2212'}{Math.abs(h.pnl).toFixed(1)}%
+                                {h.price_source === 'scrape' ? '~' : ''}{pos ? '+' : '\u2212'}{Math.abs(h.pnl).toFixed(1)}%
                               </p>
                             </>
                           ) : h.hasPrice && !showValues ? (

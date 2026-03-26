@@ -373,7 +373,7 @@ export default function UserProfile() {
                             <>
                               <div style={{ fontSize: 14, fontWeight: 700, color: T.t1 }}>{h.weight.toFixed(1)}%</div>
                               <div style={{ fontSize: 11, fontWeight: 600, color: pos ? T.green : T.red, marginTop: 1 }}>
-                                {pos ? '+' : '\u2212'}{Math.abs(h.pnl).toFixed(1)}%
+                                {h.price_source === 'scrape' ? '~' : ''}{pos ? '+' : '\u2212'}{Math.abs(h.pnl).toFixed(1)}%
                               </div>
                             </>
                           ) : (

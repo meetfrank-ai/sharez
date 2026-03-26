@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 """
-Standalone NAV scraper + price refresh for Render cron job.
-Runs daily: scrapes ProfileData fund prices, then refreshes all user holdings.
+Daily cron job: scrape NAVs, backfill historical prices, refresh all holdings.
 """
 import logging
+import time
 from database import SessionLocal
 from nav_scraper import scrape_and_store_for_holdings
 from ee_import import _auto_map_instruments, _refresh_holdings_prices
-from models import User, Holding
+from models import User, Holding, UserTransaction, InstrumentMap
 
 logging.basicConfig(
     level=logging.INFO,
@@ -15,11 +15,65 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def backfill_historical_prices(db):
+    """For holdings missing external_avg_buy_price, fetch historical prices."""
+    from price_resolver import resolve_historical_price
+
+    holdings = db.query(Holding).filter(Holding.external_avg_buy_price.is_(None)).all()
+    if not holdings:
+        logger.info("No holdings need historical price backfill")
+        return
+
+    logger.info(f"Backfilling historical prices for {len(holdings)} holdings...")
+    filled = 0
+
+    for h in holdings:
+        mapping = db.query(InstrumentMap).filter(InstrumentMap.ee_name == h.stock_name).first()
+        if not mapping or not mapping.eodhd_symbol:
+            continue
+
+        # Get buy transactions for this holding
+        txs = db.query(UserTransaction).filter(
+            UserTransaction.user_id == h.user_id,
+            UserTransaction.stock_name == h.stock_name,
+            UserTransaction.action == 'buy',
+        ).all()
+
+        if not txs:
+            continue
+
+        total_weighted = 0
+        total_amount = 0
+        resolved = 0
+
+        for tx in txs:
+            if not tx.transaction_date or not tx.amount:
+                continue
+            result = resolve_historical_price(
+                db, mapping.eodhd_symbol, tx.transaction_date,
+                yf_symbol=mapping.yfinance_symbol,
+            )
+            if result["price"]:
+                total_weighted += tx.amount * result["price"]
+                total_amount += tx.amount
+                resolved += 1
+            time.sleep(0.1)  # Rate limit
+
+        if total_amount > 0 and resolved > 0:
+            h.external_avg_buy_price = round(total_weighted / total_amount, 4)
+            filled += 1
+            logger.info(f"Backfilled {h.stock_name}: ext_buy=R{h.external_avg_buy_price:.4f} ({resolved}/{len(txs)} trades)")
+
+    db.flush()
+    logger.info(f"Backfilled {filled} holdings with historical prices")
+
+
 if __name__ == "__main__":
     db = SessionLocal()
     try:
         # 1. Scrape fund NAV prices from ProfileData
-        logger.info("Starting daily NAV scrape...")
+        logger.info("Starting daily cron...")
         result = scrape_and_store_for_holdings(db)
         logger.info(f"Scrape result: {result}")
 
@@ -27,7 +81,10 @@ if __name__ == "__main__":
         all_stock_names = [h[0] for h in db.query(Holding.stock_name).distinct().all() if h[0]]
         _auto_map_instruments(db, all_stock_names)
 
-        # 3. Refresh prices for all users
+        # 3. Backfill historical prices for holdings missing external_avg_buy_price
+        backfill_historical_prices(db)
+
+        # 4. Refresh current prices for all users
         users = db.query(User).all()
         for user in users:
             holdings = db.query(Holding).filter(Holding.user_id == user.id).all()
