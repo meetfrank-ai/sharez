@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Settings, RefreshCw } from 'lucide-react';
+import { Settings, RefreshCw, Share2 } from 'lucide-react';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 import NoteCard from '../components/NoteCard';
+import NoteComposer from '../components/NoteComposer';
+import TradeCard from '../components/TradeCard';
 import FollowButton from '../components/FollowButton';
 
 /* ── Design tokens (STAK system) ── */
@@ -93,9 +95,11 @@ export default function UserProfile() {
   const [profile, setProfile] = useState(null);
   const [holdings, setHoldings] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [trades, setTrades] = useState([]);
   const [tab, setTab] = useState('notes');
   const [loading, setLoading] = useState(true);
   const [highlightIdx, setHighlightIdx] = useState(null);
+  const [shared, setShared] = useState(false);
 
   const isOwnProfile = currentUser && String(currentUser.id) === String(userId);
 
@@ -105,15 +109,52 @@ export default function UserProfile() {
       api.get(`/profile/${userId}`),
       api.get(`/portfolio/user/${userId}`),
       api.get(`/notes/user/${userId}`),
+      api.get(`/trades/user/${userId}`).catch(() => ({ data: [] })),
     ])
-      .then(([p, h, n]) => { setProfile(p.data); setHoldings(h.data); setNotes(n.data); })
+      .then(([p, h, n, t]) => { setProfile(p.data); setHoldings(h.data); setNotes(n.data); setTrades(t.data || []); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [userId]);
 
+  const handleShare = async () => {
+    const url = `${window.location.origin}/user/${userId}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: `${profile?.display_name} on Sharez`, url }); } catch {}
+    } else {
+      await navigator.clipboard.writeText(url);
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    }
+  };
+
   if (loading || !profile) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: T.border, borderTopColor: 'transparent' }} />
+    <div style={{ backgroundColor: T.bg, minHeight: '100vh', fontFamily: "'Inter', -apple-system, sans-serif" }}>
+      <div className="max-w-2xl mx-auto" style={{ padding: '24px 16px 120px' }}>
+        {/* Skeleton */}
+        <style>{`@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:0.8}}`}</style>
+        <div style={{ ...card, padding: 24, marginBottom: 20 }}>
+          <div style={{ display: 'flex', gap: 18 }}>
+            <div style={{ width: 72, height: 72, borderRadius: '50%', background: T.surface, animation: 'pulse 1.5s infinite' }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ width: '60%', height: 20, borderRadius: 8, background: T.surface, animation: 'pulse 1.5s infinite', marginBottom: 8 }} />
+              <div style={{ width: '40%', height: 14, borderRadius: 8, background: T.surface, animation: 'pulse 1.5s infinite', marginBottom: 12 }} />
+              <div style={{ width: '80%', height: 14, borderRadius: 8, background: T.surface, animation: 'pulse 1.5s infinite' }} />
+            </div>
+          </div>
+        </div>
+        <div style={{ height: 260, borderRadius: 20, background: '#1A1A3E', animation: 'pulse 1.5s infinite', marginBottom: 20 }} />
+        {[1,2,3].map(i => (
+          <div key={i} style={{ ...card, padding: 16, marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: T.surface, animation: 'pulse 1.5s infinite' }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ width: '50%', height: 14, borderRadius: 8, background: T.surface, animation: 'pulse 1.5s infinite', marginBottom: 6 }} />
+                <div style={{ width: '30%', height: 10, borderRadius: 8, background: T.surface, animation: 'pulse 1.5s infinite' }} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 
@@ -155,9 +196,11 @@ export default function UserProfile() {
             <div style={{ ...card, padding: 16 }}>
               <div style={{ fontSize: 15, fontWeight: 600, color: T.t1, marginBottom: 12 }}>Quick stats</div>
               {[
-                ['Holdings', String(holdings.length)],
+                ['Holdings', String(profile.total_holdings_count || holdings.length)],
                 ['Win rate', `${winning}/${priced.length}`],
-                ['Trades', String(holdings.reduce((s, h) => s + (h.trade_count || 0), 0) || '—')],
+                ['Trades', String(profile.trade_count || '—')],
+                ['Notes', String(profile.notes_count || 0)],
+                ['Member since', profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-ZA', { month: 'short', year: 'numeric' }) : '—'],
               ].map(([l, v], i) => (
                 <div key={i}>
                   {i > 0 && <div style={{ height: 1, background: T.border, margin: '4px 0' }} />}
@@ -211,16 +254,18 @@ export default function UserProfile() {
                       </span>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {isOwnProfile ? (
                       <Link to="/profile" className="no-underline" style={{ border: `1.5px solid ${T.border}`, borderRadius: 12, padding: '10px 20px', fontSize: 13, fontWeight: 500, color: T.t1, background: T.card, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                         <Settings size={14} /> Edit profile
                       </Link>
                     ) : (
-                      <>
-                        <FollowButton userId={profile.id} profile={profile} />
-                      </>
+                      <FollowButton userId={profile.id} profile={profile} />
                     )}
+                    <button onClick={handleShare} className="border-none cursor-pointer"
+                      style={{ border: `1.5px solid ${T.border}`, borderRadius: 12, padding: '10px 20px', fontSize: 13, fontWeight: 500, color: T.t1, background: T.card, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <Share2 size={14} /> {shared ? 'Copied!' : 'Share'}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -305,7 +350,7 @@ export default function UserProfile() {
                           </div>
                           <div>
                             <div style={{ fontSize: 14, fontWeight: 600, color: T.t1 }}>{shortName(h.stock_name)}</div>
-                            <div style={{ fontSize: 11, color: T.t3, marginTop: 1 }}>{h.account_type}</div>
+                            <div style={{ fontSize: 11, color: T.t3, marginTop: 1 }}>{h.account_type}{h.trade_count ? ` · ${h.trade_count} trades` : ''}</div>
                           </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
@@ -338,14 +383,26 @@ export default function UserProfile() {
                   }}>{t}</div>
                 ))}
               </div>
-              <div style={{ padding: notes.length > 0 ? 0 : 20 }}>
+              <div>
                 {tab === 'notes' && (
-                  notes.length > 0
-                    ? notes.map(n => <NoteCard key={n.id} note={n} />)
-                    : <p style={{ fontSize: 13, color: T.t3, textAlign: 'center' }}>No notes yet</p>
+                  <>
+                    {isOwnProfile && (
+                      <div style={{ padding: '16px 20px', borderBottom: `1px solid ${T.border}` }}>
+                        <NoteComposer onPosted={(note) => setNotes(prev => [note, ...prev])} />
+                      </div>
+                    )}
+                    {notes.length > 0
+                      ? notes.map(n => <NoteCard key={n.id} note={n} />)
+                      : <p style={{ fontSize: 13, color: T.t3, textAlign: 'center', padding: 20 }}>
+                          {isOwnProfile ? 'Share your first note about what you\'re investing in.' : 'No notes yet'}
+                        </p>
+                    }
+                  </>
                 )}
                 {tab === 'trades' && (
-                  <p style={{ fontSize: 13, color: T.t3, textAlign: 'center', padding: 20 }}>Coming soon</p>
+                  trades.length > 0
+                    ? trades.map(t => <TradeCard key={t.id} trade={t} />)
+                    : <p style={{ fontSize: 13, color: T.t3, textAlign: 'center', padding: 20 }}>No trades shared yet</p>
                 )}
               </div>
             </div>
