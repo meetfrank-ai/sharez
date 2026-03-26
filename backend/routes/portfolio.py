@@ -485,6 +485,36 @@ def get_transactions_by_ids(
     } for t in txs]
 
 
+@router.get("/user/{user_id}/holding-detail/{stock_name}")
+def get_holding_detail(
+    user_id: int,
+    stock_name: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get trade details for a specific holding."""
+    from models import UserTransaction
+    from sqlalchemy import func
+    txs = db.query(UserTransaction).filter(
+        UserTransaction.user_id == user_id,
+        UserTransaction.stock_name == stock_name,
+    ).order_by(UserTransaction.transaction_date.asc()).all()
+    if not txs:
+        return {"trade_count": 0}
+    dates = [t.transaction_date for t in txs if t.transaction_date]
+    first = min(dates) if dates else None
+    last = max(dates) if dates else None
+    duration = (last - first).days if first and last else 0
+    return {
+        "trade_count": len(txs),
+        "first_trade_date": str(first)[:10] if first else None,
+        "last_trade_date": str(last)[:10] if last else None,
+        "hold_duration_days": duration,
+        "buy_count": sum(1 for t in txs if t.action == 'buy'),
+        "sell_count": sum(1 for t in txs if t.action == 'sell'),
+    }
+
+
 @router.post("/import-preview")
 async def import_preview(
     file: UploadFile = File(...),

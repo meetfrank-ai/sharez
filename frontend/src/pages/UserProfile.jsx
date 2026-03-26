@@ -100,6 +100,8 @@ export default function UserProfile() {
   const [loading, setLoading] = useState(true);
   const [highlightIdx, setHighlightIdx] = useState(null);
   const [shared, setShared] = useState(false);
+  const [expandedIdx, setExpandedIdx] = useState(null);
+  const [expandedDetail, setExpandedDetail] = useState(null);
 
   const isOwnProfile = currentUser && String(currentUser.id) === String(userId);
 
@@ -335,17 +337,30 @@ export default function UserProfile() {
                 {withWeights.map((h, i) => {
                   const tint = ICON_TINTS[i % ICON_TINTS.length];
                   const pos = h.pnl !== null && h.pnl >= 0;
+                  const isExpanded = expandedIdx === i;
+                  // Blur: non-followers see top 5 only, last 2 blurred
+                  const isBlurred = !isOwnProfile && profile.your_tier === 'public' && i >= 3 && withWeights.length > 5;
+                  const isHidden = !isOwnProfile && profile.your_tier === 'public' && i >= 5 && withWeights.length > 5;
+                  if (isHidden) return null;
                   return (
-                    <Link key={h.id} to={`/stock/${h.contract_code}?name=${encodeURIComponent(h.stock_name)}`} className="block no-underline">
+                    <div key={h.id} style={{ position: 'relative', filter: isBlurred ? 'blur(4px)' : 'none', pointerEvents: isBlurred ? 'none' : 'auto' }}>
                       <div style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
                         transition: 'background 150ms',
                         background: highlightIdx === i ? T.purpleLight : 'transparent',
                       }}
+                        onClick={async () => {
+                          if (isExpanded) { setExpandedIdx(null); setExpandedDetail(null); return; }
+                          setExpandedIdx(i);
+                          try {
+                            const r = await api.get(`/portfolio/user/${userId}/holding-detail/${encodeURIComponent(h.stock_name)}`);
+                            setExpandedDetail(r.data);
+                          } catch { setExpandedDetail(null); }
+                        }}
                         onMouseEnter={() => setHighlightIdx(i)} onMouseLeave={() => setHighlightIdx(null)}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <div style={{ width: 40, height: 40, borderRadius: 12, background: tint.bg, color: tint.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
+                          <div style={{ width: 42, height: 42, borderRadius: 12, background: tint.bg, color: tint.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
                             {abbrev(h.stock_name)}
                           </div>
                           <div>
@@ -366,9 +381,30 @@ export default function UserProfile() {
                           )}
                         </div>
                       </div>
-                    </Link>
+                      {/* Expanded detail */}
+                      {isExpanded && expandedDetail && (
+                        <div style={{ padding: '8px 12px 12px 66px', display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 11, color: T.t3 }}>
+                          {expandedDetail.first_trade_date && <span>First trade: <strong style={{ color: T.t1 }}>{expandedDetail.first_trade_date}</strong></span>}
+                          {expandedDetail.last_trade_date && <span>Last trade: <strong style={{ color: T.t1 }}>{expandedDetail.last_trade_date}</strong></span>}
+                          {expandedDetail.hold_duration_days > 0 && <span>Held: <strong style={{ color: T.t1 }}>{expandedDetail.hold_duration_days}d</strong></span>}
+                          {expandedDetail.buy_count > 0 && <span>{expandedDetail.buy_count} buys</span>}
+                          {expandedDetail.sell_count > 0 && <span>{expandedDetail.sell_count} sells</span>}
+                          <Link to={`/stock/${h.contract_code}?name=${encodeURIComponent(h.stock_name)}`}
+                            style={{ fontSize: 11, fontWeight: 500, color: T.purple, textDecoration: 'none' }}>
+                            View stock →
+                          </Link>
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
+                {/* Blur overlay CTA */}
+                {!isOwnProfile && profile.your_tier === 'public' && (profile.total_holdings_count || withWeights.length) > 5 && (
+                  <div style={{ textAlign: 'center', padding: '16px 12px', borderTop: `1px solid ${T.border}` }}>
+                    <p style={{ fontSize: 13, color: T.t2, margin: '0 0 8px' }}>Follow to see all {profile.total_holdings_count || withWeights.length} holdings</p>
+                    <FollowButton userId={profile.id} profile={profile} />
+                  </div>
+                )}
               </div>
             )}
 
