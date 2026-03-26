@@ -1,0 +1,1 @@
+Saved from conversation — see product spec in Claude context.
