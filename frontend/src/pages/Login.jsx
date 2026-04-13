@@ -49,7 +49,7 @@ export default function Login() {
             S
           </div>
           <h1 className="text-2xl font-semibold m-0" style={{ color: 'var(--text-primary)' }}>
-            Stance
+            Sharez
           </h1>
           <p className="text-sm mt-1 m-0" style={{ color: 'var(--text-secondary)' }}>
             See what your friends are investing in

@@ -119,7 +119,7 @@ export default function Profile() {
               <Smartphone size={18} style={{ color: T.purple }} />
             </div>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 500, color: T.t1 }}>Install Stance</div>
+              <div style={{ fontSize: 15, fontWeight: 500, color: T.t1 }}>Install Sharez</div>
               <div style={{ fontSize: 12, color: T.t3 }}>Add to your home screen</div>
             </div>
           </div>

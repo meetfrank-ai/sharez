@@ -121,7 +121,7 @@ export default function UserProfile() {
   const handleShare = async () => {
     const url = `${window.location.origin}/user/${userId}`;
     if (navigator.share) {
-      try { await navigator.share({ title: `${profile?.display_name} on Stance`, url }); } catch {}
+      try { await navigator.share({ title: `${profile?.display_name} on Sharez`, url }); } catch {}
     } else {
       await navigator.clipboard.writeText(url);
       setShared(true);

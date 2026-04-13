@@ -582,6 +582,116 @@ function TickerStrip() {
 }
 
 // ============================================================
+//  SIDE SCROLL INDICATOR
+// ============================================================
+const SIDE_SECTIONS = [
+  { id: 'top',       label: 'Intro' },
+  { id: 'portfolio', label: 'Portfolio' },
+  { id: 'feed',      label: 'Feed' },
+  { id: 'ai',        label: 'AI context' },
+  { id: 'notes',     label: 'Notes' },
+  { id: 'launch',    label: 'Launch' },
+];
+
+function SideNav() {
+  const [active, setActive] = useState('top');
+
+  useEffect(() => {
+    const targets = SIDE_SECTIONS
+      .map((s) => document.getElementById(s.id))
+      .filter(Boolean);
+    if (!targets.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]) setActive(visible[0].target.id);
+      },
+      { rootMargin: '-40% 0px -50% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] }
+    );
+
+    targets.forEach((t) => observer.observe(t));
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <nav
+      aria-label="Page sections"
+      className="hidden lg:block"
+      style={{
+        position: 'fixed',
+        top: '50%',
+        left: 32,
+        transform: 'translateY(-50%)',
+        zIndex: 40,
+        padding: '4px 0',
+      }}
+    >
+      {/* Thin spine */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          left: 5, top: 12, bottom: 12,
+          width: 1,
+          backgroundColor: T.line,
+        }}
+      />
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 20 }}>
+        {SIDE_SECTIONS.map((s) => {
+          const isActive = s.id === active;
+          return (
+            <li key={s.id}>
+              <a
+                href={`#${s.id}`}
+                style={{
+                  position: 'relative',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  textDecoration: 'none',
+                  paddingLeft: 0,
+                }}
+              >
+                <span
+                  style={{
+                    width: isActive ? 11 : 7,
+                    height: isActive ? 11 : 7,
+                    borderRadius: '50%',
+                    backgroundColor: isActive ? T.accent : '#FFFFFF',
+                    border: `1.5px solid ${isActive ? T.accent : '#D6DBE8'}`,
+                    boxShadow: isActive ? `0 0 0 4px ${T.accentSoft}` : 'none',
+                    transition: 'all 220ms ease',
+                    marginLeft: isActive ? -2 : 0,
+                    flexShrink: 0,
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: isActive ? 700 : 500,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    color: isActive ? T.ink : T.ink3,
+                    opacity: isActive ? 1 : 0.75,
+                    transition: 'all 220ms ease',
+                    transform: isActive ? 'translateX(0)' : 'translateX(-2px)',
+                  }}
+                >
+                  {s.label}
+                </span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+// ============================================================
 //  NAV
 // ============================================================
 function Nav({ onStart }) {
@@ -604,7 +714,7 @@ function Nav({ onStart }) {
           }}>
             <TrendingUp size={15} style={{ color: '#FFFFFF' }} strokeWidth={2.6} />
           </div>
-          <span style={{ fontSize: 18, fontWeight: 700, color: T.ink, letterSpacing: '-0.015em' }}>Stance</span>
+          <span style={{ fontSize: 18, fontWeight: 700, color: T.ink, letterSpacing: '-0.015em' }}>Sharez</span>
         </a>
 
         <nav style={{ display: 'flex', alignItems: 'center', gap: 28 }} className="hidden md:flex">
@@ -646,9 +756,9 @@ export default function Landing() {
       setLaunchMessage('Add your email first so the launch note includes a reply address.');
       return;
     }
-    const subject = `Stance launch interest - ${interestType}`;
+    const subject = `Sharez launch interest - ${interestType}`;
     const body = [
-      'Hi Stance,',
+      'Hi Sharez,',
       '',
       'I would like updates on the launch.',
       '',
@@ -659,7 +769,7 @@ export default function Landing() {
       'What I am interested in:',
       note.trim() || 'Please keep me posted on launch plans and early access.',
       '',
-      'Sent from the Stance concept site.',
+      'Sent from the Sharez concept site.',
     ].join('\n');
     window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     setLaunchMessage(`Your email app should open now. If not, message ${CONTACT_EMAIL} directly.`);
@@ -669,6 +779,7 @@ export default function Landing() {
     <div style={{ backgroundColor: T.bg, color: T.ink, fontFamily: FONT_SANS }}>
       <GlobalStyles />
       <Nav />
+      <SideNav />
 
       {/* ============ HERO ============ */}
       <section id="top" style={{ position: 'relative', overflow: 'hidden' }}>
@@ -699,7 +810,7 @@ export default function Landing() {
             fontSize: 'clamp(17px, 1.6vw, 21px)', lineHeight: 1.55,
             color: T.ink2, maxWidth: 620, margin: '0 auto 36px',
           }}>
-            See real portfolios, real theses, and real conviction — not screenshots, not hot takes. Stance is where South African investors show their hand.
+            See real portfolios, real theses, and real conviction — not screenshots, not hot takes. Sharez is where South African investors show their hand.
           </p>
           <div style={{ display: 'inline-flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
             <PrimaryCTA href="#launch">Get early access</PrimaryCTA>
@@ -777,7 +888,7 @@ export default function Landing() {
             <SectionHead
               eyebrow="AI context"
               title="Every stock, explained in three bullets."
-              body="Price charts are table stakes. Stance pairs each stock with an AI synthesis of what matters right now — plus community conviction signals you won't find on Bloomberg."
+              body="Price charts are table stakes. Sharez pairs each stock with an AI synthesis of what matters right now — plus community conviction signals you won't find on Bloomberg."
             />
             <div style={{ marginTop: 36, display: 'grid', gap: 18 }}>
               {[
@@ -1025,7 +1136,7 @@ export default function Landing() {
                 }}>
                   <TrendingUp size={15} style={{ color: '#FFFFFF' }} strokeWidth={2.6} />
                 </div>
-                <span style={{ fontSize: 18, fontWeight: 700, color: T.ink, letterSpacing: '-0.015em' }}>Stance</span>
+                <span style={{ fontSize: 18, fontWeight: 700, color: T.ink, letterSpacing: '-0.015em' }}>Sharez</span>
               </div>
               <p style={{ fontSize: 14, lineHeight: 1.6, color: T.ink3, margin: 0, maxWidth: 260 }}>
                 The social network for people who actually invest. South Africa first.
@@ -1051,7 +1162,7 @@ export default function Landing() {
             paddingTop: 28, borderTop: `1px solid ${T.line}`,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap',
           }}>
-            <span style={{ fontSize: 13, color: T.ink3 }}>© {new Date().getFullYear()} Stance. Concept site — not financial advice.</span>
+            <span style={{ fontSize: 13, color: T.ink3 }}>© {new Date().getFullYear()} Sharez. Concept site — not financial advice.</span>
             <span style={{ fontSize: 13, color: T.ink3, fontFamily: FONT_MONO }}>hello@sharez.co.za</span>
           </div>
         </div>

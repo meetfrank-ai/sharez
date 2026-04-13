@@ -39,7 +39,7 @@ export default function Layout() {
       >
         <NavLink to="/app" className="block px-6 py-6 no-underline" style={{ borderBottom: '1px solid #E6E9F2' }}>
           <h1 className="m-0" style={{ fontSize: 22, fontWeight: 600, color: '#7C5CE0', fontFamily: "'Inter', -apple-system, sans-serif", letterSpacing: '-0.01em' }}>
-            Stance
+            Sharez
           </h1>
         </NavLink>
 
