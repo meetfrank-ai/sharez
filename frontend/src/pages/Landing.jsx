@@ -616,7 +616,6 @@ function Nav({ onStart }) {
         </nav>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <a href="/login" className="stance-link" style={{ fontSize: 14, fontWeight: 500 }}>Sign in</a>
           <a href="#launch" onClick={onStart} className="stance-cta" style={{
             padding: '8px 16px', borderRadius: 999,
             backgroundColor: T.ink, color: '#FFFFFF',
