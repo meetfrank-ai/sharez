@@ -844,7 +844,7 @@ export default function Landing() {
               fontWeight: 700, lineHeight: 1.04, letterSpacing: '-0.035em',
               color: T.ink, margin: 0, marginBottom: 24,
             }}>
-              See how people invest.
+              See how people around you invest.
             </h1>
             <p style={{
               fontSize: 'clamp(17px, 1.5vw, 20px)', lineHeight: 1.55,
