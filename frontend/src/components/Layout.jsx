@@ -1,9 +1,9 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Home, BarChart3, Compass, Bookmark, Bell, Settings, LogOut, ArrowLeftRight, Layers } from 'lucide-react';
 
 const navItems = [
-  { path: '/', label: 'Feed', icon: Home },
+  { path: '/app', label: 'Feed', icon: Home },
   { path: '/portfolio', label: 'Portfolio', icon: BarChart3 },
   { path: '/transactions', label: 'Transactions', icon: Layers },
   { path: '/watchlist', label: 'Watchlist', icon: Bookmark },
@@ -14,14 +14,14 @@ const navItems = [
 ];
 
 const mobileNavItems = [
-  { path: '/', label: 'Feed', icon: Home },
+  { path: '/app', label: 'Feed', icon: Home },
   { path: '/portfolio', label: 'Portfolio', icon: BarChart3 },
   { path: '/transactions', label: 'Trades', icon: Layers },
   { path: '/discover', label: 'Discover', icon: Compass },
   { path: '/profile', label: 'Profile', icon: Settings },
 ];
 
-export default function Layout({ children }) {
+export default function Layout() {
   const { user, logout } = useAuth();
   const location = useLocation();
 
@@ -29,19 +29,24 @@ export default function Layout({ children }) {
     <div className="flex min-h-screen w-full overflow-x-hidden" style={{ backgroundColor: '#F6F7FB' }}>
       {/* Desktop Sidebar */}
       <aside
-        className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-60 z-40"
-        style={{ backgroundColor: '#FFFFFF', borderRight: '1px solid #E6E9F2' }}
+        className="hidden md:flex flex-col fixed z-40"
+        style={{
+          top: 20, bottom: 20, left: 20, width: 264,
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #E6E9F2',
+          borderRadius: 20,
+        }}
       >
-        <NavLink to="/" className="block px-5 py-5 no-underline" style={{ borderBottom: '1px solid #E6E9F2' }}>
-          <h1 className="m-0" style={{ fontSize: 18, fontWeight: 600, color: '#7C5CE0', fontFamily: "'Inter', -apple-system, sans-serif" }}>
-            Sharez
+        <NavLink to="/app" className="block px-6 py-6 no-underline" style={{ borderBottom: '1px solid #E6E9F2' }}>
+          <h1 className="m-0" style={{ fontSize: 22, fontWeight: 600, color: '#7C5CE0', fontFamily: "'Inter', -apple-system, sans-serif", letterSpacing: '-0.01em' }}>
+            Stance
           </h1>
         </NavLink>
 
-        <div className="px-5 py-4" style={{ borderBottom: '1px solid #E6E9F2' }}>
+        <div className="px-6 py-5" style={{ borderBottom: '1px solid #E6E9F2' }}>
           <div className="flex items-center gap-3">
             <div className="shrink-0 flex items-center justify-center"
-              style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#F0EEFF', color: '#7C5CE0', fontSize: 15, fontWeight: 700 }}>
+              style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: '#F0EEFF', color: '#7C5CE0', fontSize: 16, fontWeight: 700 }}>
               {user?.display_name?.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
@@ -51,29 +56,30 @@ export default function Layout({ children }) {
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-3">
+        <nav className="flex-1 px-4 py-5">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             return (
               <NavLink key={item.path} to={item.path}
-                className="flex items-center gap-3 px-3 py-2.5 no-underline mb-1"
+                className="flex items-center gap-3 no-underline"
                 style={{
-                  borderRadius: 12, fontSize: 14, fontWeight: isActive ? 500 : 400,
+                  padding: '12px 14px', marginBottom: 6,
+                  borderRadius: 12, fontSize: 15, fontWeight: isActive ? 500 : 400,
                   backgroundColor: isActive ? '#F0EEFF' : 'transparent',
                   color: isActive ? '#7C5CE0' : '#6B7280',
                   transition: 'all 150ms ease',
                 }}
                 onMouseEnter={e => { if (!isActive) e.currentTarget.style.backgroundColor = '#F6F7FB'; }}
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}>
-                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+                <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
                 <span>{item.label}</span>
               </NavLink>
             );
           })}
         </nav>
 
-        <div className="px-5 py-4" style={{ borderTop: '1px solid #E6E9F2' }}>
+        <div className="px-6 py-5" style={{ borderTop: '1px solid #E6E9F2' }}>
           <button onClick={logout}
             className="flex items-center gap-2 bg-transparent border-none cursor-pointer p-0"
             style={{ fontSize: 13, fontWeight: 500, color: '#9AA1AC' }}>
@@ -83,8 +89,8 @@ export default function Layout({ children }) {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 md:ml-60 pb-28 md:pb-6 min-w-0 overflow-x-hidden">
-        {children}
+      <main className="flex-1 pb-28 md:pb-6 md:ml-[304px] min-w-0 overflow-x-hidden">
+        <Outlet />
       </main>
 
       {/* Mobile bottom nav */}

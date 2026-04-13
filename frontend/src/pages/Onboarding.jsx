@@ -37,7 +37,7 @@ export default function Onboarding() {
       await api.post('/auth/complete-onboarding');
       setUser({ ...user, has_onboarded: true });
     } catch {}
-    navigate('/');
+    navigate('/app');
   };
 
   const handleConnectEE = async (e) => {

@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
 
 // Lazy-load all pages for code splitting
+const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/Login'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const Feed = lazy(() => import('./pages/Feed'));
@@ -40,31 +41,53 @@ function AppRoutes() {
   const { user, loading } = useAuth();
   if (loading) return null;
 
-  if (!user || !user.has_onboarded) {
+  if (!user) {
     return (
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/login" element={user ? <Navigate to={user.has_onboarded ? '/' : '/onboarding'} /> : <Login />} />
+          <Route path="/" element={<Landing />} />
+          <Route path="/investors" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/onboarding" element={
-            <ProtectedRoute>
-              {user?.has_onboarded ? <Navigate to="/" /> : <Onboarding />}
-            </ProtectedRoute>
-          } />
-          <Route path="*" element={<Navigate to={user ? '/onboarding' : '/login'} />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+
+  if (!user.has_onboarded) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/investors" element={<Landing />} />
+          <Route path="/" element={<Navigate to="/onboarding" />} />
+          <Route path="/login" element={<Navigate to="/onboarding" />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <Onboarding />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/onboarding" />} />
         </Routes>
       </Suspense>
     );
   }
 
   return (
-    <Layout>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/login" element={<Navigate to="/" />} />
-          <Route path="/onboarding" element={<Navigate to="/" />} />
-          <Route path="/" element={<Feed />} />
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/investors" element={<Landing />} />
+        <Route path="/login" element={<Navigate to="/app" />} />
+        <Route path="/onboarding" element={<Navigate to="/app" />} />
+        <Route element={<Layout />}>
+          <Route path="/app" element={<Feed />} />
           <Route path="/discover" element={<Discover />} />
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/watchlist" element={<Watchlist />} />
@@ -76,9 +99,10 @@ function AppRoutes() {
           <Route path="/tier-settings" element={<TierSettings />} />
           <Route path="/followers" element={<Followers />} />
           <Route path="/note/:noteId" element={<NoteThread />} />
-        </Routes>
-      </Suspense>
-    </Layout>
+        </Route>
+        <Route path="*" element={<Navigate to="/app" />} />
+      </Routes>
+    </Suspense>
   );
 }
 

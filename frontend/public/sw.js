@@ -1,4 +1,4 @@
-// Sharez Service Worker — enables PWA install + file handling
+// Stance Service Worker — enables PWA install + file handling
 const CACHE_NAME = 'sharez-v1';
 
 self.addEventListener('install', (event) => {
