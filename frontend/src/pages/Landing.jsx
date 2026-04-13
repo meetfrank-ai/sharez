@@ -77,6 +77,22 @@ function GlobalStyles() {
       .stance-ghost:hover { color: ${T.accent}; }
       .stance-ghost { transition: color 150ms ease; }
       .stance-input::placeholder { color: ${T.ink3}; }
+
+      /* SideNav: only render when viewport has space for a gutter */
+      .stance-sidenav { display: none; }
+      @media (min-width: 1440px) { .stance-sidenav { display: block; } }
+      .stance-sidenav a .label {
+        opacity: 0;
+        transform: translateX(-6px);
+        transition: opacity 220ms ease, transform 220ms ease;
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      .stance-sidenav a:hover .label,
+      .stance-sidenav a .label.is-active {
+        opacity: 1;
+        transform: translateX(0);
+      }
     `}</style>
   );
 }
@@ -657,27 +673,16 @@ function SideNav() {
   return (
     <nav
       aria-label="Page sections"
-      className="hidden lg:block"
+      className="stance-sidenav"
       style={{
         position: 'fixed',
         top: '50%',
-        left: 32,
+        left: 24,
         transform: 'translateY(-50%)',
         zIndex: 40,
-        padding: '4px 0',
       }}
     >
-      {/* Thin spine */}
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute',
-          left: 5, top: 12, bottom: 12,
-          width: 1,
-          backgroundColor: T.line,
-        }}
-      />
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 20 }}>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 18 }}>
         {SIDE_SECTIONS.map((s) => {
           const isActive = s.id === active;
           return (
@@ -685,37 +690,33 @@ function SideNav() {
               <a
                 href={`#${s.id}`}
                 style={{
-                  position: 'relative',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 14,
+                  gap: 12,
                   textDecoration: 'none',
-                  paddingLeft: 0,
+                  padding: '4px 0',
                 }}
               >
                 <span
                   style={{
-                    width: isActive ? 11 : 7,
-                    height: isActive ? 11 : 7,
+                    width: isActive ? 10 : 6,
+                    height: isActive ? 10 : 6,
                     borderRadius: '50%',
-                    backgroundColor: isActive ? T.accent : '#FFFFFF',
-                    border: `1.5px solid ${isActive ? T.accent : '#D6DBE8'}`,
+                    backgroundColor: isActive ? T.accent : '#D6DBE8',
                     boxShadow: isActive ? `0 0 0 4px ${T.accentSoft}` : 'none',
                     transition: 'all 220ms ease',
-                    marginLeft: isActive ? -2 : 0,
                     flexShrink: 0,
+                    marginLeft: isActive ? -2 : 0,
                   }}
                 />
                 <span
+                  className={`label${isActive ? ' is-active' : ''}`}
                   style={{
                     fontSize: 11,
                     fontWeight: isActive ? 700 : 500,
                     letterSpacing: '0.12em',
                     textTransform: 'uppercase',
-                    color: isActive ? T.ink : T.ink3,
-                    opacity: isActive ? 1 : 0.75,
-                    transition: 'all 220ms ease',
-                    transform: isActive ? 'translateX(0)' : 'translateX(-2px)',
+                    color: isActive ? T.ink : T.ink2,
                   }}
                 >
                   {s.label}
@@ -817,7 +818,6 @@ export default function Landing() {
     <div style={{ backgroundColor: T.bg, color: T.ink, fontFamily: FONT_SANS }}>
       <GlobalStyles />
       <Nav />
-      <SideNav />
 
       {/* ============ HERO ============ */}
       <section id="top" style={{ position: 'relative', overflow: 'hidden', minHeight: 640 }}>
