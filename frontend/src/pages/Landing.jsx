@@ -845,13 +845,13 @@ export default function Landing() {
               fontWeight: 700, lineHeight: 1.04, letterSpacing: '-0.035em',
               color: T.ink, margin: 0, marginBottom: 24,
             }}>
-              The social network for people who <span style={{ background: `linear-gradient(120deg, ${T.accent}, #A78BFA, #FB7185)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>actually invest.</span>
+              See how people invest.
             </h1>
             <p style={{
               fontSize: 'clamp(17px, 1.5vw, 20px)', lineHeight: 1.55,
-              color: T.ink2, maxWidth: 540, margin: '0 0 36px',
+              color: T.ink2, maxWidth: 560, margin: '0 0 36px',
             }}>
-              See real portfolios, real theses, and real conviction — not screenshots, not hot takes. Sharez is where South African investors show their hand.
+              Explore real portfolios, understand the thinking behind them, and follow investors whose approach resonates with yours.
             </p>
             <div style={{ display: 'inline-flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
               <PrimaryCTA href="#launch">Get early access</PrimaryCTA>
