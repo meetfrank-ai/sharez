@@ -5,10 +5,13 @@ import {
   BadgeCheck,
   BriefcaseBusiness,
   Check,
+  Link2,
   Lock,
   MessageSquare,
+  Search,
   Sparkles,
   TrendingUp,
+  UserPlus,
   Users,
 } from 'lucide-react';
 
@@ -738,11 +741,11 @@ function Nav({ onStart }) {
   const [progress, setProgress] = useState(0);
 
   const links = [
+    { id: 'how',       label: 'How it works' },
     { id: 'portfolio', label: 'Portfolio' },
     { id: 'feed',      label: 'Feed' },
     { id: 'ai',        label: 'AI context' },
     { id: 'notes',     label: 'Notes' },
-    { id: 'model',     label: 'How it works' },
   ];
 
   useEffect(() => {
@@ -932,6 +935,83 @@ export default function Landing() {
 
       {/* ============ TICKER ============ */}
       <TickerStrip />
+
+      {/* ============ HOW IT WORKS ============ */}
+      <section id="how" style={{ padding: '120px 24px 100px', backgroundColor: T.bg }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <SectionHead
+            eyebrow="How it works"
+            title="Three steps to see what's really in your circle's portfolios."
+            align="center"
+            maxWidth={760}
+          />
+          <div style={{
+            marginTop: 72,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 48,
+            position: 'relative',
+          }}>
+            {/* Connector line behind the icons (desktop only) */}
+            <div aria-hidden style={{
+              position: 'absolute',
+              top: 28, left: '16%', right: '16%',
+              height: 1,
+              background: `linear-gradient(90deg, transparent, ${T.line} 15%, ${T.line} 85%, transparent)`,
+              zIndex: 0,
+            }} />
+            {[
+              {
+                n: '01',
+                icon: Link2,
+                title: 'Connect your portfolio',
+                body: 'Link your EasyEquities account. Your holdings become your verified profile — no screenshots, no edits.',
+              },
+              {
+                n: '02',
+                icon: Search,
+                title: 'Explore real portfolios',
+                body: 'Browse what other investors actually hold, read the thinking behind each position, and see community sentiment on every stock.',
+              },
+              {
+                n: '03',
+                icon: UserPlus,
+                title: 'Follow who resonates',
+                body: "Follow investors whose approach aligns with yours. Their trades, notes and theses land in your feed.",
+              },
+            ].map((s) => {
+              const Icon = s.icon;
+              return (
+                <div key={s.n} style={{ position: 'relative', zIndex: 1, textAlign: 'left' }}>
+                  <div style={{
+                    width: 56, height: 56, borderRadius: 16,
+                    backgroundColor: '#FFFFFF',
+                    border: `1px solid ${T.line}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    marginBottom: 24,
+                    boxShadow: '0 4px 12px rgba(10,37,64,0.04)',
+                  }}>
+                    <Icon size={22} strokeWidth={2} style={{ color: T.accent }} />
+                  </div>
+                  <div style={{
+                    fontFamily: FONT_MONO, fontSize: 12, fontWeight: 600,
+                    color: T.ink3, letterSpacing: '0.1em',
+                    marginBottom: 10,
+                  }}>{s.n}</div>
+                  <div style={{
+                    fontSize: 20, fontWeight: 600, color: T.ink,
+                    letterSpacing: '-0.015em', lineHeight: 1.25,
+                    marginBottom: 10,
+                  }}>{s.title}</div>
+                  <p style={{
+                    fontSize: 15, lineHeight: 1.6, color: T.ink2, margin: 0,
+                  }}>{s.body}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       {/* ============ PORTFOLIO SECTION ============ */}
       <section id="portfolio" style={{ padding: '140px 24px', backgroundColor: T.bg }}>
