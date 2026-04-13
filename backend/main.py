@@ -9,8 +9,14 @@ from fastapi.responses import FileResponse
 from database import engine, Base
 from routes import auth, portfolio, follow, theses, comments, feed, notes, discover, trades, stocks
 
-# Create all tables
-Base.metadata.create_all(bind=engine)
+# Create all tables. During the landing-only phase the database may be
+# unreachable; don't let that crash the app so the static site still serves.
+_DB_AVAILABLE = True
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as _e:
+    _DB_AVAILABLE = False
+    print(f"[startup] DB unreachable, skipping schema init: {_e}")
 
 # Migrate: add new columns to existing tables
 try:
