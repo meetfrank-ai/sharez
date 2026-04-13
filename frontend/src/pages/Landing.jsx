@@ -41,11 +41,14 @@ const FONT_MONO = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monosp
 function GlobalStyles() {
   return (
     <style>{`
-      @keyframes stance-blob {
-        0%   { transform: translate(0,0) scale(1); }
-        33%  { transform: translate(4%, -3%) scale(1.08); }
-        66%  { transform: translate(-3%, 4%) scale(0.95); }
-        100% { transform: translate(0,0) scale(1); }
+      @keyframes stance-ribbon {
+        0%, 100% { transform: translate(0, 0) rotate(0deg); }
+        33%      { transform: translate(-8px, 10px) rotate(-0.5deg); }
+        66%      { transform: translate(6px, -6px) rotate(0.4deg); }
+      }
+      .stance-ribbon-grp {
+        animation: stance-ribbon 32s ease-in-out infinite;
+        transform-origin: 70% 30%;
       }
       @keyframes stance-float {
         0%,100% { transform: translateY(0); }
@@ -79,40 +82,75 @@ function GlobalStyles() {
 }
 
 // ============================================================
-//  GRADIENT MESH (hero background)
+//  HERO RIBBON (Stripe-style flowing SVG artifact)
 // ============================================================
-function GradientMesh() {
-  const blobs = [
-    { c: '#A78BFA', x: '8%',  y: '18%', s: 540, dur: 22 },
-    { c: '#7EE8D2', x: '78%', y: '12%', s: 520, dur: 28 },
-    { c: '#FFD37A', x: '62%', y: '68%', s: 460, dur: 25 },
-    { c: '#FB7185', x: '16%', y: '72%', s: 420, dur: 30 },
-    { c: '#635BFF', x: '48%', y: '36%', s: 600, dur: 26 },
-  ];
+function HeroRibbon() {
+  // Deterministic strand set — each strand is a slight perturbation of
+  // the base S-curve so stacking ~90 creates a silk-like texture.
+  const N = 90;
+  const strands = Array.from({ length: N }, (_, i) => {
+    const t = i / (N - 1);               // 0..1 across the fabric
+    const ox = (t - 0.5) * 180;          // horizontal spread across the top
+    const oy = i * 1.2;                  // vertical stagger
+    // Peak opacity/width in the middle of the bundle, taper at edges.
+    const bell = 1 - Math.abs(t - 0.5) * 2;
+    return {
+      ox, oy,
+      w: 0.4 + bell * 1.4,
+      op: 0.06 + bell * 0.55,
+    };
+  });
+
   return (
-    <div
-      aria-hidden
-      style={{
-        position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0,
-        maskImage: 'linear-gradient(180deg, #000 0%, #000 70%, transparent 100%)',
-      }}
-    >
-      {blobs.map((b, i) => (
-        <div key={i}
-          style={{
-            position: 'absolute',
-            left: b.x, top: b.y,
-            width: b.s, height: b.s,
-            borderRadius: '50%',
-            background: `radial-gradient(circle at 50% 50%, ${b.c} 0%, transparent 60%)`,
-            opacity: 0.45,
-            filter: 'blur(60px)',
-            transform: 'translate(-50%,-50%)',
-            animation: `stance-blob ${b.dur}s ease-in-out infinite`,
-            animationDelay: `${i * -3}s`,
-          }}
-        />
-      ))}
+    <div aria-hidden style={{
+      position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0,
+    }}>
+      <svg
+        viewBox="0 0 900 1000"
+        preserveAspectRatio="xMaxYMin slice"
+        style={{
+          position: 'absolute', top: 0, right: 0,
+          width: '68%', height: '135%',
+          minWidth: 680,
+        }}
+      >
+        <defs>
+          <linearGradient id="ribbonGrad" x1="85%" y1="0%" x2="10%" y2="100%">
+            <stop offset="0%"   stopColor="#FB7185" />
+            <stop offset="22%"  stopColor="#F472B6" />
+            <stop offset="48%"  stopColor="#C084FC" />
+            <stop offset="70%"  stopColor="#7C3AED" />
+            <stop offset="88%"  stopColor="#635BFF" />
+            <stop offset="100%" stopColor="#60A5FA" />
+          </linearGradient>
+          <radialGradient id="ribbonFade" cx="100%" cy="0%" r="115%">
+            <stop offset="0%"  stopColor="#FFFFFF" stopOpacity="1" />
+            <stop offset="55%" stopColor="#FFFFFF" stopOpacity="0.85" />
+            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+          </radialGradient>
+          <mask id="ribbonMask">
+            <rect width="100%" height="100%" fill="url(#ribbonFade)" />
+          </mask>
+        </defs>
+        <g mask="url(#ribbonMask)" className="stance-ribbon-grp">
+          {strands.map((s, i) => (
+            <path
+              key={i}
+              d={`M ${760 + s.ox} ${-50 + s.oy}
+                  C ${520 + s.ox * 0.65} ${200 + s.oy * 0.8},
+                    ${380 + s.ox * 0.45} ${480 + s.oy * 0.6},
+                    ${240 + s.ox * 0.3}  ${720 + s.oy * 0.4}
+                  S ${60  + s.ox * 0.2}  ${950 + s.oy * 0.2},
+                    ${-90 + s.ox * 0.15} ${1100}`}
+              stroke="url(#ribbonGrad)"
+              strokeWidth={s.w}
+              strokeLinecap="round"
+              fill="none"
+              opacity={s.op}
+            />
+          ))}
+        </g>
+      </svg>
     </div>
   );
 }
@@ -782,46 +820,43 @@ export default function Landing() {
       <SideNav />
 
       {/* ============ HERO ============ */}
-      <section id="top" style={{ position: 'relative', overflow: 'hidden' }}>
-        <GradientMesh />
-        <div style={{ position: 'relative', maxWidth: 1200, margin: '0 auto', padding: '100px 24px 64px', textAlign: 'center' }} className="stance-reveal">
-          <div style={{ marginBottom: 24 }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '6px 14px', borderRadius: 999,
-              backgroundColor: 'rgba(255,255,255,0.7)',
-              border: `1px solid ${T.line}`,
-              fontSize: 13, color: T.ink2, fontWeight: 500,
-              backdropFilter: 'blur(8px)',
+      <section id="top" style={{ position: 'relative', overflow: 'hidden', minHeight: 640 }}>
+        <HeroRibbon />
+        <div style={{
+          position: 'relative', maxWidth: 1200, margin: '0 auto',
+          padding: '120px 24px 140px',
+        }}>
+          <div style={{ maxWidth: 620 }} className="stance-reveal">
+            <div style={{ marginBottom: 24 }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '6px 14px', borderRadius: 999,
+                backgroundColor: 'rgba(255,255,255,0.75)',
+                border: `1px solid ${T.line}`,
+                fontSize: 13, color: T.ink2, fontWeight: 500,
+                backdropFilter: 'blur(8px)',
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: T.pos }} />
+                Early concept · South Africa first
+              </span>
+            </div>
+            <h1 style={{
+              fontSize: 'clamp(44px, 6.4vw, 76px)',
+              fontWeight: 700, lineHeight: 1.04, letterSpacing: '-0.035em',
+              color: T.ink, margin: 0, marginBottom: 24,
             }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: T.pos }} />
-              Early concept · South Africa first
-            </span>
-          </div>
-          <h1 style={{
-            fontSize: 'clamp(44px, 7.2vw, 84px)',
-            fontWeight: 700, lineHeight: 1.03, letterSpacing: '-0.035em',
-            color: T.ink, margin: 0, marginBottom: 24,
-          }}>
-            The social network<br />for people who<br />
-            <span style={{ background: `linear-gradient(120deg, ${T.accent}, #A78BFA, #FB7185)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>actually invest.</span>
-          </h1>
-          <p style={{
-            fontSize: 'clamp(17px, 1.6vw, 21px)', lineHeight: 1.55,
-            color: T.ink2, maxWidth: 620, margin: '0 auto 36px',
-          }}>
-            See real portfolios, real theses, and real conviction — not screenshots, not hot takes. Sharez is where South African investors show their hand.
-          </p>
-          <div style={{ display: 'inline-flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <PrimaryCTA href="#launch">Get early access</PrimaryCTA>
-            <GhostCTA href="#portfolio">See the concept</GhostCTA>
-          </div>
-        </div>
-
-        {/* Hero product artifact */}
-        <div style={{ position: 'relative', maxWidth: 1080, margin: '0 auto', padding: '0 24px 80px' }}>
-          <div className="stance-float">
-            <PortfolioMock />
+              The social network for people who <span style={{ background: `linear-gradient(120deg, ${T.accent}, #A78BFA, #FB7185)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>actually invest.</span>
+            </h1>
+            <p style={{
+              fontSize: 'clamp(17px, 1.5vw, 20px)', lineHeight: 1.55,
+              color: T.ink2, maxWidth: 540, margin: '0 0 36px',
+            }}>
+              See real portfolios, real theses, and real conviction — not screenshots, not hot takes. Sharez is where South African investors show their hand.
+            </p>
+            <div style={{ display: 'inline-flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+              <PrimaryCTA href="#launch">Get early access</PrimaryCTA>
+              <GhostCTA href="#portfolio">See the concept</GhostCTA>
+            </div>
           </div>
         </div>
       </section>
