@@ -820,21 +820,20 @@ export default function Landing() {
       <Nav />
 
       {/* ============ HERO ============ */}
-      <section id="top" style={{ position: 'relative', overflow: 'hidden', minHeight: 640 }}>
-        <HeroRibbon />
+      <section id="top" style={{ backgroundColor: '#FFFFFF' }}>
         <div style={{
-          position: 'relative', maxWidth: 1200, margin: '0 auto',
-          padding: '120px 24px 140px',
+          maxWidth: 1200, margin: '0 auto',
+          padding: '140px 24px 120px',
+          textAlign: 'center',
         }}>
-          <div style={{ maxWidth: 620 }} className="stance-reveal">
+          <div style={{ maxWidth: 780, margin: '0 auto' }} className="stance-reveal">
             <div style={{ marginBottom: 24 }}>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 padding: '6px 14px', borderRadius: 999,
-                backgroundColor: 'rgba(255,255,255,0.75)',
+                backgroundColor: '#FFFFFF',
                 border: `1px solid ${T.line}`,
                 fontSize: 13, color: T.ink2, fontWeight: 500,
-                backdropFilter: 'blur(8px)',
               }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: T.pos }} />
                 Early concept · South Africa first
@@ -849,11 +848,11 @@ export default function Landing() {
             </h1>
             <p style={{
               fontSize: 'clamp(17px, 1.5vw, 20px)', lineHeight: 1.55,
-              color: T.ink2, maxWidth: 560, margin: '0 0 36px',
+              color: T.ink2, maxWidth: 620, margin: '0 auto 36px',
             }}>
               Explore real portfolios, understand the thinking behind them, and follow investors whose approach resonates with yours.
             </p>
-            <div style={{ display: 'inline-flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'inline-flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
               <PrimaryCTA href="#launch">Get early access</PrimaryCTA>
               <GhostCTA href="#portfolio">See the concept</GhostCTA>
             </div>
