@@ -906,7 +906,7 @@ export default function Landing() {
                 fontSize: 13, color: T.ink2, fontWeight: 500,
               }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: T.pos }} />
-                Early concept · South Africa first
+                South Africa&rsquo;s first investing network
               </span>
             </div>
             <h1 style={{
