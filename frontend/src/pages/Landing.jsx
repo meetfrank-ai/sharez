@@ -734,10 +734,52 @@ function SideNav() {
 //  NAV
 // ============================================================
 function Nav({ onStart }) {
+  const [active, setActive] = useState(null);
+  const [progress, setProgress] = useState(0);
+
+  const links = [
+    { id: 'portfolio', label: 'Portfolio' },
+    { id: 'feed',      label: 'Feed' },
+    { id: 'ai',        label: 'AI context' },
+    { id: 'notes',     label: 'Notes' },
+    { id: 'model',     label: 'How it works' },
+  ];
+
+  useEffect(() => {
+    const ids = links.map((l) => l.id);
+    const targets = ids.map((id) => document.getElementById(id)).filter(Boolean);
+    if (!targets.length) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]) setActive(visible[0].target.id);
+        else setActive(null);
+      },
+      // Detect once a section's top enters the upper ~40% of viewport.
+      { rootMargin: '-20% 0px -55% 0px', threshold: [0, 0.15, 0.3, 0.6, 1] }
+    );
+    targets.forEach((t) => observer.observe(t));
+    return () => observer.disconnect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const p = max > 0 ? window.scrollY / max : 0;
+      setProgress(Math.min(Math.max(p, 0), 1));
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
     <header style={{
       position: 'sticky', top: 0, zIndex: 50,
-      backgroundColor: 'rgba(255,255,255,0.82)',
+      backgroundColor: 'rgba(255,255,255,0.86)',
       backdropFilter: 'saturate(180%) blur(12px)',
       borderBottom: `1px solid ${T.lineSoft}`,
     }}>
@@ -757,11 +799,26 @@ function Nav({ onStart }) {
         </a>
 
         <nav style={{ display: 'flex', alignItems: 'center', gap: 28 }} className="hidden md:flex">
-          <a href="#portfolio"  className="stance-link" style={{ fontSize: 14, fontWeight: 500 }}>Portfolio</a>
-          <a href="#feed"       className="stance-link" style={{ fontSize: 14, fontWeight: 500 }}>Feed</a>
-          <a href="#ai"         className="stance-link" style={{ fontSize: 14, fontWeight: 500 }}>AI context</a>
-          <a href="#notes"      className="stance-link" style={{ fontSize: 14, fontWeight: 500 }}>Notes</a>
-          <a href="#model"      className="stance-link" style={{ fontSize: 14, fontWeight: 500 }}>How it works</a>
+          {links.map((l) => {
+            const isActive = active === l.id;
+            return (
+              <a
+                key={l.id}
+                href={`#${l.id}`}
+                style={{
+                  position: 'relative',
+                  fontSize: 14,
+                  fontWeight: isActive ? 600 : 500,
+                  color: isActive ? T.ink : T.ink2,
+                  textDecoration: 'none',
+                  transition: 'color 180ms ease',
+                  paddingBottom: 4,
+                }}
+              >
+                {l.label}
+              </a>
+            );
+          })}
         </nav>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -774,6 +831,19 @@ function Nav({ onStart }) {
             Get early access <ArrowRight size={13} strokeWidth={2.6} />
           </a>
         </div>
+      </div>
+
+      {/* Scroll progress bar */}
+      <div aria-hidden style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0,
+        height: 2, backgroundColor: T.lineSoft,
+      }}>
+        <div style={{
+          height: '100%',
+          width: `${progress * 100}%`,
+          background: `linear-gradient(90deg, ${T.accent}, #A78BFA, #FB7185)`,
+          transition: 'width 120ms linear',
+        }} />
       </div>
     </header>
   );
@@ -823,7 +893,7 @@ export default function Landing() {
       <section id="top" style={{ backgroundColor: '#FFFFFF' }}>
         <div style={{
           maxWidth: 1200, margin: '0 auto',
-          padding: '140px 24px 120px',
+          padding: '64px 24px 72px',
           textAlign: 'center',
         }}>
           <div style={{ maxWidth: 780, margin: '0 auto' }} className="stance-reveal">
@@ -1158,47 +1228,21 @@ export default function Landing() {
       </section>
 
       {/* ============ FOOTER ============ */}
-      <footer style={{ backgroundColor: T.bg, borderTop: `1px solid ${T.line}`, padding: '64px 24px 40px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: 48, marginBottom: 56 }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: 8,
-                  background: `linear-gradient(135deg, ${T.accent}, #A78BFA)`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <TrendingUp size={15} style={{ color: '#FFFFFF' }} strokeWidth={2.6} />
-                </div>
-                <span style={{ fontSize: 18, fontWeight: 700, color: T.ink, letterSpacing: '-0.015em' }}>Sharez</span>
-              </div>
-              <p style={{ fontSize: 14, lineHeight: 1.6, color: T.ink3, margin: 0, maxWidth: 260 }}>
-                The social network for people who actually invest. South Africa first.
-              </p>
+      <footer style={{ backgroundColor: T.bg, borderTop: `1px solid ${T.line}`, padding: '56px 24px 48px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', textAlign: 'center' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: `linear-gradient(135deg, ${T.accent}, #A78BFA)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <TrendingUp size={15} style={{ color: '#FFFFFF' }} strokeWidth={2.6} />
             </div>
-            {[
-              { h: 'Product', items: ['Portfolio', 'Feed', 'AI context', 'Notes', 'Vault'] },
-              { h: 'Company', items: ['About', 'Blog', 'Careers', 'Press'] },
-              { h: 'Resources', items: ['Guides', 'Docs', 'Community', 'Partners'] },
-              { h: 'Legal', items: ['Privacy', 'Terms', 'Security', 'Compliance'] },
-            ].map((col) => (
-              <div key={col.h}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: T.ink, marginBottom: 16, letterSpacing: '-0.005em' }}>{col.h}</div>
-                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 10 }}>
-                  {col.items.map((it) => (
-                    <li key={it}><a href="#" className="stance-link" style={{ fontSize: 14 }}>{it}</a></li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            <span style={{ fontSize: 18, fontWeight: 700, color: T.ink, letterSpacing: '-0.015em' }}>Sharez</span>
           </div>
-          <div style={{
-            paddingTop: 28, borderTop: `1px solid ${T.line}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap',
-          }}>
-            <span style={{ fontSize: 13, color: T.ink3 }}>© {new Date().getFullYear()} Sharez. Concept site — not financial advice.</span>
-            <span style={{ fontSize: 13, color: T.ink3, fontFamily: FONT_MONO }}>hello@sharez.co.za</span>
-          </div>
+          <p style={{ fontSize: 15, lineHeight: 1.55, color: T.ink2, margin: 0, maxWidth: 540, marginLeft: 'auto', marginRight: 'auto' }}>
+            See how people around you invest.
+          </p>
         </div>
       </footer>
     </div>
