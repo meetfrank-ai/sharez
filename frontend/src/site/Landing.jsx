@@ -15,7 +15,7 @@ import {
   Users,
 } from 'lucide-react';
 
-const CONTACT_EMAIL = 'hello@sharez.co.za';
+const CONTACT_EMAIL = 'lynetteduplessis@meetfrank.ai';
 
 // ============================================================
 //  DESIGN TOKENS (Stripe-inspired)
