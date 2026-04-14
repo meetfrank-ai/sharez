@@ -119,6 +119,7 @@ function GlobalStyles() {
         .sx-mock-pad { padding-left: 16px !important; padding-right: 16px !important; }
         .sx-port-row { grid-template-columns: 36px 1fr 60px 48px !important; gap: 10px !important; }
         .sx-disc-row { grid-template-columns: 40px 1fr auto !important; gap: 12px !important; padding: 18px 18px !important; }
+        .sx-nav-cta  { display: none !important; }
       }
     `}</style>
   );
@@ -1045,7 +1046,7 @@ function Nav({ onStart }) {
           })}
         </nav>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div className="sx-nav-cta" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <a href="#launch" onClick={onStart} className="stance-cta" style={{
             padding: '8px 16px', borderRadius: 999,
             backgroundColor: T.ink, color: '#FFFFFF',
@@ -1109,7 +1110,7 @@ export default function Landing() {
   };
 
   return (
-    <div style={{ backgroundColor: T.bg, color: T.ink, fontFamily: FONT_SANS, overflowX: 'hidden' }}>
+    <div style={{ backgroundColor: T.bg, color: T.ink, fontFamily: FONT_SANS, overflowX: 'clip' }}>
       <GlobalStyles />
       <Nav />
 
