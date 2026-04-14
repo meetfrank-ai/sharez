@@ -97,6 +97,12 @@ function GlobalStyles() {
         transform: translateX(0);
       }
 
+      /* Desktop header nav links — shown only on wider screens */
+      .sx-nav-links { display: none; }
+      @media (min-width: 861px) {
+        .sx-nav-links { display: flex; }
+      }
+
       /* ============= MOBILE ============= */
       @media (max-width: 860px) {
         .sx-hero       { padding: 48px 20px 56px !important; }
@@ -991,14 +997,22 @@ function Nav({ onStart }) {
   }, []);
 
   useEffect(() => {
-    const onScroll = () => {
+    let rafId = null;
+    const update = () => {
       const max = document.documentElement.scrollHeight - window.innerHeight;
       const p = max > 0 ? window.scrollY / max : 0;
       setProgress(Math.min(Math.max(p, 0), 1));
+      rafId = null;
     };
-    onScroll();
+    const onScroll = () => {
+      if (rafId == null) rafId = requestAnimationFrame(update);
+    };
+    update();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   return (
@@ -1023,7 +1037,7 @@ function Nav({ onStart }) {
           <span style={{ fontSize: 18, fontWeight: 700, color: T.ink, letterSpacing: '-0.015em' }}>Sharez</span>
         </a>
 
-        <nav style={{ display: 'flex', alignItems: 'center', gap: 28 }} className="hidden md:flex">
+        <nav className="sx-nav-links" style={{ alignItems: 'center', gap: 28 }}>
           {links.map((l) => {
             const isActive = active === l.id;
             return (
@@ -1067,7 +1081,7 @@ function Nav({ onStart }) {
           height: '100%',
           width: `${progress * 100}%`,
           background: `linear-gradient(90deg, ${T.accent}, #A78BFA, #FB7185)`,
-          transition: 'width 120ms linear',
+          willChange: 'width',
         }} />
       </div>
     </header>
