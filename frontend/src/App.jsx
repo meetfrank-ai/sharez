@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-const Landing = lazy(() => import('./pages/Landing'));
+const Landing = lazy(() => import('./site/Landing'));
 
 function PageLoader() {
   return (

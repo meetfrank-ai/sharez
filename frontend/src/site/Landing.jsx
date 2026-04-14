@@ -96,6 +96,30 @@ function GlobalStyles() {
         opacity: 1;
         transform: translateX(0);
       }
+
+      /* ============= MOBILE ============= */
+      @media (max-width: 860px) {
+        .sx-hero       { padding: 48px 20px 56px !important; }
+        .sx-sec        { padding: 72px 20px !important; }
+        .sx-sec-tight  { padding: 56px 20px !important; }
+        .sx-sec-wide   { padding: 80px 20px 88px !important; }
+        .sx-launch     { padding: 72px 20px !important; }
+
+        .sx-grid-2, .sx-grid-3 {
+          grid-template-columns: 1fr !important;
+          gap: 40px !important;
+        }
+        .sx-grid-3 { gap: 24px !important; }
+        .sx-grid-3 > * { margin-bottom: 0 !important; }
+        .sx-form-2 { grid-template-columns: 1fr !important; }
+        .sx-how-connector { display: none !important; }
+        .sx-section-head { max-width: 100% !important; }
+
+        /* give MockFrame and its contents a chance to breathe */
+        .sx-mock-pad { padding-left: 16px !important; padding-right: 16px !important; }
+        .sx-port-row { grid-template-columns: 36px 1fr 60px 48px !important; gap: 10px !important; }
+        .sx-disc-row { grid-template-columns: 40px 1fr auto !important; gap: 12px !important; padding: 18px 18px !important; }
+      }
     `}</style>
   );
 }
@@ -241,13 +265,16 @@ function GhostCTA({ children, href = '#' }) {
 // ============================================================
 //  TINY CHARTS / ATOMS
 // ============================================================
-function Sparkline({ points, color = T.pos, width = 80, height = 28, strokeWidth = 1.8, animated = false }) {
+function Sparkline({ points, color = T.pos, width = 80, height = 28, strokeWidth = 1.8, animated = false, responsive = false }) {
   const max = Math.max(...points), min = Math.min(...points);
   const range = max - min || 1;
   const stepX = width / (points.length - 1);
   const path = points.map((p, i) => `${i ? 'L' : 'M'}${(i * stepX).toFixed(1)},${(height - ((p - min) / range) * height).toFixed(1)}`).join(' ');
+  const svgProps = responsive
+    ? { width: '100%', height, viewBox: `0 0 ${width} ${height}`, preserveAspectRatio: 'none', style: { display: 'block' } }
+    : { width, height };
   return (
-    <svg width={width} height={height} className={animated ? 'stance-spark' : undefined}>
+    <svg {...svgProps} className={animated ? 'stance-spark' : undefined}>
       <path d={path} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -286,6 +313,21 @@ function Avatar({ initials, color, size = 32 }) {
       fontSize: size * 0.4, fontWeight: 600, flexShrink: 0,
       fontFamily: FONT_SANS,
     }}>{initials}</div>
+  );
+}
+
+function PositionTag({ ticker, label }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: '4px 10px', borderRadius: 999,
+      backgroundColor: T.accentSoft, border: `1px solid ${T.accentSoft}`,
+      fontFamily: FONT_MONO, fontSize: 12, fontWeight: 600,
+      color: T.accent,
+    }}>
+      {ticker}
+      <span style={{ color: T.ink2, fontWeight: 500, fontSize: 11 }}>· {label}</span>
+    </span>
   );
 }
 
@@ -328,16 +370,16 @@ function MockFrame({ children, style, className }) {
 
 function PortfolioMock({ floating = false }) {
   const holdings = [
-    { t: 'NPN',  n: 'Naspers',   alloc: 22.8, chg:  2.3, color: '#635BFF', spark: [4,5,4.2,5.1,5.4,5.2,5.8,6.1,6.4] },
-    { t: 'CPI',  n: 'Capitec',   alloc: 18.4, chg:  1.1, color: '#7EE8D2', spark: [3,3.2,3.1,3.4,3.3,3.5,3.6,3.5,3.7] },
-    { t: 'MTN',  n: 'MTN Group', alloc: 15.2, chg: -0.8, color: '#FFD37A', spark: [4.5,4.3,4.4,4.2,4.1,4.3,4.1,4.0,4.1] },
-    { t: 'AAPL', n: 'Apple',     alloc: 12.7, chg:  0.6, color: '#FB7185', spark: [3,3.1,3.3,3.2,3.4,3.5,3.6,3.7,3.8] },
-    { t: 'SHP',  n: 'Shoprite',  alloc:  9.1, chg:  0.4, color: '#A78BFA', spark: [3.5,3.6,3.5,3.7,3.8,3.7,3.9,4.0,4.0] },
+    { t: 'NPN',  n: 'Naspers',   sector: 'Technology', alloc: 22.8, color: '#635BFF' },
+    { t: 'CPI',  n: 'Capitec',   sector: 'Financials', alloc: 18.4, color: '#7EE8D2' },
+    { t: 'MTN',  n: 'MTN Group', sector: 'Telecom',    alloc: 15.2, color: '#FFD37A' },
+    { t: 'AAPL', n: 'Apple',     sector: 'Technology', alloc: 12.7, color: '#FB7185' },
+    { t: 'SHP',  n: 'Shoprite',  sector: 'Consumer',   alloc:  9.1, color: '#A78BFA' },
   ];
 
   return (
     <MockFrame className={floating ? 'stance-float' : undefined}>
-      {/* header strip */}
+      {/* identity header */}
       <div style={{ padding: '20px 24px', borderBottom: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <Avatar initials="TM" color="#635BFF" size={44} />
@@ -346,7 +388,7 @@ function PortfolioMock({ floating = false }) {
               <span style={{ fontSize: 15, fontWeight: 600, color: T.ink }}>Thabo Mokoena</span>
               <BadgeCheck size={15} style={{ color: T.accent }} fill={T.accentSoft} />
             </div>
-            <span style={{ fontSize: 13, color: T.ink3, fontFamily: FONT_MONO }}>@thabom · Verified portfolio</span>
+            <span style={{ fontSize: 13, color: T.ink3, fontFamily: FONT_MONO }}>@thabom · Long-only, mostly JSE</span>
           </div>
         </div>
         <button style={{
@@ -356,52 +398,75 @@ function PortfolioMock({ floating = false }) {
         }}>Follow</button>
       </div>
 
-      {/* value row */}
-      <div style={{ padding: '24px 24px 0 24px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>
-        <div>
-          <div style={{ fontSize: 12, color: T.ink3, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Portfolio value</div>
-          <div style={{ fontSize: 32, fontWeight: 700, color: T.ink, fontFamily: FONT_MONO, letterSpacing: '-0.02em' }}>R 312,847</div>
-          <div style={{ fontSize: 13, color: T.pos, fontFamily: FONT_MONO, marginTop: 4 }}>+R 12,409  ·  +4.1% this month</div>
+      {/* Allocation strip — what they own, at a glance */}
+      <div style={{ padding: '20px 24px 22px', borderBottom: `1px solid ${T.line}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: T.ink3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Allocation</span>
+          <span style={{ fontSize: 11, fontFamily: FONT_MONO, color: T.ink3 }}>5 positions</span>
         </div>
-        <div className="stance-spark">
-          <Sparkline points={[10,11,10.5,12,11.8,12.6,12.4,13.2,13.6,14.1,13.8,14.6]} width={140} height={44} strokeWidth={2} color={T.pos} />
-        </div>
-      </div>
-
-      {/* allocation donut + legend */}
-      <div style={{ padding: '24px 24px', display: 'grid', gridTemplateColumns: '150px 1fr', gap: 28, alignItems: 'center' }}>
-        <DonutAllocation slices={holdings.map(h => ({ pct: h.alloc, color: h.color }))} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 16px' }}>
-          {holdings.map(h => (
-            <div key={h.t} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: h.color, flexShrink: 0 }} />
-              <span style={{ fontSize: 13, fontFamily: FONT_MONO, fontWeight: 600, color: T.ink }}>{h.t}</span>
-              <span style={{ fontSize: 13, fontFamily: FONT_MONO, color: T.ink3, marginLeft: 'auto' }}>{h.alloc}%</span>
-            </div>
+        <div style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden' }}>
+          {holdings.map((h) => (
+            <div key={h.t} style={{ backgroundColor: h.color, width: `${h.alloc * 1.8}%` }} />
           ))}
+          <div style={{ backgroundColor: T.lineSoft, flex: 1 }} />
         </div>
       </div>
 
-      {/* holdings list */}
-      <div style={{ borderTop: `1px solid ${T.line}` }}>
-        <div style={{ padding: '12px 24px', fontSize: 12, color: T.ink3, textTransform: 'uppercase', letterSpacing: '0.06em', backgroundColor: T.bg2 }}>Top holdings</div>
-        {holdings.slice(0, 4).map((h, i) => (
-          <div key={h.t} style={{
-            padding: '14px 24px', display: 'grid',
-            gridTemplateColumns: '40px 1fr 90px 80px 70px',
-            alignItems: 'center', gap: 14,
-            borderTop: i === 0 ? 'none' : `1px solid ${T.lineSoft}`,
-          }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: h.color + '22', color: h.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700 }}>
-              {h.t.slice(0,3)}
+      {/* Holdings list — position + attached thinking on first row */}
+      <div>
+        {holdings.map((h, i) => (
+          <div key={h.t}>
+            <div className="sx-port-row" style={{
+              padding: '16px 24px',
+              display: 'grid',
+              gridTemplateColumns: '40px 1fr 120px 56px',
+              alignItems: 'center', gap: 14,
+              borderTop: i === 0 ? 'none' : `1px solid ${T.lineSoft}`,
+            }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 10,
+                backgroundColor: h.color + '22', color: h.color,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700,
+              }}>
+                {h.t.slice(0,3)}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>{h.n}</div>
+                <div style={{ fontSize: 12, color: T.ink3, fontFamily: FONT_MONO }}>{h.t} · {h.sector}</div>
+              </div>
+              <div style={{
+                height: 6, borderRadius: 3,
+                backgroundColor: T.lineSoft,
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  width: `${(h.alloc / 22.8) * 100}%`,
+                  height: '100%',
+                  backgroundColor: h.color,
+                }} />
+              </div>
+              <div style={{ fontSize: 13, fontFamily: FONT_MONO, color: T.ink, textAlign: 'right', fontWeight: 600 }}>{h.alloc}%</div>
             </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>{h.n}</div>
-              <div style={{ fontSize: 12, color: T.ink3, fontFamily: FONT_MONO }}>{h.t}</div>
-            </div>
-            <Sparkline points={h.spark} color={h.chg >= 0 ? T.pos : T.neg} width={80} height={22} />
-            <div style={{ fontSize: 13, fontFamily: FONT_MONO, color: T.ink, textAlign: 'right', fontWeight: 600 }}>{h.alloc}%</div>
-            <div style={{ fontSize: 13, fontFamily: FONT_MONO, color: h.chg >= 0 ? T.pos : T.neg, textAlign: 'right' }}>{h.chg >= 0 ? '+' : ''}{h.chg}%</div>
+
+            {/* Attached note on the top holding — this is the whole point */}
+            {i === 0 && (
+              <div style={{
+                margin: '0 24px 16px 64px',
+                padding: '12px 14px',
+                borderRadius: 10,
+                backgroundColor: T.bg2,
+                borderLeft: `3px solid ${T.accent}`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Note</span>
+                  <span style={{ fontSize: 11, color: T.ink3, fontFamily: FONT_MONO }}>2h ago</span>
+                </div>
+                <p style={{ fontSize: 13, lineHeight: 1.55, color: T.ink, margin: 0 }}>
+                  &ldquo;P/E expansion has outpaced earnings growth two quarters running. Thinking about trimming.&rdquo;
+                </p>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -412,51 +477,93 @@ function PortfolioMock({ floating = false }) {
 function FeedMock() {
   return (
     <div style={{ display: 'grid', gap: 16, fontFamily: FONT_SANS }}>
-      {/* Note card */}
+      {/* Note card with position context + threaded replies */}
       <MockFrame>
-        <div style={{ padding: '18px 20px' }}>
+        <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.lineSoft}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
             <Avatar initials="LS" color="#FB7185" />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>Lebo Sithole</div>
               <div style={{ fontSize: 12, color: T.ink3, fontFamily: FONT_MONO }}>@lebos · 2h</div>
             </div>
-            <StockChip ticker="NPN" change={2.3} />
+            <PositionTag ticker="NPN" label="Top holding" />
           </div>
-          <p style={{ fontSize: 15, lineHeight: 1.55, color: T.ink, margin: 0, marginBottom: 14 }}>
+          <p style={{ fontSize: 15, lineHeight: 1.55, color: T.ink, margin: 0, marginBottom: 12 }}>
             Thinking about trimming Naspers here. P/E expansion has outpaced earnings growth two quarters running — and Tencent exposure isn't the safety net it used to be.
           </p>
+          {/* Position context — the whole point of the product */}
+          <a href="#portfolio" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '6px 10px', borderRadius: 8,
+            backgroundColor: T.bg2, border: `1px solid ${T.line}`,
+            fontSize: 12, color: T.ink2, textDecoration: 'none',
+            marginBottom: 14,
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#635BFF' }} />
+            <span><strong style={{ color: T.ink, fontWeight: 600 }}>Naspers · 22.8% of portfolio</strong></span>
+            <span style={{ color: T.ink3, fontFamily: FONT_MONO, fontSize: 11 }}>View portfolio →</span>
+          </a>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 13, color: T.ink3 }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>♡ 12</span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><MessageSquare size={14} /> 3</span>
-            <span style={{ marginLeft: 'auto', fontSize: 12, fontFamily: FONT_MONO }}>Thesis</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><MessageSquare size={14} /> 2</span>
           </div>
         </div>
-      </MockFrame>
-
-      {/* Buy transaction card */}
-      <MockFrame>
-        <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <Avatar initials="NK" color="#635BFF" />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, color: T.ink, marginBottom: 4 }}>
-              <span style={{ fontWeight: 600 }}>Nolwazi K.</span> bought <span style={{ fontWeight: 600 }}>Capitec</span>
+        {/* Replies — framed as discourse, not comments */}
+        <div style={{ padding: '14px 20px 18px', display: 'grid', gap: 12 }}>
+          <div style={{ fontSize: 11, color: T.ink3, fontFamily: FONT_MONO, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Replying to Lebo
+          </div>
+          {[
+            { a: 'JM', c: '#FB7185', n: 'Jordan M.', t: '1h', body: 'Agree on the P/E — but the classifieds unit is finally profitable. Changes the story?' },
+            { a: 'PR', c: '#635BFF', n: 'Priya R.',  t: '22m', body: 'I trimmed 15% last week on the same logic. No regrets.' },
+          ].map((r, i) => (
+            <div key={i} style={{ display: 'flex', gap: 10, paddingLeft: 14, borderLeft: `2px solid ${T.lineSoft}` }}>
+              <Avatar initials={r.a} color={r.c} size={24} />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: T.ink }}>{r.n}</span>
+                  <span style={{ fontSize: 11, color: T.ink3, fontFamily: FONT_MONO }}>{r.t}</span>
+                </div>
+                <p style={{ fontSize: 13, lineHeight: 1.5, color: T.ink2, margin: 0 }}>{r.body}</p>
+              </div>
             </div>
-            <div style={{ fontSize: 12, color: T.ink3, fontFamily: FONT_MONO }}>R 4,200 · 3 shares · 2.1% of portfolio</div>
+          ))}
+        </div>
+      </MockFrame>
+
+      {/* Positioning update card (was buy transaction) */}
+      <MockFrame>
+        <div style={{ padding: '16px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+            <Avatar initials="NK" color="#635BFF" />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, color: T.ink3, marginBottom: 2 }}>
+                <span style={{ color: T.ink, fontWeight: 600 }}>Nolwazi K.</span> added to Capitec
+              </div>
+              <div style={{ fontSize: 11, color: T.ink3, fontFamily: FONT_MONO }}>@nolwazik · 3h</div>
+            </div>
           </div>
+          {/* New allocation bar */}
           <div style={{
-            padding: '10px 14px', borderRadius: 12,
+            padding: '12px 14px', borderRadius: 10,
             backgroundColor: T.bg2, border: `1px solid ${T.line}`,
-            display: 'flex', alignItems: 'center', gap: 12,
           }}>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 700, color: T.ink }}>CPI</span>
-            <Sparkline points={[3,3.1,3,3.3,3.4,3.3,3.5,3.6]} width={56} height={22} color={T.pos} />
-            <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: T.pos }}>+1.1%</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>Capitec now 4.3% of portfolio</span>
+              <span style={{ fontSize: 11, color: T.ink3, fontFamily: FONT_MONO }}>was 2.1%</span>
+            </div>
+            <div style={{ display: 'flex', height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: T.lineSoft }}>
+              <div style={{ width: '21%', backgroundColor: '#7EE8D2' }} />
+              <div style={{ width: '22%', background: `repeating-linear-gradient(-45deg, #7EE8D2 0 4px, #7EE8D2aa 4px 8px)` }} />
+            </div>
+            <div style={{ fontSize: 11, color: T.ink3, marginTop: 6, fontFamily: FONT_MONO }}>
+              2.1% previous · +2.2% added
+            </div>
           </div>
         </div>
       </MockFrame>
 
-      {/* Thesis card */}
+      {/* Thesis card with position context */}
       <MockFrame>
         <div style={{ padding: '18px 20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -472,9 +579,18 @@ function FeedMock() {
           <div style={{ fontSize: 17, fontWeight: 600, color: T.ink, marginBottom: 6, letterSpacing: '-0.01em' }}>
             Why MTN is a decade story, not a quarter one
           </div>
-          <p style={{ fontSize: 13, lineHeight: 1.55, color: T.ink2, margin: 0 }}>
+          <p style={{ fontSize: 13, lineHeight: 1.55, color: T.ink2, margin: 0, marginBottom: 12 }}>
             Fintech ARPU is finally the driver of the story. Call vol declines matter less than the 400-basis-point shift in revenue mix I'm seeing…
           </p>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '5px 10px', borderRadius: 8,
+            backgroundColor: T.bg2, border: `1px solid ${T.line}`,
+            fontSize: 12, color: T.ink2,
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#FFD37A' }} />
+            <strong style={{ color: T.ink, fontWeight: 600 }}>MTN · 15.2% of portfolio</strong>
+          </div>
         </div>
       </MockFrame>
     </div>
@@ -495,58 +611,163 @@ function StockMock() {
             <div style={{ fontSize: 20, fontWeight: 600, color: T.ink, letterSpacing: '-0.01em' }}>Naspers Ltd.</div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 24, fontWeight: 700, color: T.ink, fontFamily: FONT_MONO, letterSpacing: '-0.02em' }}>R 3,241.50</div>
-            <div style={{ fontSize: 13, color: T.pos, fontFamily: FONT_MONO }}>+R 72.80  ·  +2.3%</div>
+            <div style={{ fontSize: 22, fontWeight: 600, color: T.ink, fontFamily: FONT_MONO, letterSpacing: '-0.015em' }}>R 3,241.50</div>
+            <div style={{ fontSize: 12, color: T.ink3, fontFamily: FONT_MONO }}>+R 72.80  ·  +2.3%</div>
           </div>
         </div>
-        <div style={{ marginTop: 14 }} className="stance-spark">
-          <Sparkline points={[30,31,29,32,31,33,34,33,35,34,36,37,36,38,37,39,40,41]} width={520} height={56} strokeWidth={2} color={T.accent} />
+        {/* muted chart — context, not the main event */}
+        <div style={{ marginTop: 12, opacity: 0.45, maxWidth: '100%', overflow: 'hidden' }}>
+          <Sparkline points={[30,31,29,32,31,33,34,33,35,34,36,37,36,38,37,39,40,41]} width={520} height={40} strokeWidth={1.4} color={T.ink2} responsive />
         </div>
       </div>
 
-      {/* AI Summary */}
+      {/* What changed — editorial, not AI-gimmicky */}
       <div style={{ padding: '20px 24px', backgroundColor: T.bg2, borderBottom: `1px solid ${T.line}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 8,
-            background: `linear-gradient(135deg, ${T.accent}, #A78BFA)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Sparkles size={14} style={{ color: '#FFFFFF' }} />
-          </div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: T.ink, letterSpacing: '-0.005em' }}>AI Summary</span>
-          <span style={{ fontSize: 11, color: T.ink3, fontFamily: FONT_MONO, marginLeft: 'auto' }}>Updated 2m ago</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: T.pos, boxShadow: `0 0 0 3px ${T.pos}22` }} />
+            <span style={{ fontSize: 11, fontWeight: 600, color: T.pos, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Updated just now</span>
+          </span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: T.ink, letterSpacing: '-0.01em', marginLeft: 'auto' }}>What changed</span>
         </div>
-        <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
+        <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 10 }}>
           {[
             'Fintech revenue grew 41% YoY; now 18% of group revenue vs. 11% a year ago.',
             'Tencent discount narrowed to 42% after buyback acceleration in Q3.',
             'Classifieds unit reached profitability ahead of guidance.',
           ].map((b, i) => (
-            <li key={i} style={{ display: 'flex', gap: 10, fontSize: 14, lineHeight: 1.5, color: T.ink2 }}>
-              <Check size={16} style={{ color: T.accent, flexShrink: 0, marginTop: 2 }} />
+            <li key={i} style={{ display: 'flex', gap: 10, fontSize: 14, lineHeight: 1.55, color: T.ink }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: T.accent, flexShrink: 0, marginTop: 4, fontWeight: 700 }}>0{i + 1}</span>
               {b}
             </li>
           ))}
         </ul>
       </div>
 
-      {/* Community strip */}
-      <div style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
-        <div style={{ display: 'flex' }}>
-          {['#635BFF','#FB7185','#7EE8D2','#FFD37A','#A78BFA'].map((c,i) => (
-            <div key={i} style={{
-              width: 28, height: 28, borderRadius: '50%',
-              backgroundColor: c, border: '2px solid #FFFFFF',
-              marginLeft: i === 0 ? 0 : -8,
-            }} />
-          ))}
+      {/* Community layer — flipped hierarchy: insight headline, names underneath */}
+      <div style={{ padding: '20px 24px' }}>
+        <div style={{ fontSize: 18, fontWeight: 600, color: T.ink, marginBottom: 8, letterSpacing: '-0.01em' }}>
+          64% bullish · Avg allocation 6.2%
         </div>
-        <div>
-          <div style={{ fontSize: 13, color: T.ink, fontWeight: 600 }}>12 members hold this</div>
-          <div style={{ fontSize: 12, color: T.ink3, fontFamily: FONT_MONO }}>Avg allocation 6.2%  ·  64% bullish</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex' }}>
+            {['#635BFF','#FB7185','#7EE8D2','#FFD37A','#A78BFA'].map((c, i) => (
+              <div key={i} style={{
+                width: 24, height: 24, borderRadius: '50%',
+                backgroundColor: c, border: '2px solid #FFFFFF',
+                marginLeft: i === 0 ? 0 : -8,
+              }} />
+            ))}
+          </div>
+          <div style={{ fontSize: 13, color: T.ink2 }}>
+            Held by <span style={{ color: T.ink, fontWeight: 500 }}>Amanda</span>, <span style={{ color: T.ink, fontWeight: 500 }}>Thabo</span>, <span style={{ color: T.ink, fontWeight: 500 }}>Priya</span>
+            <span style={{ color: T.ink3 }}> · 9 others</span>
+          </div>
         </div>
       </div>
+    </MockFrame>
+  );
+}
+
+function DiscoverMock() {
+  const creators = [
+    {
+      initials: 'AP', name: 'Amanda Pillay', color: '#7EE8D2',
+      bio: 'SA banking & fintech specialist',
+      alloc: [
+        { c: '#635BFF', w: 38, label: 'SA banks' },
+        { c: '#7EE8D2', w: 24, label: 'Fintech' },
+        { c: '#FFD37A', w: 16, label: 'Insurance' },
+        { c: '#FB7185', w: 12, label: 'Retail' },
+        { c: '#A78BFA', w: 10, label: 'Cash' },
+      ],
+      top: 'NPN · CPI · SBK',
+      latest: 'Why SA banks re-rate in 2027',
+      meta: '18 theses · 2 years active',
+    },
+    {
+      initials: 'TM', name: 'Thabo Mokoena', color: '#635BFF',
+      bio: 'Long-only, mostly JSE mid-caps',
+      alloc: [
+        { c: '#FB7185', w: 32, label: 'Mid-caps' },
+        { c: '#A78BFA', w: 22, label: 'Industrials' },
+        { c: '#635BFF', w: 18, label: 'Tech' },
+        { c: '#7EE8D2', w: 16, label: 'Financials' },
+        { c: '#FFD37A', w: 12, label: 'Consumer' },
+      ],
+      top: 'MTN · SHP · BVT',
+      latest: 'Quiet compounders I\'m holding for a decade',
+      meta: '6 theses · 18 months active',
+    },
+    {
+      initials: 'PR', name: 'Priya R.', color: '#A78BFA',
+      bio: 'US tech, concentrated positions',
+      alloc: [
+        { c: '#7EE8D2', w: 42, label: 'US tech' },
+        { c: '#635BFF', w: 28, label: 'Semis' },
+        { c: '#FFD37A', w: 18, label: 'AI' },
+        { c: '#FB7185', w: 12, label: 'Cash' },
+      ],
+      top: 'NVDA · MSFT · AAPL',
+      latest: 'The case for NVDA at current multiples',
+      meta: '11 theses · 3 years active',
+    },
+  ];
+
+  return (
+    <MockFrame>
+      <div style={{ padding: '18px 24px', borderBottom: `1px solid ${T.line}` }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: T.ink3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Creators</div>
+      </div>
+      {creators.map((c, i) => (
+        <div
+          key={c.name}
+          className="sx-disc-row"
+          style={{
+            padding: '20px 24px',
+            display: 'grid',
+            gridTemplateColumns: '44px 1fr auto',
+            gap: 14,
+            alignItems: 'flex-start',
+            borderTop: i === 0 ? 'none' : `1px solid ${T.lineSoft}`,
+          }}
+        >
+          <Avatar initials={c.initials} color={c.color} size={44} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <span style={{ fontSize: 15, fontWeight: 600, color: T.ink }}>{c.name}</span>
+              <BadgeCheck size={13} style={{ color: T.accent }} fill={T.accentSoft} />
+            </div>
+            <div style={{ fontSize: 12, color: T.ink3, marginBottom: 10 }}>{c.bio}</div>
+            {/* allocation bar with meaning */}
+            <div style={{ display: 'flex', height: 5, borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
+              {c.alloc.map((a, ai) => (
+                <div key={ai} style={{ backgroundColor: a.c, width: `${a.w}%` }} />
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: T.ink3, fontFamily: FONT_MONO, marginBottom: 10 }}>
+              {c.alloc.slice(0, 3).map(a => a.label).join(' · ')}
+            </div>
+            {/* top positions */}
+            <div style={{ fontSize: 13, color: T.ink2, marginBottom: 4 }}>
+              <span style={{ color: T.ink3 }}>Top positions: </span>
+              <span style={{ fontFamily: FONT_MONO, fontWeight: 600, color: T.ink }}>{c.top}</span>
+            </div>
+            {/* latest thesis — direct link to thinking */}
+            <div style={{ fontSize: 13, color: T.ink2, marginBottom: 8 }}>
+              <span style={{ color: T.ink3 }}>Latest: </span>
+              <span style={{ color: T.ink, fontWeight: 500 }}>&ldquo;{c.latest}&rdquo;</span>
+            </div>
+            <div style={{ fontSize: 11, fontFamily: FONT_MONO, color: T.ink3 }}>{c.meta}</div>
+          </div>
+          <button style={{
+            padding: '8px 16px', borderRadius: 999,
+            backgroundColor: T.ink, color: '#FFFFFF',
+            fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
+            fontFamily: FONT_SANS,
+          }}>Follow</button>
+        </div>
+      ))}
     </MockFrame>
   );
 }
@@ -741,11 +962,11 @@ function Nav({ onStart }) {
   const [progress, setProgress] = useState(0);
 
   const links = [
-    { id: 'how',       label: 'How it works' },
     { id: 'portfolio', label: 'Portfolio' },
     { id: 'feed',      label: 'Feed' },
-    { id: 'ai',        label: 'AI context' },
-    { id: 'notes',     label: 'Notes' },
+    { id: 'ai',        label: 'Stock context' },
+    { id: 'discover',  label: 'Discover' },
+    { id: 'how',       label: 'Getting started' },
   ];
 
   useEffect(() => {
@@ -888,13 +1109,13 @@ export default function Landing() {
   };
 
   return (
-    <div style={{ backgroundColor: T.bg, color: T.ink, fontFamily: FONT_SANS }}>
+    <div style={{ backgroundColor: T.bg, color: T.ink, fontFamily: FONT_SANS, overflowX: 'hidden' }}>
       <GlobalStyles />
       <Nav />
 
       {/* ============ HERO ============ */}
       <section id="top" style={{ backgroundColor: '#FFFFFF' }}>
-        <div style={{
+        <div className="sx-hero" style={{
           maxWidth: 1200, margin: '0 auto',
           padding: '64px 24px 72px',
           textAlign: 'center',
@@ -920,15 +1141,29 @@ export default function Landing() {
               See how people around you invest.
             </h1>
             <p style={{
-              fontSize: 'clamp(17px, 1.5vw, 20px)', lineHeight: 1.55,
+              fontSize: 'clamp(18px, 1.6vw, 22px)', lineHeight: 1.4,
+              color: T.ink, fontWeight: 500,
+              maxWidth: 620, margin: '0 auto 20px',
+            }}>
+              Most investing content is opinion.<br />
+              Sharez shows the position behind it.
+            </p>
+            <p style={{
+              fontSize: 'clamp(16px, 1.4vw, 18px)', lineHeight: 1.6,
               color: T.ink2, maxWidth: 620, margin: '0 auto 36px',
             }}>
-              Explore real portfolios, understand the thinking behind them, and follow investors whose approach resonates with yours.
+              Explore real portfolios, see the thinking behind them, and follow investors whose approach resonates with yours.
             </p>
             <div style={{ display: 'inline-flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
               <PrimaryCTA href="#launch">Get early access</PrimaryCTA>
-              <GhostCTA href="#portfolio">See the concept</GhostCTA>
             </div>
+            <p style={{
+              marginTop: 36, marginBottom: 0,
+              fontSize: 14, letterSpacing: '0.04em',
+              color: T.ink3, fontFamily: FONT_MONO,
+            }}>
+              See what people say. See what they own.
+            </p>
           </div>
         </div>
       </section>
@@ -936,24 +1171,190 @@ export default function Landing() {
       {/* ============ TICKER ============ */}
       <TickerStrip />
 
-      {/* ============ HOW IT WORKS ============ */}
-      <section id="how" style={{ padding: '120px 24px 100px', backgroundColor: T.bg }}>
+      {/* ============ PORTFOLIO SECTION ============ */}
+      <section id="portfolio" className="sx-sec" style={{ padding: '140px 24px', backgroundColor: T.bg }}>
+        <div className="sx-grid-2" style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+          <div>
+            <SectionHead
+              eyebrow="Portfolio"
+              title="Built on what you own."
+              body="Every profile is a live portfolio showing real holdings and weightings."
+            />
+            <p style={{ marginTop: 20, marginBottom: 0, fontSize: 16, lineHeight: 1.55, color: T.ink, fontWeight: 500 }}>
+              No curation. No hiding.
+            </p>
+            <div style={{ marginTop: 28, display: 'grid', gap: 18 }}>
+              {[
+                'Real positions, not opinions',
+                'Clear view of allocation',
+                'Performance that speaks for itself',
+              ].map((t, i) => (
+                <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <Check size={18} style={{ color: T.accent, marginTop: 4, flexShrink: 0 }} />
+                  <span style={{ fontSize: 16, color: T.ink2, lineHeight: 1.55 }}>{t}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div><PortfolioMock /></div>
+        </div>
+      </section>
+
+      {/* ============ FEED SECTION (tinted band) ============ */}
+      <section id="feed" className="sx-sec" style={{ padding: '140px 24px', backgroundColor: '#F6F9FF' }}>
+        <div className="sx-grid-2" style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+          <div style={{ order: 2 }}><FeedMock /></div>
+          <div style={{ order: 1 }}>
+            <SectionHead
+              eyebrow="Feed"
+              title="What happens when everyone shows their hand."
+              body="A feed where every idea is backed by a real portfolio you can open."
+            />
+            <p style={{ marginTop: 20, marginBottom: 0, fontSize: 16, lineHeight: 1.55, color: T.ink, fontWeight: 500 }}>
+              No anonymity. No empty takes.
+            </p>
+            <div style={{ marginTop: 28, display: 'grid', gap: 18 }}>
+              {[
+                'Every thesis linked to real positions',
+                'Open the portfolio behind it',
+                'Conviction over content',
+              ].map((t, i) => (
+                <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <Check size={18} style={{ color: T.accent, marginTop: 4, flexShrink: 0 }} />
+                  <span style={{ fontSize: 16, color: T.ink2, lineHeight: 1.55 }}>{t}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ AI SECTION ============ */}
+      <section id="ai" className="sx-sec" style={{ padding: '140px 24px', backgroundColor: T.bg }}>
+        <div className="sx-grid-2" style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+          <div>
+            <SectionHead
+              eyebrow="Stock context"
+              title="Understand any stock in seconds."
+              body="Click any stock to see a clear snapshot of what is happening and how the community is positioned."
+            />
+            <p style={{ marginTop: 20, marginBottom: 0, fontSize: 16, lineHeight: 1.55, color: T.ink, fontWeight: 500 }}>
+              No digging. No noise.
+            </p>
+            <div style={{ marginTop: 28, display: 'grid', gap: 18 }}>
+              {[
+                'What changed, in plain English',
+                'Community allocation at a glance',
+                'Direct access to related theses',
+              ].map((t, i) => (
+                <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <Check size={18} style={{ color: T.accent, marginTop: 4, flexShrink: 0 }} />
+                  <span style={{ fontSize: 16, color: T.ink2, lineHeight: 1.55 }}>{t}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div><StockMock /></div>
+        </div>
+      </section>
+
+      {/* ============ DISCOVER SECTION (mint band) ============ */}
+      <section id="discover" className="sx-sec" style={{ padding: '140px 24px', backgroundColor: '#F0FAF5' }}>
+        <div className="sx-grid-2" style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+          <div style={{ order: 2 }}><DiscoverMock /></div>
+          <div style={{ order: 1 }}>
+            <SectionHead
+              eyebrow="Discover"
+              title="Find conviction worth following."
+              body="Explore portfolios and go deeper into the ideas behind them."
+            />
+            <p style={{ marginTop: 20, marginBottom: 0, fontSize: 16, lineHeight: 1.55, color: T.ink, fontWeight: 500 }}>
+              Not popularity. Track record.
+            </p>
+            <div style={{ marginTop: 28, display: 'grid', gap: 18 }}>
+              {[
+                'Discover investors by how they are positioned',
+                'Access deeper theses and notes',
+                'Follow ideas over time',
+              ].map((t, i) => (
+                <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <Check size={18} style={{ color: T.accent, marginTop: 4, flexShrink: 0 }} />
+                  <span style={{ fontSize: 16, color: T.ink2, lineHeight: 1.55 }}>{t}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ AUDIENCE ============ */}
+      <section id="audience" className="sx-sec" style={{ padding: '140px 24px', backgroundColor: T.bg }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <SectionHead
-            eyebrow="How it works"
+            eyebrow="Who it's for"
+            title="For people who take investing seriously."
+            align="center"
+            maxWidth={760}
+          />
+          <div className="sx-grid-3" style={{ marginTop: 72, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}>
+            {[
+              {
+                icon: Users,
+                label: 'Members',
+                title: 'A feed worth opening.',
+                body: 'See real portfolios, not cherry-picked wins. Learn from how people are actually positioned.',
+              },
+              {
+                icon: Sparkles,
+                label: 'Creators',
+                title: 'Build an audience on trust.',
+                body: 'Your portfolio speaks for you. Share your thinking and grow a following that values it.',
+              },
+              {
+                icon: BriefcaseBusiness,
+                label: 'Partners',
+                title: 'Reach investors who actually invest.',
+                body: 'Connect with a verified retail base, organised by how they are positioned.',
+              },
+            ].map((c) => {
+              const Icon = c.icon;
+              return (
+                <div key={c.label} style={{ padding: 32, borderRadius: 20, border: `1px solid ${T.line}`, backgroundColor: T.bg }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 12,
+                    backgroundColor: T.accentSoft, color: T.accent,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    marginBottom: 20,
+                  }}>
+                    <Icon size={22} strokeWidth={2} />
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.accent, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>{c.label}</div>
+                  <div style={{ fontSize: 20, fontWeight: 600, color: T.ink, marginBottom: 12, letterSpacing: '-0.015em', lineHeight: 1.2 }}>{c.title}</div>
+                  <p style={{ fontSize: 15, lineHeight: 1.6, color: T.ink2, margin: 0 }}>{c.body}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ HOW IT WORKS ============ */}
+      <section id="how" className="sx-sec-tight" style={{ padding: '120px 24px', backgroundColor: T.bg2 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <SectionHead
+            eyebrow="Getting started"
             title="Three steps to see what's really in your circle's portfolios."
             align="center"
             maxWidth={760}
           />
-          <div style={{
+          <div className="sx-grid-3" style={{
             marginTop: 72,
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
             gap: 48,
             position: 'relative',
           }}>
-            {/* Connector line behind the icons (desktop only) */}
-            <div aria-hidden style={{
+            <div aria-hidden className="sx-how-connector" style={{
               position: 'absolute',
               top: 28, left: '16%', right: '16%',
               height: 1,
@@ -965,7 +1366,7 @@ export default function Landing() {
                 n: '01',
                 icon: Link2,
                 title: 'Connect your portfolio',
-                body: 'Link your EasyEquities account. Your holdings become your verified profile — no screenshots, no edits.',
+                body: 'Link your brokerage account. Your holdings become your verified profile — no screenshots, no edits.',
               },
               {
                 n: '02',
@@ -977,7 +1378,7 @@ export default function Landing() {
                 n: '03',
                 icon: UserPlus,
                 title: 'Follow who resonates',
-                body: "Follow investors whose approach aligns with yours. Their trades, notes and theses land in your feed.",
+                body: "Follow investors whose approach aligns with yours. Their ideas and theses land in your feed.",
               },
             ].map((s) => {
               const Icon = s.icon;
@@ -1013,199 +1414,34 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ============ PORTFOLIO SECTION ============ */}
-      <section id="portfolio" style={{ padding: '140px 24px', backgroundColor: T.bg }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }} className="stance-two-col">
-          <div>
-            <SectionHead
-              eyebrow="Portfolios"
-              title="A profile built on positions, not posts."
-              body="Sync once and every holding, weighting, and move shows up verified. No screenshots. No selective memory. The portfolio is the profile."
-            />
-            <div style={{ marginTop: 36, display: 'grid', gap: 18 }}>
-              {[
-                'Verified holdings and live weightings',
-                'Performance signals in monthly and all-time views',
-                'A credibility badge so conviction can be weighed',
-              ].map((t, i) => (
-                <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <Check size={18} style={{ color: T.accent, marginTop: 4, flexShrink: 0 }} />
-                  <span style={{ fontSize: 16, color: T.ink2, lineHeight: 1.55 }}>{t}</span>
-                </div>
-              ))}
-            </div>
+      {/* ============ BELIEF (closing statement) ============ */}
+      <section id="why" className="sx-sec-wide" style={{ padding: '140px 24px 160px', backgroundColor: T.bg }}>
+        <div style={{ maxWidth: 860, margin: '0 auto', textAlign: 'center' }}>
+          <div style={{ marginBottom: 28 }}>
+            <Eyebrow>Why Sharez exists</Eyebrow>
           </div>
-          <div><PortfolioMock /></div>
-        </div>
-      </section>
-
-      {/* ============ FEED SECTION (tinted band) ============ */}
-      <section id="feed" style={{ padding: '140px 24px', backgroundColor: '#F6F9FF' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
-          <div style={{ order: 2 }}><FeedMock /></div>
-          <div style={{ order: 1 }}>
-            <SectionHead
-              eyebrow="Feed"
-              title="What happens when everyone shows their hand."
-              body="A feed of real trades, notes tied to real positions, and theses from real portfolios. Nothing anonymous. Nothing unverifiable."
-            />
-            <div style={{ marginTop: 36, display: 'grid', gap: 18 }}>
-              {[
-                'Trades, notes, and theses — tied to portfolios you can open',
-                'Free to browse, premium to go deeper with Vault creators',
-                'Built for conviction, not engagement farming',
-              ].map((t, i) => (
-                <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <Check size={18} style={{ color: T.accent, marginTop: 4, flexShrink: 0 }} />
-                  <span style={{ fontSize: 16, color: T.ink2, lineHeight: 1.55 }}>{t}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============ AI SECTION ============ */}
-      <section id="ai" style={{ padding: '140px 24px', backgroundColor: T.bg }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
-          <div>
-            <SectionHead
-              eyebrow="AI context"
-              title="Every stock, explained in three bullets."
-              body="Price charts are table stakes. Sharez pairs each stock with an AI synthesis of what matters right now — plus community conviction signals you won't find on Bloomberg."
-            />
-            <div style={{ marginTop: 36, display: 'grid', gap: 18 }}>
-              {[
-                'Plain-language summaries of what changed this quarter',
-                'Community allocation and sentiment at a glance',
-                'Deep links into member theses and notes',
-              ].map((t, i) => (
-                <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <Check size={18} style={{ color: T.accent, marginTop: 4, flexShrink: 0 }} />
-                  <span style={{ fontSize: 16, color: T.ink2, lineHeight: 1.55 }}>{t}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div><StockMock /></div>
-        </div>
-      </section>
-
-      {/* ============ NOTES SECTION (mint band) ============ */}
-      <section id="notes" style={{ padding: '140px 24px', backgroundColor: '#F0FAF5' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
-          <div style={{ order: 2 }}><NoteMock /></div>
-          <div style={{ order: 1 }}>
-            <SectionHead
-              eyebrow="Notes & threads"
-              title="Where the actual conversation lives."
-              body="Every note sits beside the portfolio that wrote it. Every reply is traceable. This is how investing discussion should have looked the whole time."
-            />
-            <div style={{ marginTop: 36, display: 'grid', gap: 18 }}>
-              {[
-                'Notes tied to stocks, theses, and specific positions',
-                'Threaded replies from other verified investors',
-                'Saveable, quotable, and actually useful on revisit',
-              ].map((t, i) => (
-                <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <Check size={18} style={{ color: T.accent, marginTop: 4, flexShrink: 0 }} />
-                  <span style={{ fontSize: 16, color: T.ink2, lineHeight: 1.55 }}>{t}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============ AUDIENCE ============ */}
-      <section id="audience" style={{ padding: '140px 24px', backgroundColor: T.bg }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <SectionHead
-            eyebrow="Who it's for"
-            title="Built for three kinds of people."
-            align="center"
-            maxWidth={720}
-          />
-          <div style={{ marginTop: 72, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}>
-            {[
-              {
-                icon: Users,
-                label: 'Members',
-                title: 'Finally, a feed worth opening.',
-                body: 'See verified portfolios, not subtweets. Build conviction by learning from people who show their full position, not just the winners.',
-              },
-              {
-                icon: Sparkles,
-                label: 'Creators',
-                title: 'An audience built on trust.',
-                body: 'Your portfolio is your portfolio. Your track record is your track record. Build a free audience, convert them into Vault subscribers.',
-              },
-              {
-                icon: BriefcaseBusiness,
-                label: 'Partners',
-                title: 'Reach investors who actually invest.',
-                body: 'Verified retail, organised by conviction theme. Partner programmes that don\'t depend on the randomness of ad targeting.',
-              },
-            ].map((c) => {
-              const Icon = c.icon;
-              return (
-                <div key={c.label} style={{ padding: 32, borderRadius: 20, border: `1px solid ${T.line}`, backgroundColor: T.bg }}>
-                  <div style={{
-                    width: 44, height: 44, borderRadius: 12,
-                    backgroundColor: T.accentSoft, color: T.accent,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    marginBottom: 20,
-                  }}>
-                    <Icon size={22} strokeWidth={2} />
-                  </div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: T.accent, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>{c.label}</div>
-                  <div style={{ fontSize: 20, fontWeight: 600, color: T.ink, marginBottom: 12, letterSpacing: '-0.015em', lineHeight: 1.2 }}>{c.title}</div>
-                  <p style={{ fontSize: 15, lineHeight: 1.6, color: T.ink2, margin: 0 }}>{c.body}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ============ MODEL ============ */}
-      <section id="model" style={{ padding: '120px 24px 140px', backgroundColor: T.bg2 }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <SectionHead
-            eyebrow="Business model"
-            title="Three revenue surfaces, one network."
-            align="center"
-            maxWidth={700}
-          />
-          <div style={{ marginTop: 64, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 40 }}>
-            {[
-              { icon: Lock, title: 'Vault subscriptions', body: 'Creators monetise depth. Members subscribe to the portfolios and theses they value most.' },
-              { icon: BriefcaseBusiness, title: 'Platform partnerships', body: 'Verified retail investing audiences for financial brands, without ad-targeting randomness.' },
-              { icon: Sparkles, title: 'Premium tooling', body: 'Advanced analytics, comparisons, and investor intelligence as an upgrade on top of the network.' },
-            ].map((m) => {
-              const Icon = m.icon;
-              return (
-                <div key={m.title}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: 10,
-                    backgroundColor: T.bg, border: `1px solid ${T.line}`,
-                    color: T.accent,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    marginBottom: 20,
-                  }}>
-                    <Icon size={18} strokeWidth={2} />
-                  </div>
-                  <div style={{ fontSize: 17, fontWeight: 600, color: T.ink, marginBottom: 8, letterSpacing: '-0.01em' }}>{m.title}</div>
-                  <p style={{ fontSize: 15, lineHeight: 1.6, color: T.ink2, margin: 0 }}>{m.body}</p>
-                </div>
-              );
-            })}
-          </div>
+          <h2 style={{
+            fontSize: 'clamp(32px, 4.6vw, 56px)',
+            fontWeight: 700, lineHeight: 1.12, letterSpacing: '-0.025em',
+            color: T.ink, margin: 0, marginBottom: 24,
+          }}>
+            Most investing content is opinion without context.<br />
+            <span style={{
+              background: `linear-gradient(120deg, ${T.accent}, #A78BFA, #FB7185)`,
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            }}>Sharez flips that.</span>
+          </h2>
+          <p style={{
+            fontSize: 'clamp(17px, 1.5vw, 20px)', lineHeight: 1.55,
+            color: T.ink2, margin: 0, maxWidth: 640, marginLeft: 'auto', marginRight: 'auto',
+          }}>
+            Every idea is tied to a real portfolio, so you can weigh conviction honestly, follow what resonates, and build your own picture over time.
+          </p>
         </div>
       </section>
 
       {/* ============ LAUNCH CTA (dark band) ============ */}
-      <section id="launch" style={{ padding: '120px 24px', backgroundColor: T.navy, position: 'relative', overflow: 'hidden' }}>
+      <section id="launch" className="sx-launch" style={{ padding: '120px 24px', backgroundColor: T.navy, position: 'relative', overflow: 'hidden' }}>
         <div aria-hidden style={{
           position: 'absolute', inset: 0,
           background: `radial-gradient(circle at 20% 30%, rgba(99,91,255,0.35) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(167,139,250,0.25) 0%, transparent 50%)`,
@@ -1222,7 +1458,7 @@ export default function Landing() {
             Get on the list before we open the doors.
           </h2>
           <p style={{ fontSize: 18, lineHeight: 1.55, color: 'rgba(255,255,255,0.72)', margin: 0, marginBottom: 40 }}>
-            Drop your email and we'll include you in the first round of invites. No spam, no drip sequences — just launch.
+            Drop your email and we'll include you in the first round of invites. No spam. Just launch.
           </p>
 
           <form onSubmit={openLaunchEmail} style={{
@@ -1232,7 +1468,7 @@ export default function Landing() {
             backdropFilter: 'blur(12px)',
             display: 'grid', gap: 14,
           }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="sx-form-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <input
                 placeholder="Your name"
                 value={name}
