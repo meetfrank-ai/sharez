@@ -965,36 +965,7 @@ function SideNav() {
 //  NAV
 // ============================================================
 function Nav({ onStart }) {
-  const [active, setActive] = useState(null);
   const [progress, setProgress] = useState(0);
-
-  const links = [
-    { id: 'portfolio', label: 'Portfolio' },
-    { id: 'feed',      label: 'Feed' },
-    { id: 'ai',        label: 'Stock context' },
-    { id: 'discover',  label: 'Discover' },
-    { id: 'how',       label: 'Getting started' },
-  ];
-
-  useEffect(() => {
-    const ids = links.map((l) => l.id);
-    const targets = ids.map((id) => document.getElementById(id)).filter(Boolean);
-    if (!targets.length) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-        if (visible[0]) setActive(visible[0].target.id);
-        else setActive(null);
-      },
-      // Detect once a section's top enters the upper ~40% of viewport.
-      { rootMargin: '-20% 0px -55% 0px', threshold: [0, 0.15, 0.3, 0.6, 1] }
-    );
-    targets.forEach((t) => observer.observe(t));
-    return () => observer.disconnect();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     let rafId = null;
@@ -1037,30 +1008,7 @@ function Nav({ onStart }) {
           <span style={{ fontSize: 18, fontWeight: 700, color: T.ink, letterSpacing: '-0.015em' }}>Sharez</span>
         </a>
 
-        <nav className="sx-nav-links" style={{ alignItems: 'center', gap: 28 }}>
-          {links.map((l) => {
-            const isActive = active === l.id;
-            return (
-              <a
-                key={l.id}
-                href={`#${l.id}`}
-                style={{
-                  position: 'relative',
-                  fontSize: 14,
-                  fontWeight: isActive ? 600 : 500,
-                  color: isActive ? T.ink : T.ink2,
-                  textDecoration: 'none',
-                  transition: 'color 180ms ease',
-                  paddingBottom: 4,
-                }}
-              >
-                {l.label}
-              </a>
-            );
-          })}
-        </nav>
-
-        <div className="sx-nav-cta" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <a href="#launch" onClick={onStart} className="stance-cta" style={{
             padding: '8px 16px', borderRadius: 999,
             backgroundColor: T.ink, color: '#FFFFFF',
