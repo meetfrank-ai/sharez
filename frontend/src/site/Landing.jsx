@@ -114,11 +114,11 @@ function GlobalStyles() {
 
       /* ============= MOBILE ============= */
       @media (max-width: 860px) {
-        .sx-hero       { padding: 48px 20px 12px !important; }
-        .sx-sec        { padding: 72px 20px !important; }
+        .sx-hero       { padding: 40px 20px 8px !important; }
+        .sx-sec        { padding: 56px 20px !important; }
         .sx-sec-tight  { padding: 56px 20px !important; }
-        .sx-sec-wide   { padding: 80px 20px 88px !important; }
-        .sx-launch     { padding: 72px 20px !important; }
+        .sx-sec-wide   { padding: 64px 20px 72px !important; }
+        .sx-launch     { padding: 64px 20px !important; }
         .sx-emoji      { display: none !important; }
 
         .sx-grid-2, .sx-grid-3 {
@@ -137,8 +137,10 @@ function GlobalStyles() {
         .sx-disc-row { grid-template-columns: 40px 1fr auto !important; gap: 12px !important; padding: 18px 18px !important; }
         .sx-nav-cta  { display: none !important; }
         .sx-hero-side { display: none !important; }
-        .sx-hero-composite { height: auto !important; margin-top: 40px !important; }
+        .sx-hero-composite { height: auto !important; margin-top: 32px !important; }
         .sx-hero-composite > div:last-child { position: static !important; left: auto !important; transform: none !important; width: 100% !important; max-width: 360px !important; margin: 0 auto !important; }
+        .sx-step-card { transform: none !important; }
+        .sx-hero-reveal .sx-sticker-hero { top: -18px !important; right: -4px !important; width: 48px !important; height: 48px !important; font-size: 26px !important; }
       }
     `}</style>
   );
@@ -1377,7 +1379,7 @@ export default function Landing() {
             </div>
             <h1 style={{
               fontFamily: FONT_DISPLAY,
-              fontSize: 'clamp(44px, 6.4vw, 76px)',
+              fontSize: 'clamp(34px, 7.2vw, 76px)',
               fontWeight: 700, lineHeight: 1.04, letterSpacing: '-0.035em',
               color: T.ink, margin: 0, marginBottom: 24,
             }}>
@@ -1634,7 +1636,7 @@ export default function Landing() {
                 body: "Follow investors whose approach aligns with yours. Their ideas and theses land in your feed.",
               },
             ].map((s) => (
-              <div key={s.n} style={{
+              <div key={s.n} className="sx-step-card" style={{
                 padding: 28,
                 borderRadius: 24,
                 backgroundColor: s.tint,
