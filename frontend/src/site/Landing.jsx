@@ -140,6 +140,8 @@ function GlobalStyles() {
         .sx-hero-composite { height: auto !important; margin-top: 32px !important; }
         .sx-hero-composite > div:last-child { position: static !important; left: auto !important; transform: none !important; width: 100% !important; max-width: 360px !important; margin: 0 auto !important; }
         .sx-step-card { transform: none !important; }
+        .sx-flip-mobile > :first-child { order: 2; }
+        .sx-flip-mobile > :nth-child(2) { order: 1; }
         .sx-hero-reveal .sx-sticker-hero { top: -18px !important; right: -4px !important; width: 48px !important; height: 48px !important; font-size: 26px !important; }
       }
     `}</style>
@@ -1453,7 +1455,7 @@ export default function Landing() {
 
       {/* ============ FEED SECTION (tinted band) ============ */}
       <section id="feed" className="sx-sec" style={{ padding: '140px 24px', backgroundColor: '#F6F9FF' }}>
-        <div className="sx-grid-2" style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+        <div className="sx-grid-2 sx-flip-mobile" style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
           <div><FeedMock /></div>
           <div style={{ position: 'relative' }}>
             <SectionHead
@@ -1508,7 +1510,7 @@ export default function Landing() {
 
       {/* ============ DISCOVER SECTION (mint band) ============ */}
       <section id="discover" className="sx-sec" style={{ padding: '140px 24px', backgroundColor: '#F0FAF5' }}>
-        <div className="sx-grid-2" style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+        <div className="sx-grid-2 sx-flip-mobile" style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
           <div><DiscoverMock /></div>
           <div style={{ position: 'relative' }}>
             <SectionHead
