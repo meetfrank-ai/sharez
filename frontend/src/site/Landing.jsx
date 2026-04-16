@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -14,8 +14,6 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react';
-
-const CONTACT_EMAIL = 'lynetteduplessis@meetfrank.ai';
 
 // ============================================================
 //  DESIGN TOKENS (Stripe-inspired)
@@ -36,6 +34,7 @@ const T = {
 };
 
 const FONT_SANS = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const FONT_DISPLAY = "'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const FONT_MONO = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
 
 // ============================================================
@@ -57,6 +56,12 @@ function GlobalStyles() {
         0%,100% { transform: translateY(0); }
         50%     { transform: translateY(-10px); }
       }
+      @keyframes stance-hero-side {
+        0%,100% { transform: translateY(0); }
+        50%     { transform: translateY(-6px); }
+      }
+      .stance-hero-left  { animation: stance-hero-side 10s ease-in-out infinite; animation-delay: -2s; }
+      .stance-hero-right { animation: stance-hero-side 11s ease-in-out infinite; }
       @keyframes stance-ticker {
         0%   { transform: translateX(0); }
         100% { transform: translateX(-50%); }
@@ -68,6 +73,10 @@ function GlobalStyles() {
       @keyframes stance-reveal {
         from { opacity: 0; transform: translateY(16px); }
         to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes stance-sticker-bob {
+        0%, 100% { transform: translate3d(0, 0, 0) rotate(var(--sticker-rotate)); }
+        50% { transform: translate3d(0, calc(var(--sticker-drift) * -1), 0) rotate(var(--sticker-rotate)); }
       }
       .stance-reveal { animation: stance-reveal 0.8s ease-out both; }
       .stance-float  { animation: stance-float 6s ease-in-out infinite; }
@@ -83,7 +92,7 @@ function GlobalStyles() {
 
       /* SideNav: only render when viewport has space for a gutter */
       .stance-sidenav { display: none; }
-      @media (min-width: 1440px) { .stance-sidenav { display: block; } }
+      @media (min-width: 1180px) { .stance-sidenav { display: block; } }
       .stance-sidenav a .label {
         opacity: 0;
         transform: translateX(-6px);
@@ -105,11 +114,12 @@ function GlobalStyles() {
 
       /* ============= MOBILE ============= */
       @media (max-width: 860px) {
-        .sx-hero       { padding: 48px 20px 56px !important; }
+        .sx-hero       { padding: 48px 20px 12px !important; }
         .sx-sec        { padding: 72px 20px !important; }
         .sx-sec-tight  { padding: 56px 20px !important; }
         .sx-sec-wide   { padding: 80px 20px 88px !important; }
         .sx-launch     { padding: 72px 20px !important; }
+        .sx-emoji      { display: none !important; }
 
         .sx-grid-2, .sx-grid-3 {
           grid-template-columns: 1fr !important;
@@ -126,6 +136,9 @@ function GlobalStyles() {
         .sx-port-row { grid-template-columns: 36px 1fr 60px 48px !important; gap: 10px !important; }
         .sx-disc-row { grid-template-columns: 40px 1fr auto !important; gap: 12px !important; padding: 18px 18px !important; }
         .sx-nav-cta  { display: none !important; }
+        .sx-hero-side { display: none !important; }
+        .sx-hero-composite { height: auto !important; margin-top: 40px !important; }
+        .sx-hero-composite > div:last-child { position: static !important; left: auto !important; transform: none !important; width: 100% !important; max-width: 360px !important; margin: 0 auto !important; }
       }
     `}</style>
   );
@@ -222,8 +235,9 @@ function SectionHead({ eyebrow, title, body, align = 'left', maxWidth = 620 }) {
     <div style={{ maxWidth, textAlign: align, margin: align === 'center' ? '0 auto' : undefined }}>
       {eyebrow && <div style={{ marginBottom: 18 }}><Eyebrow>{eyebrow}</Eyebrow></div>}
       <h2 style={{
+        fontFamily: FONT_DISPLAY,
         fontSize: 'clamp(32px, 4.2vw, 52px)',
-        fontWeight: 700, lineHeight: 1.08, letterSpacing: '-0.02em',
+        fontWeight: 700, lineHeight: 1.02, letterSpacing: '-0.04em',
         color: T.ink, margin: 0, marginBottom: 20,
       }}>{title}</h2>
       {body && (
@@ -338,6 +352,39 @@ function PositionTag({ ticker, label }) {
   );
 }
 
+function EmojiSticker({ emoji, size = 58, top, left, right, bottom, rotate = -8, drift = 8, delay = '0s', duration = '7.5s' }) {
+  return (
+    <div
+      aria-hidden
+      className="sx-emoji"
+      style={{
+        position: 'absolute',
+        top, left, right, bottom,
+        zIndex: 10,
+        pointerEvents: 'none',
+      }}
+    >
+      <div
+        style={{
+        width: size, height: size,
+        borderRadius: '50%',
+        backgroundColor: '#FFFFFF',
+        border: `1px solid ${T.line}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: Math.round(size * 0.54),
+        boxShadow: '0 16px 30px rgba(10,37,64,0.12), 0 4px 10px rgba(10,37,64,0.05)',
+        transform: `rotate(${rotate}deg)`,
+        '--sticker-rotate': `${rotate}deg`,
+        '--sticker-drift': `${drift}px`,
+        animation: `stance-sticker-bob ${duration} ease-in-out ${delay} infinite`,
+      }}
+    >
+      {emoji}
+      </div>
+    </div>
+  );
+}
+
 function StockChip({ ticker, change }) {
   const positive = change >= 0;
   return (
@@ -405,17 +452,33 @@ function PortfolioMock({ floating = false }) {
         }}>Follow</button>
       </div>
 
-      {/* Allocation strip — what they own, at a glance */}
-      <div style={{ padding: '20px 24px 22px', borderBottom: `1px solid ${T.line}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      {/* Allocation donut — what they own, at a glance */}
+      <div style={{ padding: '24px 24px 26px', borderBottom: `1px solid ${T.line}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: T.ink3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Allocation</span>
-          <span style={{ fontSize: 11, fontFamily: FONT_MONO, color: T.ink3 }}>5 positions</span>
+          <span style={{ fontSize: 11, fontFamily: FONT_MONO, color: T.ink3 }}>{holdings.length} positions</span>
         </div>
-        <div style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden' }}>
-          {holdings.map((h) => (
-            <div key={h.t} style={{ backgroundColor: h.color, width: `${h.alloc * 1.8}%` }} />
-          ))}
-          <div style={{ backgroundColor: T.lineSoft, flex: 1 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '156px 1fr', gap: 24, alignItems: 'center' }}>
+          <div style={{ position: 'relative', width: 156, height: 156, justifySelf: 'center' }}>
+            <DonutAllocation slices={holdings.map((h) => ({ pct: h.alloc, color: h.color }))} size={156} thickness={20} />
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: T.ink, fontFamily: FONT_MONO, letterSpacing: '-0.02em', lineHeight: 1 }}>{holdings.length}</div>
+              <div style={{ fontSize: 10, color: T.ink3, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>Positions</div>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {holdings.map((h) => (
+              <div key={h.t} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: h.color, flexShrink: 0 }} />
+                <span style={{ fontSize: 12, fontFamily: FONT_MONO, fontWeight: 600, color: T.ink }}>{h.t}</span>
+                <span style={{ fontSize: 12, fontFamily: FONT_MONO, color: T.ink3, marginLeft: 'auto' }}>{h.alloc}%</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -779,6 +842,167 @@ function DiscoverMock() {
   );
 }
 
+// ============================================================
+//  HERO GLIMPSE MOCKS (compact variants for the 3-card composite)
+// ============================================================
+function PortfolioGlimpse() {
+  return (
+    <MockFrame>
+      <div style={{ padding: '14px 16px', borderBottom: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <Avatar initials="TM" color="#635BFF" size={34} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>Thabo Mokoena</span>
+              <BadgeCheck size={12} style={{ color: T.accent }} fill={T.accentSoft} />
+            </div>
+            <span style={{ fontSize: 11, color: T.ink3, fontFamily: FONT_MONO }}>@thabom · Long-only, SA</span>
+          </div>
+        </div>
+        <button style={{
+          padding: '5px 12px', borderRadius: 999,
+          backgroundColor: T.ink, color: '#FFFFFF',
+          fontSize: 11, fontWeight: 600, border: 'none', flexShrink: 0,
+        }}>Follow</button>
+      </div>
+      <div style={{ padding: '14px 16px', borderBottom: `1px solid ${T.line}` }}>
+        <div style={{ fontSize: 10, fontWeight: 600, color: T.ink3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Allocation · 5 positions</div>
+        <div style={{ display: 'flex', height: 6, borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ backgroundColor: '#635BFF', width: '23%' }} />
+          <div style={{ backgroundColor: '#7EE8D2', width: '18%' }} />
+          <div style={{ backgroundColor: '#FFD37A', width: '15%' }} />
+          <div style={{ backgroundColor: '#FB7185', width: '13%' }} />
+          <div style={{ backgroundColor: '#A78BFA', width: '9%' }} />
+          <div style={{ backgroundColor: T.lineSoft, flex: 1 }} />
+        </div>
+      </div>
+      {[
+        { t: 'NPN', n: 'Naspers', alloc: 22.8, color: '#635BFF', noted: true },
+        { t: 'CPI', n: 'Capitec', alloc: 18.4, color: '#7EE8D2' },
+      ].map((h, i) => (
+        <div key={h.t}>
+          <div style={{ padding: '12px 16px', display: 'grid', gridTemplateColumns: '30px 1fr 44px', alignItems: 'center', gap: 10, borderTop: i === 0 ? 'none' : `1px solid ${T.lineSoft}` }}>
+            <div style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: h.color + '22', color: h.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700 }}>{h.t}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{h.n}</div>
+            <div style={{ fontSize: 12, fontFamily: FONT_MONO, color: T.ink, textAlign: 'right', fontWeight: 600 }}>{h.alloc}%</div>
+          </div>
+          {h.noted && (
+            <div style={{ margin: '0 16px 14px 52px', padding: '10px 12px', borderRadius: 8, backgroundColor: T.bg2, borderLeft: `3px solid ${T.accent}` }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Note · 2h</div>
+              <p style={{ fontSize: 12, lineHeight: 1.5, color: T.ink, margin: 0 }}>
+                &ldquo;Thinking about trimming here. P/E outpaced earnings two quarters.&rdquo;
+              </p>
+            </div>
+          )}
+        </div>
+      ))}
+    </MockFrame>
+  );
+}
+
+function FeedGlimpse() {
+  return (
+    <MockFrame>
+      <div style={{ padding: '14px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <Avatar initials="LS" color="#FB7185" size={30} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: T.ink }}>Lebo Sithole</div>
+            <div style={{ fontSize: 10, color: T.ink3, fontFamily: FONT_MONO }}>@lebos · 2h</div>
+          </div>
+        </div>
+        <p style={{ fontSize: 13, lineHeight: 1.5, color: T.ink, margin: 0, marginBottom: 10 }}>
+          Thinking about trimming Naspers. P/E outpaced earnings two quarters.
+        </p>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          padding: '4px 10px', borderRadius: 8,
+          backgroundColor: T.bg2, border: `1px solid ${T.line}`,
+          fontSize: 11,
+        }}>
+          <span style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: '#635BFF' }} />
+          <strong style={{ color: T.ink, fontWeight: 600 }}>NPN · 22.8%</strong>
+        </div>
+      </div>
+    </MockFrame>
+  );
+}
+
+function StockGlimpse() {
+  return (
+    <MockFrame>
+      <div style={{ padding: '12px 16px', borderBottom: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: T.ink, padding: '2px 6px', backgroundColor: T.accentSoft, borderRadius: 4 }}>NPN</span>
+          <span style={{ fontSize: 10, fontFamily: FONT_MONO, color: T.ink3 }}>Technology</span>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: T.ink, fontFamily: FONT_MONO }}>R 3,241</div>
+          <div style={{ fontSize: 10, color: T.ink3, fontFamily: FONT_MONO }}>+2.3%</div>
+        </div>
+      </div>
+      <div style={{ padding: '12px 16px', backgroundColor: T.bg2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+          <span style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: T.pos }} />
+          <span style={{ fontSize: 9, fontWeight: 700, color: T.pos, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Just updated</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: T.ink, marginLeft: 'auto' }}>What changed</span>
+        </div>
+        <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 6 }}>
+          {[
+            'Fintech revenue +41% YoY; now 18% of group.',
+            'Tencent discount narrowed to 42%.',
+          ].map((b, i) => (
+            <li key={i} style={{ display: 'flex', gap: 8, fontSize: 12, lineHeight: 1.4, color: T.ink }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: T.accent, flexShrink: 0, marginTop: 2, fontWeight: 700 }}>0{i + 1}</span>
+              {b}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div style={{ padding: '10px 16px' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: T.ink, marginBottom: 4 }}>64% bullish · Avg 6.2%</div>
+        <div style={{ fontSize: 11, color: T.ink3 }}>Held by Amanda, Thabo · 10 others</div>
+      </div>
+    </MockFrame>
+  );
+}
+
+function HeroComposite() {
+  return (
+    <div className="sx-hero-composite" style={{
+      position: 'relative',
+      margin: '56px auto 0',
+      maxWidth: 980,
+      height: 540,
+    }}>
+      <div className="sx-hero-side stance-hero-left" style={{
+        position: 'absolute',
+        top: 60, left: '2%', zIndex: 1,
+        width: 280,
+      }}>
+        <div style={{ transform: 'rotate(-5deg)' }}><FeedGlimpse /></div>
+      </div>
+      <div className="sx-hero-side stance-hero-right" style={{
+        position: 'absolute',
+        top: 30, right: '2%', zIndex: 2,
+        width: 320,
+      }}>
+        <div style={{ transform: 'rotate(4deg)' }}><StockGlimpse /></div>
+      </div>
+      <div style={{
+        position: 'absolute',
+        top: 0, left: '50%', transform: 'translateX(-50%)',
+        zIndex: 3,
+        width: 420,
+      }}>
+        <div className="stance-float" style={{ position: 'relative' }}>
+          <PortfolioGlimpse />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function NoteMock() {
   return (
     <MockFrame>
@@ -871,15 +1095,20 @@ function TickerStrip() {
 // ============================================================
 const SIDE_SECTIONS = [
   { id: 'top',       label: 'Intro' },
-  { id: 'portfolio', label: 'Portfolio' },
-  { id: 'feed',      label: 'Feed' },
-  { id: 'ai',        label: 'AI context' },
-  { id: 'notes',     label: 'Notes' },
-  { id: 'launch',    label: 'Launch' },
+  { id: 'portfolio', label: 'Portfolios' },
+  { id: 'feed',      label: 'Notes' },
+  { id: 'ai',        label: 'Stock AI' },
+  { id: 'discover',  label: 'People' },
+  { id: 'why',       label: 'Why now' },
+  { id: 'launch',    label: 'Contact' },
 ];
+const SIDE_NAV_HEIGHT = 320;
 
 function SideNav() {
   const [active, setActive] = useState('top');
+  const [positions, setPositions] = useState(() =>
+    Object.fromEntries(SIDE_SECTIONS.map((section, index) => [section.id, index / Math.max(SIDE_SECTIONS.length - 1, 1)]))
+  );
 
   useEffect(() => {
     const targets = SIDE_SECTIONS
@@ -901,6 +1130,28 @@ function SideNav() {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const updatePositions = () => {
+      const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+      const nextPositions = Object.fromEntries(
+        SIDE_SECTIONS.map((section, index) => {
+          const node = document.getElementById(section.id);
+          if (!node) {
+            return [section.id, index / Math.max(SIDE_SECTIONS.length - 1, 1)];
+          }
+          const pageTop = node.getBoundingClientRect().top + window.scrollY;
+          const ratio = Math.min(Math.max(pageTop / maxScroll, 0), 1);
+          return [section.id, ratio];
+        })
+      );
+      setPositions(nextPositions);
+    };
+
+    updatePositions();
+    window.addEventListener('resize', updatePositions);
+    return () => window.removeEventListener('resize', updatePositions);
+  }, []);
+
   return (
     <nav
       aria-label="Page sections"
@@ -908,38 +1159,37 @@ function SideNav() {
       style={{
         position: 'fixed',
         top: '50%',
-        left: 24,
+        right: 24,
         transform: 'translateY(-50%)',
         zIndex: 40,
       }}
     >
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 18 }}>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0, position: 'relative', height: SIDE_NAV_HEIGHT }}>
         {SIDE_SECTIONS.map((s) => {
           const isActive = s.id === active;
+          const ratio = positions[s.id] ?? 0;
+          const top = 10 + ratio * (SIDE_NAV_HEIGHT - 20);
           return (
-            <li key={s.id}>
+            <li
+              key={s.id}
+              style={{
+                position: 'absolute',
+                right: 0,
+                top,
+                transform: 'translateY(-50%)',
+              }}
+            >
               <a
                 href={`#${s.id}`}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
+                  justifyContent: 'flex-end',
                   gap: 12,
                   textDecoration: 'none',
-                  padding: '4px 0',
+                  padding: 0,
                 }}
               >
-                <span
-                  style={{
-                    width: isActive ? 10 : 6,
-                    height: isActive ? 10 : 6,
-                    borderRadius: '50%',
-                    backgroundColor: isActive ? T.accent : '#D6DBE8',
-                    boxShadow: isActive ? `0 0 0 4px ${T.accentSoft}` : 'none',
-                    transition: 'all 220ms ease',
-                    flexShrink: 0,
-                    marginLeft: isActive ? -2 : 0,
-                  }}
-                />
                 <span
                   className={`label${isActive ? ' is-active' : ''}`}
                   style={{
@@ -952,6 +1202,17 @@ function SideNav() {
                 >
                   {s.label}
                 </span>
+                <span
+                  style={{
+                    width: isActive ? 10 : 8,
+                    height: isActive ? 10 : 8,
+                    borderRadius: '50%',
+                    backgroundColor: isActive ? T.accent : '#D6DBE8',
+                    boxShadow: isActive ? `0 0 0 4px ${T.accentSoft}` : 'none',
+                    transition: 'all 220ms ease',
+                    flexShrink: 0,
+                  }}
+                />
               </a>
             </li>
           );
@@ -971,8 +1232,8 @@ function Nav({ onStart }) {
     let rafId = null;
     const update = () => {
       const max = document.documentElement.scrollHeight - window.innerHeight;
-      const p = max > 0 ? window.scrollY / max : 0;
-      setProgress(Math.min(Math.max(p, 0), 1));
+      const next = max > 0 ? window.scrollY / max : 0;
+      setProgress(Math.min(Math.max(next, 0), 1));
       rafId = null;
     };
     const onScroll = () => {
@@ -1015,15 +1276,18 @@ function Nav({ onStart }) {
             fontSize: 13, fontWeight: 600, textDecoration: 'none',
             display: 'inline-flex', alignItems: 'center', gap: 6,
           }}>
-            Get early access <ArrowRight size={13} strokeWidth={2.6} />
+            Get in touch <ArrowRight size={13} strokeWidth={2.6} />
           </a>
         </div>
       </div>
 
-      {/* Scroll progress bar */}
       <div aria-hidden style={{
-        position: 'absolute', left: 0, right: 0, bottom: 0,
-        height: 2, backgroundColor: T.lineSoft,
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: 2,
+        backgroundColor: T.lineSoft,
       }}>
         <div style={{
           height: '100%',
@@ -1045,30 +1309,44 @@ export default function Landing() {
   const [email, setEmail] = useState('');
   const [note, setNote] = useState('');
   const [launchMessage, setLaunchMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
-  const openLaunchEmail = (event) => {
+  const openLaunchEmail = async (event) => {
     event.preventDefault();
     if (!email.trim()) {
       setLaunchMessage('Add your email first so the launch note includes a reply address.');
       return;
     }
-    const subject = `Sharez launch interest - ${interestType}`;
-    const body = [
-      'Hi Sharez,',
-      '',
-      'I would like updates on the launch.',
-      '',
-      `Name: ${name.trim() || 'Not provided'}`,
-      `Email: ${email.trim()}`,
-      `Interest: ${interestType}`,
-      '',
-      'What I am interested in:',
-      note.trim() || 'Please keep me posted on launch plans and early access.',
-      '',
-      'Sent from the Sharez concept site.',
-    ].join('\n');
-    window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setLaunchMessage(`Your email app should open now. If not, message ${CONTACT_EMAIL} directly.`);
+    setIsSending(true);
+    setLaunchMessage('');
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          interest_type: interestType,
+          message: note.trim(),
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.detail || 'Something went wrong while sending your message.');
+      }
+
+      setLaunchMessage('Message sent. We will get back to you soon.');
+      setName('');
+      setEmail('');
+      setNote('');
+      setInterestType('Investor');
+    } catch (error) {
+      setLaunchMessage(error.message || 'Something went wrong while sending your message.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -1080,10 +1358,11 @@ export default function Landing() {
       <section id="top" style={{ backgroundColor: '#FFFFFF' }}>
         <div className="sx-hero" style={{
           maxWidth: 1200, margin: '0 auto',
-          padding: '64px 24px 72px',
+          padding: '64px 24px 16px',
           textAlign: 'center',
         }}>
-          <div style={{ maxWidth: 780, margin: '0 auto' }} className="stance-reveal">
+          <div style={{ maxWidth: 780, margin: '0 auto', position: 'relative' }} className="stance-reveal">
+            <EmojiSticker emoji="👀" size={60} top={-10} right={-10} rotate={8} drift={8} delay="-1.4s" duration="8.2s" />
             <div style={{ marginBottom: 24 }}>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -1093,10 +1372,11 @@ export default function Landing() {
                 fontSize: 13, color: T.ink2, fontWeight: 500,
               }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: T.pos }} />
-                South Africa&rsquo;s first investing network
+                South Africa&rsquo;s first investing social network
               </span>
             </div>
             <h1 style={{
+              fontFamily: FONT_DISPLAY,
               fontSize: 'clamp(44px, 6.4vw, 76px)',
               fontWeight: 700, lineHeight: 1.04, letterSpacing: '-0.035em',
               color: T.ink, margin: 0, marginBottom: 24,
@@ -1104,30 +1384,36 @@ export default function Landing() {
               See how people around you invest.
             </h1>
             <p style={{
-              fontSize: 'clamp(18px, 1.6vw, 22px)', lineHeight: 1.4,
-              color: T.ink, fontWeight: 500,
-              maxWidth: 620, margin: '0 auto 20px',
-            }}>
-              Most investing content is opinion.<br />
-              Sharez shows the position behind it.
-            </p>
-            <p style={{
               fontSize: 'clamp(16px, 1.4vw, 18px)', lineHeight: 1.6,
-              color: T.ink2, maxWidth: 620, margin: '0 auto 36px',
+              color: T.ink2, maxWidth: 620, margin: '0 auto 28px',
             }}>
               Explore real portfolios, see the thinking behind them, and follow investors whose approach resonates with yours.
             </p>
-            <div style={{ display: 'inline-flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <PrimaryCTA href="#launch">Get early access</PrimaryCTA>
-            </div>
-            <p style={{
-              marginTop: 36, marginBottom: 0,
-              fontSize: 14, letterSpacing: '0.04em',
-              color: T.ink3, fontFamily: FONT_MONO,
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', gap: 10,
+              justifyContent: 'center', marginBottom: 36,
             }}>
-              See what people say. See what they own.
-            </p>
+              {[
+                { e: '👀', t: 'See what people own' },
+                { e: '💬', t: 'Read what they think' },
+                { e: '🤝', t: 'Follow who resonates' },
+              ].map((f) => (
+                <span key={f.t} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  padding: '9px 16px', borderRadius: 999,
+                  backgroundColor: T.bg2, border: `1px solid ${T.line}`,
+                  fontSize: 14, fontWeight: 500, color: T.ink,
+                }}>
+                  <span style={{ fontSize: 16 }}>{f.e}</span>
+                  {f.t}
+                </span>
+              ))}
+            </div>
+            <div style={{ display: 'inline-flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <PrimaryCTA href="#launch">Get in touch</PrimaryCTA>
+            </div>
           </div>
+          <HeroComposite />
         </div>
       </section>
 
@@ -1137,20 +1423,20 @@ export default function Landing() {
       {/* ============ PORTFOLIO SECTION ============ */}
       <section id="portfolio" className="sx-sec" style={{ padding: '140px 24px', backgroundColor: T.bg }}>
         <div className="sx-grid-2" style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
-          <div>
+          <div style={{ position: 'relative' }}>
             <SectionHead
-              eyebrow="Portfolio"
-              title="Built on what you own."
-              body="Every profile is a live portfolio showing real holdings and weightings."
+              eyebrow="Portfolios"
+              title="See what people own."
+              body="Every profile on Sharez is a verified portfolio — holdings and weightings imported from the member's brokerage, not posted as a screenshot."
             />
             <p style={{ marginTop: 20, marginBottom: 0, fontSize: 16, lineHeight: 1.55, color: T.ink, fontWeight: 500 }}>
-              No curation. No hiding.
+              The portfolio is the profile.
             </p>
             <div style={{ marginTop: 28, display: 'grid', gap: 18 }}>
               {[
-                'Real positions, not opinions',
-                'Clear view of allocation',
-                'Performance that speaks for itself',
+                'See real holdings and weightings',
+                'See how someone is actually allocated',
+                'See performance over time',
               ].map((t, i) => (
                 <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   <Check size={18} style={{ color: T.accent, marginTop: 4, flexShrink: 0 }} />
@@ -1166,21 +1452,21 @@ export default function Landing() {
       {/* ============ FEED SECTION (tinted band) ============ */}
       <section id="feed" className="sx-sec" style={{ padding: '140px 24px', backgroundColor: '#F6F9FF' }}>
         <div className="sx-grid-2" style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
-          <div style={{ order: 2 }}><FeedMock /></div>
-          <div style={{ order: 1 }}>
+          <div><FeedMock /></div>
+          <div style={{ position: 'relative' }}>
             <SectionHead
-              eyebrow="Feed"
-              title="What happens when everyone shows their hand."
-              body="A feed where every idea is backed by a real portfolio you can open."
+              eyebrow="Notes"
+              title="See what people say."
+              body="Notes are short posts on any topic. Each one is tied to the author's verified portfolio, so readers can see the position behind the opinion."
             />
             <p style={{ marginTop: 20, marginBottom: 0, fontSize: 16, lineHeight: 1.55, color: T.ink, fontWeight: 500 }}>
-              No anonymity. No empty takes.
+              Every author has a portfolio behind them.
             </p>
             <div style={{ marginTop: 28, display: 'grid', gap: 18 }}>
               {[
-                'Every thesis linked to real positions',
-                'Open the portfolio behind it',
-                'Conviction over content',
+                'Real people behind the opinions',
+                'Open the portfolio behind the note',
+                'See conviction, not just commentary',
               ].map((t, i) => (
                 <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   <Check size={18} style={{ color: T.accent, marginTop: 4, flexShrink: 0 }} />
@@ -1195,20 +1481,17 @@ export default function Landing() {
       {/* ============ AI SECTION ============ */}
       <section id="ai" className="sx-sec" style={{ padding: '140px 24px', backgroundColor: T.bg }}>
         <div className="sx-grid-2" style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
-          <div>
+          <div style={{ position: 'relative' }}>
             <SectionHead
-              eyebrow="Stock context"
-              title="Understand any stock in seconds."
-              body="Click any stock to see a clear snapshot of what is happening and how the community is positioned."
+              eyebrow="Stocks"
+              title="See any stock in context."
+              body="Every stock has a page with a price summary, a short brief on what's changed recently, and how members of the community are positioned."
             />
-            <p style={{ marginTop: 20, marginBottom: 0, fontSize: 16, lineHeight: 1.55, color: T.ink, fontWeight: 500 }}>
-              No digging. No noise.
-            </p>
             <div style={{ marginTop: 28, display: 'grid', gap: 18 }}>
               {[
                 'What changed, in plain English',
-                'Community allocation at a glance',
-                'Direct access to related theses',
+                'Member and market sentiment at a glance',
+                'Go deeper into related notes and theses',
               ].map((t, i) => (
                 <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   <Check size={18} style={{ color: T.accent, marginTop: 4, flexShrink: 0 }} />
@@ -1224,21 +1507,21 @@ export default function Landing() {
       {/* ============ DISCOVER SECTION (mint band) ============ */}
       <section id="discover" className="sx-sec" style={{ padding: '140px 24px', backgroundColor: '#F0FAF5' }}>
         <div className="sx-grid-2" style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
-          <div style={{ order: 2 }}><DiscoverMock /></div>
-          <div style={{ order: 1 }}>
+          <div><DiscoverMock /></div>
+          <div style={{ position: 'relative' }}>
             <SectionHead
               eyebrow="Discover"
-              title="Find conviction worth following."
-              body="Explore portfolios and go deeper into the ideas behind them."
+              title="Follow investors whose style matches yours."
+              body="Browse members by allocation, sector focus, or tenure. Follow accounts whose approach matches yours — their positions and notes appear in your feed."
             />
             <p style={{ marginTop: 20, marginBottom: 0, fontSize: 16, lineHeight: 1.55, color: T.ink, fontWeight: 500 }}>
-              Not popularity. Track record.
+              Follow conviction, not popularity.
             </p>
             <div style={{ marginTop: 28, display: 'grid', gap: 18 }}>
               {[
-                'Discover investors by how they are positioned',
-                'Access deeper theses and notes',
-                'Follow ideas over time',
+                'Discover people by how they invest',
+                'Go deeper into notes and theses',
+                'Follow ideas and portfolios over time',
               ].map((t, i) => (
                 <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   <Check size={18} style={{ color: T.accent, marginTop: 4, flexShrink: 0 }} />
@@ -1255,29 +1538,35 @@ export default function Landing() {
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <SectionHead
             eyebrow="Who it's for"
-            title="For people who take investing seriously."
+            title="For DIY investors who want to learn, connect, and grow."
             align="center"
             maxWidth={760}
           />
-          <div className="sx-grid-3" style={{ marginTop: 72, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}>
+          <div className="sx-grid-3" style={{ marginTop: 72, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
             {[
               {
-                icon: Users,
-                label: 'Members',
-                title: 'A feed worth opening.',
-                body: 'See real portfolios, not cherry-picked wins. Learn from how people are actually positioned.',
+                icon: TrendingUp,
+                label: 'Long-term',
+                title: 'Long-term wealth builders.',
+                body: 'People building conviction over time, not chasing the latest hype.',
               },
               {
                 icon: Sparkles,
-                label: 'Creators',
-                title: 'Build an audience on trust.',
-                body: 'Your portfolio speaks for you. Share your thinking and grow a following that values it.',
+                label: 'Learning',
+                title: 'People who want to learn.',
+                body: 'Learn by seeing real portfolios, real notes, and real thinking.',
               },
               {
-                icon: BriefcaseBusiness,
-                label: 'Partners',
-                title: 'Reach investors who actually invest.',
-                body: 'Connect with a verified retail base, organised by how they are positioned.',
+                icon: Users,
+                label: 'Community',
+                title: 'People looking for their people.',
+                body: 'Follow people whose style, views, and approach resonate with you.',
+              },
+              {
+                icon: MessageSquare,
+                label: 'Proof',
+                title: 'People who want proof behind the opinions.',
+                body: 'See what people say, and see what they actually own.',
               },
             ].map((c) => {
               const Icon = c.icon;
@@ -1305,74 +1594,72 @@ export default function Landing() {
       <section id="how" className="sx-sec-tight" style={{ padding: '120px 24px', backgroundColor: T.bg2 }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <SectionHead
-            eyebrow="Getting started"
-            title="Three steps to see what's really in your circle's portfolios."
+            eyebrow="How it works"
+            title="Connect. Explore. Follow."
             align="center"
             maxWidth={760}
           />
           <div className="sx-grid-3" style={{
-            marginTop: 72,
+            marginTop: 64,
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 48,
-            position: 'relative',
+            gap: 24,
           }}>
-            <div aria-hidden className="sx-how-connector" style={{
-              position: 'absolute',
-              top: 28, left: '16%', right: '16%',
-              height: 1,
-              background: `linear-gradient(90deg, transparent, ${T.line} 15%, ${T.line} 85%, transparent)`,
-              zIndex: 0,
-            }} />
             {[
               {
                 n: '01',
-                icon: Link2,
+                emoji: '🔗',
+                tint: '#EEF2FF',
+                border: '#DDE3FF',
+                rotate: -1,
                 title: 'Connect your portfolio',
-                body: 'Link your brokerage account. Your holdings become your verified profile — no screenshots, no edits.',
+                body: 'Securely connect your brokerage. Your holdings become your verified profile — no screenshots, no edits.',
               },
               {
                 n: '02',
-                icon: Search,
-                title: 'Explore real portfolios',
-                body: 'Browse what other investors actually hold, read the thinking behind each position, and see community sentiment on every stock.',
+                emoji: '🔍',
+                tint: '#FCE7F3',
+                border: '#F9CEE3',
+                rotate: 1.2,
+                title: 'See what people own',
+                body: 'Browse real portfolios, read the thinking behind each position, and see how the community is positioned on any stock.',
               },
               {
                 n: '03',
-                icon: UserPlus,
-                title: 'Follow who resonates',
+                emoji: '🤝',
+                tint: '#DCFCE7',
+                border: '#BBF7D0',
+                rotate: -1,
+                title: 'Find your people',
                 body: "Follow investors whose approach aligns with yours. Their ideas and theses land in your feed.",
               },
-            ].map((s) => {
-              const Icon = s.icon;
-              return (
-                <div key={s.n} style={{ position: 'relative', zIndex: 1, textAlign: 'left' }}>
-                  <div style={{
-                    width: 56, height: 56, borderRadius: 16,
-                    backgroundColor: '#FFFFFF',
-                    border: `1px solid ${T.line}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    marginBottom: 24,
-                    boxShadow: '0 4px 12px rgba(10,37,64,0.04)',
-                  }}>
-                    <Icon size={22} strokeWidth={2} style={{ color: T.accent }} />
-                  </div>
-                  <div style={{
-                    fontFamily: FONT_MONO, fontSize: 12, fontWeight: 600,
-                    color: T.ink3, letterSpacing: '0.1em',
-                    marginBottom: 10,
-                  }}>{s.n}</div>
-                  <div style={{
-                    fontSize: 20, fontWeight: 600, color: T.ink,
-                    letterSpacing: '-0.015em', lineHeight: 1.25,
-                    marginBottom: 10,
-                  }}>{s.title}</div>
-                  <p style={{
-                    fontSize: 15, lineHeight: 1.6, color: T.ink2, margin: 0,
-                  }}>{s.body}</p>
-                </div>
-              );
-            })}
+            ].map((s) => (
+              <div key={s.n} style={{
+                padding: 28,
+                borderRadius: 24,
+                backgroundColor: s.tint,
+                border: `1px solid ${s.border}`,
+                position: 'relative',
+                transform: `rotate(${s.rotate}deg)`,
+                boxShadow: '0 10px 30px rgba(10,37,64,0.05)',
+                textAlign: 'left',
+              }}>
+                <span style={{
+                  position: 'absolute', top: 20, right: 22,
+                  fontSize: 12, fontWeight: 700, color: T.ink3,
+                  fontFamily: FONT_MONO, letterSpacing: '0.1em',
+                }}>{s.n}</span>
+                <div style={{ fontSize: 46, lineHeight: 1, marginBottom: 20 }}>{s.emoji}</div>
+                <div style={{
+                  fontSize: 20, fontWeight: 600, color: T.ink,
+                  letterSpacing: '-0.015em', lineHeight: 1.25,
+                  marginBottom: 10,
+                }}>{s.title}</div>
+                <p style={{
+                  fontSize: 15, lineHeight: 1.6, color: T.ink2, margin: 0,
+                }}>{s.body}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -1381,18 +1668,19 @@ export default function Landing() {
       <section id="why" className="sx-sec-wide" style={{ padding: '140px 24px 160px', backgroundColor: T.bg }}>
         <div style={{ maxWidth: 860, margin: '0 auto', textAlign: 'center' }}>
           <div style={{ marginBottom: 28 }}>
-            <Eyebrow>Why Sharez exists</Eyebrow>
+            <Eyebrow>Why now</Eyebrow>
           </div>
           <h2 style={{
+            fontFamily: FONT_DISPLAY,
             fontSize: 'clamp(32px, 4.6vw, 56px)',
             fontWeight: 700, lineHeight: 1.12, letterSpacing: '-0.025em',
             color: T.ink, margin: 0, marginBottom: 24,
           }}>
-            Most investing content is opinion without context.<br />
+            See what people say.<br />
             <span style={{
               background: `linear-gradient(120deg, ${T.accent}, #A78BFA, #FB7185)`,
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-            }}>Sharez flips that.</span>
+            }}>See what they own.</span>
           </h2>
           <p style={{
             fontSize: 'clamp(17px, 1.5vw, 20px)', lineHeight: 1.55,
@@ -1411,17 +1699,18 @@ export default function Landing() {
         }} />
         <div style={{ position: 'relative', maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
           <div style={{ marginBottom: 18 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.04em', color: '#A78BFA', textTransform: 'uppercase' }}>Early access</span>
+            <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.04em', color: '#A78BFA', textTransform: 'uppercase' }}>Contact</span>
           </div>
           <h2 style={{
+            fontFamily: FONT_DISPLAY,
             fontSize: 'clamp(34px, 4.6vw, 56px)',
             fontWeight: 700, lineHeight: 1.08, letterSpacing: '-0.025em',
             color: '#FFFFFF', margin: 0, marginBottom: 18,
           }}>
-            Get on the list before we open the doors.
+            Want to shape this early?
           </h2>
           <p style={{ fontSize: 18, lineHeight: 1.55, color: 'rgba(255,255,255,0.72)', margin: 0, marginBottom: 40 }}>
-            Drop your email and we'll include you in the first round of invites. No spam. Just launch.
+            Leave your email and a short note, and we will get back to you directly.
           </p>
 
           <form onSubmit={openLaunchEmail} style={{
@@ -1488,16 +1777,17 @@ export default function Landing() {
                 resize: 'vertical',
               }}
             />
-            <button type="submit" className="stance-cta"
+            <button type="submit" className="stance-cta" disabled={isSending}
               style={{
                 padding: '14px 22px', borderRadius: 12,
                 background: `linear-gradient(135deg, ${T.accent}, #A78BFA)`,
-                color: '#FFFFFF', border: 'none', cursor: 'pointer',
+                color: '#FFFFFF', border: 'none', cursor: isSending ? 'default' : 'pointer',
                 fontSize: 15, fontWeight: 600, letterSpacing: '-0.005em',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 boxShadow: '0 10px 30px rgba(99,91,255,0.35)',
+                opacity: isSending ? 0.72 : 1,
               }}>
-              Request early access <ArrowRight size={16} strokeWidth={2.4} />
+              {isSending ? 'Sending...' : 'Send message'} <ArrowRight size={16} strokeWidth={2.4} />
             </button>
             {launchMessage && (
               <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)', textAlign: 'center' }}>{launchMessage}</div>

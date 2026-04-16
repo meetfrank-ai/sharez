@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from database import engine, Base
-from routes import auth, portfolio, follow, theses, comments, feed, notes, discover, trades, stocks
+from routes import auth, portfolio, follow, theses, comments, feed, notes, discover, trades, stocks, contact
 
 # Create all tables. During the landing-only phase the database may be
 # unreachable; don't let that crash the app so the static site still serves.
@@ -179,6 +179,7 @@ app.include_router(notes.router)
 app.include_router(discover.router)
 app.include_router(trades.router)
 app.include_router(stocks.router)
+app.include_router(contact.router)
 
 # Serve built React frontend in production
 STATIC_DIR = Path(__file__).parent / "static"
