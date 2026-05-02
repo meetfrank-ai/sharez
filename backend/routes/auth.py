@@ -86,6 +86,112 @@ def complete_onboarding(
     return {"message": "Onboarding complete"}
 
 
+# ----- Onboarding checklist (Phase 3) -----
+
+ONBOARDING_STEPS = [
+    {
+        "key": "link_account",
+        "title": "Link your EasyEquities account",
+        "blurb": "Connect Gmail so we can read your trade confirmations and build your portfolio.",
+        "cta": "Link account",
+        "href": "/link-account",
+    },
+    {
+        "key": "set_visibility",
+        "title": "Set what your followers see",
+        "blurb": "Pick what's free and what's behind your Vault. You can change this any time.",
+        "cta": "Set visibility",
+        "href": "/tier-settings",
+    },
+    {
+        "key": "follow_someone",
+        "title": "Follow someone interesting",
+        "blurb": "Your Friends feed comes alive once you follow a few investors.",
+        "cta": "Find people",
+        "href": "/discover",
+    },
+    {
+        "key": "add_thesis",
+        "title": "Post your first thesis",
+        "blurb": "Share why you're holding one of your stocks — a single paragraph is enough.",
+        "cta": "Write a thesis",
+        "href": "/portfolio",
+    },
+    {
+        "key": "complete_profile",
+        "title": "Finish your profile",
+        "blurb": "Add a bio so people you might follow can decide if your style fits them.",
+        "cta": "Edit profile",
+        "href": "/profile",
+    },
+]
+
+
+def mark_step_complete(db: Session, user_id: int, step_key: str) -> None:
+    """Idempotent helper called from elsewhere in the codebase when an action lands."""
+    from models import OnboardingStep
+    valid_keys = {s["key"] for s in ONBOARDING_STEPS}
+    if step_key not in valid_keys:
+        return
+    existing = (
+        db.query(OnboardingStep)
+        .filter(OnboardingStep.user_id == user_id, OnboardingStep.step_key == step_key)
+        .first()
+    )
+    if existing:
+        return
+    db.add(OnboardingStep(user_id=user_id, step_key=step_key))
+    db.commit()
+
+
+@router.get("/onboarding")
+def get_onboarding_progress(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Returns the 5-step checklist with completed flags for the current user."""
+    from models import OnboardingStep
+
+    completed = {
+        s.step_key: s.completed_at
+        for s in db.query(OnboardingStep).filter(OnboardingStep.user_id == user.id).all()
+    }
+
+    # Self-heal: derive a few obvious completions from existing state so users
+    # who finished steps before this feature shipped don't see a stale checklist.
+    if user.gmail_refresh_token_enc and "link_account" not in completed:
+        mark_step_complete(db, user.id, "link_account")
+        completed["link_account"] = True
+    if user.bio and "complete_profile" not in completed:
+        mark_step_complete(db, user.id, "complete_profile")
+        completed["complete_profile"] = True
+
+    steps = [
+        {**s, "completed": s["key"] in completed}
+        for s in ONBOARDING_STEPS
+    ]
+    done = sum(1 for s in steps if s["completed"])
+    return {
+        "steps": steps,
+        "completed_count": done,
+        "total": len(steps),
+        "all_done": done == len(steps),
+    }
+
+
+@router.post("/onboarding/{step_key}/complete")
+def complete_onboarding_step(
+    step_key: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    valid_keys = {s["key"] for s in ONBOARDING_STEPS}
+    if step_key not in valid_keys:
+        raise HTTPException(status_code=400, detail=f"Unknown step '{step_key}'")
+    mark_step_complete(db, user.id, step_key)
+    return {"ok": True, "step_key": step_key}
+
+
 @router.put("/profile", response_model=UserOut)
 def update_profile(
     data: UserProfileUpdate,
@@ -107,6 +213,14 @@ def update_profile(
         user.website_url = data.website_url
     db.commit()
     db.refresh(user)
+
+    # Profile is "complete enough" once both bio and handle are populated.
+    if user.bio and user.handle:
+        try:
+            mark_step_complete(db, user.id, "complete_profile")
+        except Exception:
+            pass
+
     return user
 
 

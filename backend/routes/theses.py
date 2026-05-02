@@ -29,6 +29,12 @@ def create_thesis(
     db.commit()
     db.refresh(thesis)
 
+    try:
+        from routes.auth import mark_step_complete
+        mark_step_complete(db, user.id, "add_thesis")
+    except Exception:
+        pass
+
     result = ThesisOut.model_validate(thesis)
     result.display_name = user.display_name
     return result

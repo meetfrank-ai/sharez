@@ -44,6 +44,12 @@ def follow_user(
     db.commit()
     db.refresh(follow)
 
+    try:
+        from routes.auth import mark_step_complete
+        mark_step_complete(db, current_user.id, "follow_someone")
+    except Exception:
+        pass
+
     result = FollowOut.model_validate(follow)
     result.display_name = target.display_name
     result.avatar_url = target.avatar_url

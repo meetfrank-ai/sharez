@@ -147,6 +147,13 @@ def update_tier_config(
 
     db.commit()
     db.refresh(config)
+
+    try:
+        from routes.auth import mark_step_complete
+        mark_step_complete(db, user.id, "set_visibility")
+    except Exception:
+        pass
+
     return config
 
 

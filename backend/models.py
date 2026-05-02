@@ -431,6 +431,23 @@ class StockSummaryCache(Base):
     generated_at = Column(DateTime, default=utcnow)
 
 
+class OnboardingStep(Base):
+    """
+    Tracks per-user completion of the activation steps shown on the Feed
+    onboarding card. One row per (user, step_key); presence == completed.
+    """
+    __tablename__ = "onboarding_steps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    step_key = Column(String, nullable=False)  # link_account / set_visibility / add_thesis / follow_someone / complete_profile
+    completed_at = Column(DateTime, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "step_key", name="uq_onboarding_step"),
+    )
+
+
 class TradeReaction(Base):
     """
     Bull/Bear reactions on a feed-event-shaped trade. Polymorphic via target_kind

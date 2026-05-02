@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import FeedItem from '../components/FeedItem';
 import NoteCard from '../components/NoteCard';
 import TradeCard from '../components/TradeCard';
+import OnboardingChecklist from '../components/OnboardingChecklist';
 
 const FILTERS = [
   { key: 'all', label: 'For you' },
@@ -333,6 +334,8 @@ export default function Feed() {
           </div>
         )}
       </div>
+
+      <OnboardingChecklist />
 
       {/* Source segmented toggle (Sirius pattern: For You / Friends) */}
       <div

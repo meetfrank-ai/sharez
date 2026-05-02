@@ -106,6 +106,13 @@ async def callback(
 
     google_oauth.store_refresh_token(db, user, refresh_token, google_email)
 
+    # Mark the onboarding "link_account" step complete.
+    try:
+        from routes.auth import mark_step_complete
+        mark_step_complete(db, user.id, "link_account")
+    except Exception:
+        pass
+
     return RedirectResponse(url=f"{_frontend_url()}/settings?gmail=connected", status_code=302)
 
 

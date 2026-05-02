@@ -104,6 +104,8 @@ try:
         "CREATE INDEX IF NOT EXISTS ix_holdings_user_id ON holdings (user_id)",
         "CREATE INDEX IF NOT EXISTS ix_user_transactions_user_id ON user_transactions (user_id)",
         "CREATE INDEX IF NOT EXISTS ix_trades_user_id ON trades (user_id)",
+        "CREATE INDEX IF NOT EXISTS ix_trade_reactions_target ON trade_reactions (target_kind, target_id)",
+        "CREATE INDEX IF NOT EXISTS ix_onboarding_steps_user ON onboarding_steps (user_id)",
     ]
     with engine.connect() as conn:
         for idx_sql in indexes:
