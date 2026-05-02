@@ -76,6 +76,58 @@ def get_me(user: User = Depends(get_current_user)):
     return user
 
 
+@router.get("/debug/db-test")
+def debug_db_test(db: Session = Depends(get_db)):
+    """Temporary diagnostic — runs the same operations register does and
+    returns the traceback if anything blows up. Safe to leave in
+    production; it returns no secrets and is easy to remove later."""
+    import traceback
+    out = {"steps": [], "ok": True}
+    try:
+        out["steps"].append("query_user_by_email")
+        u = db.query(User).filter(User.email == "diag@nonexistent.example").first()
+        out["query_user_result"] = "none" if u is None else "found"
+    except Exception as e:
+        out["ok"] = False
+        out["error"] = f"{type(e).__name__}: {e}"
+        out["traceback"] = traceback.format_exc()
+        return out
+
+    try:
+        out["steps"].append("hash_password")
+        hash_password("testing123")
+        out["hash_ok"] = True
+    except Exception as e:
+        out["ok"] = False
+        out["error"] = f"{type(e).__name__}: {e}"
+        out["traceback"] = traceback.format_exc()
+        return out
+
+    try:
+        out["steps"].append("inspect_users_table")
+        from sqlalchemy import inspect
+        cols = {c["name"] for c in inspect(db.get_bind()).get_columns("users")}
+        out["users_columns"] = sorted(cols)
+    except Exception as e:
+        out["ok"] = False
+        out["error"] = f"{type(e).__name__}: {e}"
+        out["traceback"] = traceback.format_exc()
+        return out
+
+    try:
+        out["steps"].append("query_user_tier_config")
+        from models import UserTierConfig
+        cfg = db.query(UserTierConfig).first()
+        out["tier_config_result"] = "none" if cfg is None else f"id={cfg.id}"
+    except Exception as e:
+        out["ok"] = False
+        out["error"] = f"{type(e).__name__}: {e}"
+        out["traceback"] = traceback.format_exc()
+        return out
+
+    return out
+
+
 @router.get("/google/debug")
 def google_debug():
     """Public diagnostic — lists which Google client IDs the backend will
