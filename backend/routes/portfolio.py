@@ -278,10 +278,34 @@ def share_transaction(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """User explicitly shares a buy/sell transaction, with optional note."""
+    """User explicitly shares a buy/sell transaction, with optional note.
+
+    Pulls the latest matching UserTransaction so we can snapshot the rich
+    fields (broker_name, is_opening_position, shares/price, account_type)
+    into FeedEvent.metadata_ for the redesigned TradeCard. Falls back to
+    the legacy minimal payload if no UserTransaction is found.
+    """
+    from models import UserTransaction, InstrumentMap
+
     event_type = EventType.added_stock if data.transaction_type == "buy" else EventType.removed_stock
 
-    # Create the FeedEvent (now user-initiated, not auto)
+    # Most-recent matching transaction so the feed snapshot reflects what was actually shared.
+    tx = (
+        db.query(UserTransaction)
+        .filter(
+            UserTransaction.user_id == user.id,
+            UserTransaction.contract_code == data.contract_code,
+            UserTransaction.action == data.transaction_type,
+        )
+        .order_by(UserTransaction.transaction_date.desc().nullslast(), UserTransaction.id.desc())
+        .first()
+    )
+
+    # Look up the EODHD ticker so the sparkline has a symbol to plot.
+    mapping = (
+        db.query(InstrumentMap).filter(InstrumentMap.ee_name == data.stock_name).first()
+    )
+
     note_id = None
     if data.note:
         note = Note(
@@ -296,12 +320,31 @@ def share_transaction(
         db.flush()
         note_id = note.id
 
+    metadata = {
+        "stock_name": data.stock_name,
+        "contract_code": data.contract_code,
+        "ticker": mapping.ticker if mapping else None,
+        "eodhd_symbol": mapping.eodhd_symbol if mapping else None,
+        "market": mapping.market if mapping else None,
+        "sector": mapping.sector if mapping else None,
+    }
+    if tx:
+        metadata.update({
+            "broker_name": tx.broker_name,
+            "account_type": tx.account_type,
+            "is_opening_position": bool(tx.is_opening_position),
+            "shares": tx.quantity,
+            "price": tx.price,
+            "trade_date": str(tx.transaction_date)[:10] if tx.transaction_date else None,
+            "user_transaction_id": tx.id,
+        })
+
     feed_event = FeedEvent(
         user_id=user.id,
         event_type=event_type,
         visibility=Tier.public,
         note_id=note_id,
-        metadata_={"stock_name": data.stock_name, "contract_code": data.contract_code},
+        metadata_=metadata,
     )
     db.add(feed_event)
     db.commit()
