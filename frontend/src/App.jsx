@@ -28,6 +28,12 @@ const LinkAccount = lazy(() => import('./app/pages/LinkAccount'));
 // Rank page kept on disk but not routed — global leaderboard is out of v1
 // scope. Will reincarnate as a Crystal Ball-specific leaderboard.
 
+const Challenge = lazy(() => import('./app/pages/Challenge'));
+const ChallengeJoin = lazy(() => import('./app/pages/ChallengeJoin'));
+const ChallengePicks = lazy(() => import('./app/pages/ChallengePicks'));
+const ChallengeLeaderboard = lazy(() => import('./app/pages/ChallengeLeaderboard'));
+const ChallengeParticipant = lazy(() => import('./app/pages/ChallengeParticipant'));
+
 function PageLoader() {
   return (
     <div className="flex items-center justify-center h-64">
@@ -103,6 +109,11 @@ function AppRoutes() {
           <Route path="/tier-settings" element={<TierSettings />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/link-account" element={<LinkAccount />} />
+          <Route path="/challenges/:slug" element={<Challenge />} />
+          <Route path="/challenges/:slug/join" element={<ChallengeJoin />} />
+          <Route path="/challenges/:slug/picks" element={<ChallengePicks />} />
+          <Route path="/challenges/:slug/leaderboard" element={<ChallengeLeaderboard />} />
+          <Route path="/challenges/:slug/participants/:userId" element={<ChallengeParticipant />} />
           <Route path="/followers" element={<Followers />} />
           <Route path="/note/:noteId" element={<NoteThread />} />
         </Route>

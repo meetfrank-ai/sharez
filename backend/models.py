@@ -292,13 +292,94 @@ class Thesis(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     contract_code = Column(String, nullable=False)
     stock_name = Column(String, nullable=False)
+    title = Column(String, nullable=True)  # used by challenge picks
     body = Column(Text, nullable=False)
     visibility = Column(Enum(Tier), default=Tier.inner_circle)
+
+    # Crystal Ball / future challenges. challenge_id+is_locked makes a thesis
+    # immutable (body cannot change; updates go through ThesisUpdate).
+    challenge_id = Column(Integer, ForeignKey("challenges.id"), nullable=True, index=True)
+    is_locked = Column(Boolean, default=False)
+    locked_at = Column(DateTime, nullable=True)
+
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     user = relationship("User", back_populates="theses")
     comments = relationship("Comment", back_populates="thesis", cascade="all, delete-orphan")
+    updates = relationship("ThesisUpdate", back_populates="thesis", cascade="all, delete-orphan", order_by="ThesisUpdate.created_at")
+
+
+class ThesisUpdate(Base):
+    """
+    Append-only updates on an immutable thesis. Used both for general theses
+    (when authors want to add an "update from Q1" note) and for the Crystal
+    Ball quarterly update prompts. Original thesis body never changes.
+    """
+    __tablename__ = "thesis_updates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    thesis_id = Column(Integer, ForeignKey("theses.id"), nullable=False, index=True)
+    body = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    thesis = relationship("Thesis", back_populates="updates")
+
+
+class Challenge(Base):
+    """
+    Crystal Ball Challenge (and future user-created challenges). Every
+    challenge entry is structurally five Theses with the same challenge_id
+    + locked_at + is_locked=True.
+    """
+    __tablename__ = "challenges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    slug = Column(String, unique=True, nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    pick_count = Column(Integer, default=5)
+    max_participants = Column(Integer, default=500)
+    market = Column(String, default="JSE")  # restrict pick universe
+    lockup_at = Column(DateTime, nullable=False)  # picks must be in by this time
+    end_at = Column(DateTime, nullable=False)
+    is_public_view = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+
+
+class ChallengeParticipant(Base):
+    __tablename__ = "challenge_participants"
+
+    id = Column(Integer, primary_key=True, index=True)
+    challenge_id = Column(Integer, ForeignKey("challenges.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    invited_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    joined_at = Column(DateTime, default=utcnow)
+    picks_locked = Column(Boolean, default=False)  # set true once 5 theses exist & lockup passes
+    return_pct = Column(Float, nullable=True)  # latest snapshot, refreshed daily
+
+    __table_args__ = (
+        UniqueConstraint("challenge_id", "user_id", name="uq_challenge_participant"),
+    )
+
+
+class ChallengeInvite(Base):
+    """
+    Per-invite-code tracking. Each beta user gets ~4 codes; Sharez allocates
+    100 directly. Invite consumed when used_by is set; expires once
+    the challenge's lockup passes.
+    """
+    __tablename__ = "challenge_invites"
+
+    id = Column(Integer, primary_key=True, index=True)
+    challenge_id = Column(Integer, ForeignKey("challenges.id"), nullable=False, index=True)
+    code = Column(String, unique=True, nullable=False, index=True)
+    issued_to_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    used_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    used_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
 
 
 class Comment(Base):

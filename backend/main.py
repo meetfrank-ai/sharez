@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from database import engine, Base
-from routes import auth, portfolio, follow, theses, comments, feed, notes, discover, trades, stocks, contact, gmail, notifications as notifications_route, alerts as alerts_route, rank as rank_route
+from routes import auth, portfolio, follow, theses, comments, feed, notes, discover, trades, stocks, contact, gmail, notifications as notifications_route, alerts as alerts_route, rank as rank_route, challenges as challenges_route
 
 # Create all tables. During the landing-only phase the database may be
 # unreachable; don't let that crash the app so the static site still serves.
@@ -61,6 +61,12 @@ try:
         ],
         "user_tier_configs": [
             ("show_on_rank", "ALTER TABLE user_tier_configs ADD COLUMN show_on_rank BOOLEAN DEFAULT TRUE"),
+        ],
+        "theses": [
+            ("title", "ALTER TABLE theses ADD COLUMN title VARCHAR"),
+            ("challenge_id", "ALTER TABLE theses ADD COLUMN challenge_id INTEGER"),
+            ("is_locked", "ALTER TABLE theses ADD COLUMN is_locked BOOLEAN DEFAULT FALSE"),
+            ("locked_at", "ALTER TABLE theses ADD COLUMN locked_at TIMESTAMP"),
         ],
     }
 
@@ -116,6 +122,12 @@ try:
         "CREATE INDEX IF NOT EXISTS ix_price_alerts_active ON price_alerts (active)",
         "CREATE INDEX IF NOT EXISTS ix_user_returns_date ON user_returns_snapshots (snapshot_date)",
         "CREATE INDEX IF NOT EXISTS ix_user_returns_user ON user_returns_snapshots (user_id)",
+        "CREATE INDEX IF NOT EXISTS ix_theses_challenge ON theses (challenge_id)",
+        "CREATE INDEX IF NOT EXISTS ix_thesis_updates_thesis ON thesis_updates (thesis_id)",
+        "CREATE INDEX IF NOT EXISTS ix_challenges_slug ON challenges (slug)",
+        "CREATE INDEX IF NOT EXISTS ix_challenge_participants_challenge ON challenge_participants (challenge_id)",
+        "CREATE INDEX IF NOT EXISTS ix_challenge_participants_user ON challenge_participants (user_id)",
+        "CREATE INDEX IF NOT EXISTS ix_challenge_invites_code ON challenge_invites (code)",
     ]
     with engine.connect() as conn:
         for idx_sql in indexes:
@@ -229,6 +241,7 @@ app.include_router(gmail.router)
 app.include_router(notifications_route.router)
 app.include_router(alerts_route.router)
 app.include_router(rank_route.router)
+app.include_router(challenges_route.router)
 
 # Serve built React frontend in production
 STATIC_DIR = Path(__file__).parent / "static"

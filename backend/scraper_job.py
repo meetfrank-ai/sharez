@@ -111,6 +111,16 @@ if __name__ == "__main__":
         except Exception as e:
             logger.warning(f"Returns snapshot failed: {e}")
 
+        # 7. Crystal Ball: lock picks for passed lockups, then refresh returns.
+        try:
+            from services.challenges import lock_picks_for_passed_lockups, refresh_participant_returns
+            lock_result = lock_picks_for_passed_lockups(db)
+            logger.info(f"Challenge pick-lock: {lock_result}")
+            cb_result = refresh_participant_returns(db)
+            logger.info(f"Challenge returns: {cb_result}")
+        except Exception as e:
+            logger.warning(f"Challenge cron failed: {e}")
+
         logger.info("Daily cron complete.")
     except Exception as e:
         logger.error(f"Cron job failed: {e}", exc_info=True)
