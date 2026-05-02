@@ -15,6 +15,10 @@ services:
         value: "20"
       - key: GOOGLE_CLIENT_ID
         value: "834694676276-lps1on59n5dbdhqkqbeqq7e63hltquch.apps.googleusercontent.com"
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        value: "https://sharez.onrender.com/api/gmail/callback"
       - key: FRONTEND_URL
         value: "https://sharez.onrender.com"
 

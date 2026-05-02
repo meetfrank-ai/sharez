@@ -10,7 +10,8 @@ const navItems = [
   { path: '/discover', label: 'Discover', icon: Compass },
   { path: '/saved', label: 'Saved', icon: Bookmark },
   { path: '/followers', label: 'Connections', icon: Bell },
-  { path: '/profile', label: 'Settings', icon: Settings },
+  { path: '/profile', label: 'Profile', icon: Settings },
+  { path: '/settings', label: 'Settings', icon: Settings },
 ];
 
 const mobileNavItems = [

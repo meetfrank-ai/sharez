@@ -72,6 +72,12 @@ class User(Base):
     ee_username_enc = Column(String, nullable=True)
     ee_password_enc = Column(String, nullable=True)
 
+    # Gmail integration — replaces EE credential scrape
+    google_email = Column(String, nullable=True, index=True)
+    gmail_refresh_token_enc = Column(Text, nullable=True)
+    gmail_last_synced_at = Column(DateTime, nullable=True)
+    gmail_history_id = Column(String, nullable=True)
+
     has_onboarded = Column(Boolean, default=False)
     portfolio_imported_at = Column(DateTime, nullable=True)
     password_reset_token = Column(String, nullable=True)

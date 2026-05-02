@@ -1,13 +1,19 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Load local .env (gitignored). On Render, env vars come from the dashboard
+# and load_dotenv is a no-op when the file doesn't exist.
+load_dotenv(Path(__file__).parent / ".env")
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from database import engine, Base
-from routes import auth, portfolio, follow, theses, comments, feed, notes, discover, trades, stocks, contact
+from routes import auth, portfolio, follow, theses, comments, feed, notes, discover, trades, stocks, contact, gmail
 
 # Create all tables. During the landing-only phase the database may be
 # unreachable; don't let that crash the app so the static site still serves.
@@ -29,6 +35,10 @@ try:
             ("handle", "ALTER TABLE users ADD COLUMN handle VARCHAR"),
             ("password_reset_token", "ALTER TABLE users ADD COLUMN password_reset_token VARCHAR"),
             ("password_reset_expires", "ALTER TABLE users ADD COLUMN password_reset_expires TIMESTAMP"),
+            ("google_email", "ALTER TABLE users ADD COLUMN google_email VARCHAR"),
+            ("gmail_refresh_token_enc", "ALTER TABLE users ADD COLUMN gmail_refresh_token_enc TEXT"),
+            ("gmail_last_synced_at", "ALTER TABLE users ADD COLUMN gmail_last_synced_at TIMESTAMP"),
+            ("gmail_history_id", "ALTER TABLE users ADD COLUMN gmail_history_id VARCHAR"),
         ],
         "notes": [
             ("transaction_ids", "ALTER TABLE notes ADD COLUMN transaction_ids JSONB"),
@@ -180,6 +190,7 @@ app.include_router(discover.router)
 app.include_router(trades.router)
 app.include_router(stocks.router)
 app.include_router(contact.router)
+app.include_router(gmail.router)
 
 # Serve built React frontend in production
 STATIC_DIR = Path(__file__).parent / "static"

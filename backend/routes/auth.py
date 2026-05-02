@@ -191,6 +191,48 @@ def google_auth(
     return Token(access_token=create_access_token(user.id))
 
 
+class ChangeEmailRequest(BaseModel):
+    new_email: str
+    password: str
+
+
+@router.put("/email", response_model=UserOut)
+def change_email(
+    data: ChangeEmailRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Change the account email — required when the user wants to connect a Gmail
+    address that differs from the one they signed up with (since EE confirmations
+    must arrive at the same address as their Sharez account).
+    """
+    new_email = (data.new_email or "").strip().lower()
+    if not new_email or "@" not in new_email:
+        raise HTTPException(status_code=400, detail="Invalid email address")
+
+    if not verify_password(data.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Password is incorrect")
+
+    if new_email == user.email.lower():
+        return user  # no-op
+
+    if db.query(User).filter(User.email == new_email, User.id != user.id).first():
+        raise HTTPException(status_code=400, detail="That email is already in use")
+
+    # Changing the account email invalidates any existing Gmail connection,
+    # since the connected mailbox no longer matches.
+    user.email = new_email
+    user.gmail_refresh_token_enc = None
+    user.google_email = None
+    user.gmail_last_synced_at = None
+    user.gmail_history_id = None
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 class ForgotPasswordRequest(BaseModel):
     email: str
 
