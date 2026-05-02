@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Settings, RefreshCw, Share2 } from 'lucide-react';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
+import PortfolioChart from '../components/PortfolioChart';
 import NoteCard from '../components/NoteCard';
 import NoteComposer from '../components/NoteComposer';
 import TradeCard from '../components/TradeCard';
@@ -272,6 +273,9 @@ export default function UserProfile() {
                 </div>
               </div>
             </div>
+
+            {/* Cumulative portfolio chart (D-14 — track-record surface) */}
+            <PortfolioChart userId={userId} isOwner={isOwnProfile} />
 
             {/* Hero donut card */}
             {segments.length > 0 && (

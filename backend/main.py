@@ -132,6 +132,7 @@ try:
         "CREATE INDEX IF NOT EXISTS ix_challenge_participants_challenge ON challenge_participants (challenge_id)",
         "CREATE INDEX IF NOT EXISTS ix_challenge_participants_user ON challenge_participants (user_id)",
         "CREATE INDEX IF NOT EXISTS ix_challenge_invites_code ON challenge_invites (code)",
+        "CREATE INDEX IF NOT EXISTS ix_portfolio_snapshots_user_date ON user_portfolio_snapshots (user_id, snapshot_date)",
     ]
     with engine.connect() as conn:
         for idx_sql in indexes:

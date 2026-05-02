@@ -121,6 +121,14 @@ if __name__ == "__main__":
         except Exception as e:
             logger.warning(f"Challenge cron failed: {e}")
 
+        # 8. Cumulative portfolio % chart snapshots (D-14 — track-record surface).
+        try:
+            from services.portfolio_history import refresh_all_users
+            ph_result = refresh_all_users(db)
+            logger.info(f"Portfolio history: {ph_result}")
+        except Exception as e:
+            logger.warning(f"Portfolio history cron failed: {e}")
+
         logger.info("Daily cron complete.")
     except Exception as e:
         logger.error(f"Cron job failed: {e}", exc_info=True)

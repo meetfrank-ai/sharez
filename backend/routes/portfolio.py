@@ -542,6 +542,72 @@ def share_transactions(
     return {"message": "Shared", "note_id": note.id}
 
 
+@router.get("/history/{user_id}")
+def get_portfolio_history(
+    user_id: int,
+    days: int = 365,
+    refresh: bool = False,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Cumulative portfolio % return over time. Public — anyone with an
+    account can view anyone's track record (% only, never rand). The
+    owner gets the rand fields too for their own profile.
+
+    First call for a user lazily backfills snapshots from their earliest
+    transaction. Subsequent calls hit the cache; `refresh=true` forces a
+    recompute (also runs daily via the cron).
+    """
+    from datetime import datetime, timedelta, timezone
+    from models import UserPortfolioSnapshot
+
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    have_snaps = (
+        db.query(UserPortfolioSnapshot)
+        .filter(UserPortfolioSnapshot.user_id == user_id)
+        .count()
+    )
+    if have_snaps == 0 or refresh:
+        try:
+            from services.portfolio_history import refresh_snapshots_for_user
+            refresh_snapshots_for_user(db, target, days=None)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).exception("Portfolio history refresh failed: %s", e)
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=max(7, min(days, 3650)))
+    snaps = (
+        db.query(UserPortfolioSnapshot)
+        .filter(UserPortfolioSnapshot.user_id == user_id)
+        .filter(UserPortfolioSnapshot.snapshot_date >= cutoff)
+        .order_by(UserPortfolioSnapshot.snapshot_date.asc())
+        .all()
+    )
+
+    is_self = user.id == user_id
+    points = [
+        {
+            "date": s.snapshot_date.strftime("%Y-%m-%d") if s.snapshot_date else None,
+            "return_pct": s.return_pct,
+            # Owner-only rand fields (D-7)
+            **({"total_value": s.total_value, "total_cost": s.total_cost} if is_self else {}),
+        }
+        for s in snaps
+    ]
+
+    return {
+        "user_id": user_id,
+        "points": points,
+        "first_date": points[0]["date"] if points else None,
+        "last_date": points[-1]["date"] if points else None,
+        "current_return_pct": points[-1]["return_pct"] if points else None,
+    }
+
+
 @router.get("/transactions/by-ids")
 def get_transactions_by_ids(
     ids: str = "",

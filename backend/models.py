@@ -516,6 +516,27 @@ class StockSummaryCache(Base):
     generated_at = Column(DateTime, default=utcnow)
 
 
+class UserPortfolioSnapshot(Base):
+    """
+    Daily portfolio-value snapshot per user. Used to draw the cumulative
+    % return chart on profiles (D-14). Values are ZAR-denominated for
+    backend computation; the API only ever exposes return_pct.
+    """
+    __tablename__ = "user_portfolio_snapshots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    snapshot_date = Column(DateTime, nullable=False, index=True)
+    total_cost = Column(Float, nullable=True)   # cumulative buys minus sells, owner-only
+    total_value = Column(Float, nullable=True)  # holdings × close prices on snapshot_date
+    return_pct = Column(Float, nullable=True)
+    holding_count = Column(Integer, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "snapshot_date", name="uq_portfolio_snapshot_day"),
+    )
+
+
 class UserReturnsSnapshot(Base):
     """
     Daily snapshot of a user's portfolio returns (% only, never amounts).

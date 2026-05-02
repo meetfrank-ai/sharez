@@ -36,6 +36,7 @@ export default function StockDetail() {
   const [people, setPeople] = useState(viewingUserId ? 'user' : 'everyone');
   const [followingStock, setFollowingStock] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [crystalBallPicks, setCrystalBallPicks] = useState(null);
   // 'user' = specific user only, 'following' = people I follow, 'everyone' = all
 
   const fetchContent = (s = sort, p = people) => {
@@ -58,6 +59,14 @@ export default function StockDetail() {
       api.get(`/notes/stock/${contractCode}?sort=${s}&people=${pParam}`).then((res) => setNotes(res.data)).catch(() => {});
     }
   };
+
+  // Surface Crystal Ball picks for this stock (D-12) — works for any
+  // active challenge; we look up the inaugural one by slug.
+  useEffect(() => {
+    api.get(`/challenges/crystal-ball/stock/${contractCode}/picks`)
+      .then((res) => setCrystalBallPicks(res.data))
+      .catch(() => setCrystalBallPicks(null));
+  }, [contractCode]);
 
   useEffect(() => {
     api.get(`/feed/stock-summary?contract_code=${contractCode}&stock_name=${encodeURIComponent(stockName)}`)
@@ -221,6 +230,42 @@ export default function StockDetail() {
           </div>
         );
       })()}
+
+      {/* Crystal Ball callout — shows when participants picked this stock (D-12) */}
+      {crystalBallPicks && crystalBallPicks.pick_count > 0 && (
+        <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: 'var(--accent-light)', border: '1px solid #C7D2FE' }}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] font-semibold tracking-wider uppercase" style={{ color: 'var(--accent)' }}>
+              🔮 Crystal Ball
+            </span>
+            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+              {crystalBallPicks.pick_count} {crystalBallPicks.pick_count === 1 ? 'participant' : 'participants'} picked this stock
+            </span>
+          </div>
+          <ul className="m-0 pl-0 list-none space-y-1.5">
+            {crystalBallPicks.picks.slice(0, 3).map((p) => (
+              <li key={p.id}>
+                <Link to={`/challenges/crystal-ball/participants/${p.user_id}`}
+                  className="block text-xs no-underline rounded-md p-2"
+                  style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                  <span className="font-semibold">{p.user_display_name}</span>
+                  <span style={{ color: 'var(--text-muted)' }}> · </span>
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    {p.title || p.body?.slice(0, 120) + (p.body?.length > 120 ? '…' : '')}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {crystalBallPicks.pick_count > 3 && (
+            <Link to={`/challenges/crystal-ball/leaderboard`}
+              className="text-xs font-semibold no-underline mt-2 inline-block"
+              style={{ color: 'var(--accent)' }}>
+              See all {crystalBallPicks.pick_count} picks →
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1.5 mb-4">
