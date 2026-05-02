@@ -420,7 +420,8 @@ def get_my_transactions(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Get all your transactions, sorted by date."""
+    """Get all your transactions, sorted by date. Owner-only payload —
+    includes price + amount so the user sees their own data."""
     from models import UserTransaction
     txs = (
         db.query(UserTransaction)
@@ -434,12 +435,45 @@ def get_my_transactions(
         "stock_name": t.stock_name,
         "contract_code": t.contract_code,
         "account_type": t.account_type,
+        "broker_name": t.broker_name,
+        "is_opening_position": bool(t.is_opening_position),
+        "display_mode": t.display_mode,  # null = use account default
         "quantity": t.quantity,
         "price": t.price,
+        "amount": t.amount,
         "transaction_date": str(t.transaction_date)[:10] if t.transaction_date else None,
         "shared_count": t.shared_count,
         "created_at": str(t.created_at),
     } for t in txs]
+
+
+class TransactionDisplayUpdate(BaseModel):
+    mode: str  # "rand" | "usd" | "pct" | "auto"
+
+
+@router.patch("/transactions/{tx_id}/display")
+def update_transaction_display(
+    tx_id: int,
+    data: TransactionDisplayUpdate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Owner-only: change how a single transaction renders on the
+    Transactions page. mode='auto' clears the override."""
+    from models import UserTransaction
+    valid = {"rand", "usd", "pct", "auto"}
+    if data.mode not in valid:
+        raise HTTPException(status_code=400, detail=f"mode must be one of {valid}")
+    tx = (
+        db.query(UserTransaction)
+        .filter(UserTransaction.id == tx_id, UserTransaction.user_id == user.id)
+        .first()
+    )
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    tx.display_mode = None if data.mode == "auto" else data.mode
+    db.commit()
+    return {"id": tx.id, "display_mode": tx.display_mode}
 
 
 class ShareTransactionsBody(BaseModel):

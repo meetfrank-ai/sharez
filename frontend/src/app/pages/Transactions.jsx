@@ -1,7 +1,65 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Plus, Minus, Upload, FileSpreadsheet, Send, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, Plus, Minus, Upload, FileSpreadsheet, Send, X, Eye, EyeOff, DollarSign } from 'lucide-react';
 import api from '../utils/api';
 import ImportPortfolioModal from '../components/ImportPortfolioModal';
+
+// Per-row display rotation (D-7 refinement). Cycles through:
+//   auto (account native) → pct (only %) → rand → usd → auto …
+const DISPLAY_CYCLE = ['auto', 'pct', 'rand', 'usd'];
+
+function effectiveMode(tx) {
+  if (!tx.display_mode || tx.display_mode === 'auto') {
+    if ((tx.account_type || '').toUpperCase() === 'USD') return 'usd';
+    return 'rand';
+  }
+  return tx.display_mode;
+}
+
+function formatTxAmount(tx) {
+  const mode = effectiveMode(tx);
+  const qty = Number(tx.quantity || 0).toLocaleString(undefined, { maximumFractionDigits: 4 });
+  if (mode === 'pct' || tx.price == null) {
+    return `${qty} units · private`;
+  }
+  const price = Number(tx.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+  const sym = mode === 'usd' ? '$' : 'R';
+  return `${qty} @ ${sym}${price}`;
+}
+
+function TxRow({ tx, showBorder, onModeChange }) {
+  const flip = async () => {
+    const cur = tx.display_mode || 'auto';
+    const idx = DISPLAY_CYCLE.indexOf(cur);
+    const next = DISPLAY_CYCLE[(idx + 1) % DISPLAY_CYCLE.length];
+    onModeChange(next === 'auto' ? null : next);
+    try {
+      await api.patch(`/portfolio/transactions/${tx.id}/display`, { mode: next });
+    } catch {
+      onModeChange(tx.display_mode);  // rollback
+    }
+  };
+
+  const mode = effectiveMode(tx);
+  const isPrivate = mode === 'pct';
+
+  return (
+    <div className="flex items-center justify-between py-1.5 text-xs gap-3"
+      style={{ borderTop: showBorder ? '1px dashed var(--border)' : 'none' }}>
+      <span className="flex-1" style={{ color: 'var(--text-secondary)' }}>
+        {formatTxAmount(tx)}
+      </span>
+      <button
+        onClick={flip}
+        title={`Display: ${tx.display_mode || 'auto'} — click to cycle`}
+        className="bg-transparent border-none cursor-pointer p-0.5 rounded"
+        style={{ color: 'var(--text-muted)' }}
+      >
+        {isPrivate ? <EyeOff size={12} /> : tx.display_mode === 'usd' ? <DollarSign size={12} /> : <Eye size={12} />}
+      </button>
+      <span style={{ color: 'var(--text-muted)' }}>{tx.transaction_date}</span>
+    </div>
+  );
+}
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
@@ -201,13 +259,14 @@ export default function Transactions() {
                   {isExpanded && (
                     <div className="pl-16 pr-4 pb-3">
                       {group.transactions.map((tx, j) => (
-                        <div key={tx.id} className="flex items-center justify-between py-1.5 text-xs"
-                          style={{ borderTop: j > 0 ? '1px dashed var(--border)' : 'none' }}>
-                          <span style={{ color: 'var(--text-secondary)' }}>
-                            {Number(tx.quantity).toLocaleString(undefined, { maximumFractionDigits: 2 })} shares @ R{Number(tx.price).toLocaleString()}
-                          </span>
-                          <span style={{ color: 'var(--text-muted)' }}>{tx.transaction_date}</span>
-                        </div>
+                        <TxRow
+                          key={tx.id}
+                          tx={tx}
+                          showBorder={j > 0}
+                          onModeChange={(newMode) =>
+                            setTransactions(prev => prev.map(t => t.id === tx.id ? { ...t, display_mode: newMode } : t))
+                          }
+                        />
                       ))}
                     </div>
                   )}

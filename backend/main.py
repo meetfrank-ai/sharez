@@ -57,6 +57,7 @@ try:
         "user_transactions": [
             ("broker_name", "ALTER TABLE user_transactions ADD COLUMN broker_name VARCHAR"),
             ("is_opening_position", "ALTER TABLE user_transactions ADD COLUMN is_opening_position BOOLEAN DEFAULT FALSE"),
+            ("display_mode", "ALTER TABLE user_transactions ADD COLUMN display_mode VARCHAR"),
         ],
     }
 

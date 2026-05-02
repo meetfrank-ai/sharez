@@ -216,6 +216,9 @@ class UserTransaction(Base):
     amount = Column(Float, nullable=True)  # total cost (private)
     transaction_date = Column(DateTime, nullable=True)
     is_opening_position = Column(Boolean, default=False)  # first trade for this user+stock
+    # Owner-only display preference for the Transactions page (D-7 refinement).
+    # null = use account_type native currency; "rand" / "usd" / "pct" override per row.
+    display_mode = Column(String, nullable=True)
     import_hash = Column(String, nullable=True)  # for dedup on re-import
     shared_count = Column(Integer, default=0)  # how many times shared to feed
     created_at = Column(DateTime, default=utcnow)
