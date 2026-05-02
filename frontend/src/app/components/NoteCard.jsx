@@ -110,7 +110,7 @@ export default function NoteCard({ note, onReplyPosted }) {
             <div className="flex items-center gap-2 mt-2">
               <Lock size={14} style={{ color: 'var(--text-muted)' }} />
               <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-                {note.visibility === 'vault' ? 'Join vault to read' : 'Follow to unlock'}
+                Follow to unlock
               </span>
             </div>
           </div>

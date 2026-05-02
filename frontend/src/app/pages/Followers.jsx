@@ -126,8 +126,6 @@ export default function Followers() {
           {[
             { key: 'all', label: 'All', count: followers.length },
             { key: 'pending', label: 'Requests', count: pending.length, color: '#D97706' },
-            { key: 'free', label: 'Free', count: freeMembers.length },
-            { key: 'vault', label: 'Vault', count: vaultMembers.length, color: 'var(--tier-vault)' },
           ].map(f => (
             <button key={f.key} onClick={() => setTierFilter(f.key)}
               className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border-none cursor-pointer"

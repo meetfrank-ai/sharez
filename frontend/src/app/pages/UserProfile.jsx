@@ -444,19 +444,9 @@ export default function UserProfile() {
             </div>
           </div>
 
-          {/* === RIGHT SIDEBAR (desktop only) === */}
-          <div className="hidden md:flex flex-col gap-4">
-            {/* Vault CTA */}
-            <div style={{ ...card, padding: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, color: T.t1 }}>Vault</div>
-                <span style={{ fontSize: 10, fontWeight: 500, padding: '4px 10px', borderRadius: 8, background: T.purpleLight, color: T.purple }}>Coming soon</span>
-              </div>
-              <p style={{ fontSize: 12, color: T.t2, lineHeight: 1.5, marginBottom: 12 }}>
-                Exclusive notes, trade reasoning, and AI portfolio comparison.
-              </p>
-            </div>
-          </div>
+          {/* === RIGHT SIDEBAR (desktop only) — Vault CTA removed per D-4 === */}
+          <div className="hidden md:flex flex-col gap-4" />
+
 
         </div>
       </div>

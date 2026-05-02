@@ -77,8 +77,10 @@ export default function Sparkline({ symbol, days = 30, width = 220, height = 56,
         {areaPath && <path d={areaPath} fill={fill} stroke="none" />}
         {path && <path d={path} fill="none" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />}
       </svg>
+      {/* D-7: never show rand. Sparkline shows public-market change %, not the
+          stock's price level (which combined with shares would imply value). */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 11, color: 'var(--text-muted)' }}>
-        <span>R{Number(data.last).toFixed(2)}</span>
+        <span>{data.days}d</span>
         <span style={{ color: stroke, fontWeight: 600 }}>
           {isUp ? '+' : ''}{data.change_pct ?? 0}%
         </span>

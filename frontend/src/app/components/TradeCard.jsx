@@ -23,17 +23,15 @@ function formatRelativeTime(iso) {
   return date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
 }
 
-function formatNumber(n, decimals = 2) {
-  if (n == null || isNaN(n)) return '—';
-  return Number(n).toLocaleString('en-ZA', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-}
-
 /**
- * Trade card matching the Sirius pattern:
+ * Trade card — Sirius layout, but rand-free per D-7. Public surface ever
+ * shows is allocation % and position state, not shares / price / value.
+ *
  *   row 1: avatar · name · @handle · relative time · broker · account
  *   row 2: action verb (Bought/Sold) + ticker + position-state pill
- *   row 3: SHARES / PRICE / VALUE 3-column block + sparkline
- *   row 4: Bull / Bear / Comment footer (Phase 2 wires reactions)
+ *   row 3: ALLOCATION % block + 30-day market sparkline (sparkline is
+ *          public market data, not user data, so it stays)
+ *   row 4: Bull / Bear / Comment footer
  */
 export default function TradeCard({ trade }) {
   const meta = trade.metadata || {};
@@ -46,10 +44,8 @@ export default function TradeCard({ trade }) {
   const account = meta.account_type;
   const eodhdSymbol = meta.eodhd_symbol || (ticker && market ? `${ticker}.${market}` : null);
 
-  const shares = meta.shares;
-  const price = meta.price;
-  const value =
-    meta.value ?? (shares != null && price != null ? shares * price : null);
+  const allocationPct = meta.allocation_pct;
+  const sector = meta.sector;
 
   const time = formatRelativeTime(trade.created_at);
 
@@ -128,12 +124,30 @@ export default function TradeCard({ trade }) {
         </span>
       </div>
 
-      {/* Numbers + sparkline */}
+      {/* Allocation + sparkline (no rand values shown — D-7) */}
       <div className="px-5 pb-3 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-end">
-        <div className="grid grid-cols-3 gap-3">
-          <Stat label="SHARES" value={shares != null ? formatNumber(shares, shares % 1 === 0 ? 0 : 4) : '—'} />
-          <Stat label="PRICE" value={price != null ? `R${formatNumber(price, 2)}` : '—'} />
-          <Stat label="VALUE" value={value != null ? `R${formatNumber(value, 2)}` : '—'} />
+        <div className="flex flex-wrap items-center gap-2">
+          {allocationPct != null ? (
+            <Stat
+              label="ALLOCATION"
+              value={`${allocationPct.toFixed(1)}%`}
+              hint="of their portfolio"
+            />
+          ) : (
+            <Stat
+              label="ALLOCATION"
+              value={isOpening ? 'New position' : 'Adjusting'}
+              hint=""
+            />
+          )}
+          {sector && (
+            <span
+              className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+            >
+              {sector}
+            </span>
+          )}
         </div>
         {eodhdSymbol && (
           <div className="md:justify-self-end">
@@ -241,15 +255,20 @@ function ReactionFooter({ targetId, targetKind, initial, viewStockHref, replyHre
   );
 }
 
-function Stat({ label, value }) {
+function Stat({ label, value, hint }) {
   return (
     <div>
       <div className="text-[10px] font-semibold tracking-wider mb-0.5" style={{ color: 'var(--text-muted)' }}>
         {label}
       </div>
-      <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+      <div className="text-base font-semibold" style={{ color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
         {value}
       </div>
+      {hint && (
+        <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+          {hint}
+        </div>
+      )}
     </div>
   );
 }

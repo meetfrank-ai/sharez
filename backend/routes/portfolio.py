@@ -327,6 +327,19 @@ def share_transaction(
         db.flush()
         note_id = note.id
 
+    # Allocation % at moment of share. We deliberately compute and store *only*
+    # the percentage, never the rand amount, so leaks via the feed are impossible
+    # (D-7: never show rand values, only %).
+    holdings = db.query(Holding).filter(Holding.user_id == user.id).all()
+    total_value = sum((h.current_value or 0) for h in holdings) or 0.0
+    matching = next(
+        (h for h in holdings if (h.contract_code == data.contract_code) or (h.stock_name == data.stock_name)),
+        None,
+    )
+    allocation_pct = None
+    if total_value > 0 and matching and matching.current_value:
+        allocation_pct = round((matching.current_value / total_value) * 100, 2)
+
     metadata = {
         "stock_name": data.stock_name,
         "contract_code": data.contract_code,
@@ -334,16 +347,17 @@ def share_transaction(
         "eodhd_symbol": mapping.eodhd_symbol if mapping else None,
         "market": mapping.market if mapping else None,
         "sector": mapping.sector if mapping else None,
+        "allocation_pct": allocation_pct,
     }
     if tx:
         metadata.update({
             "broker_name": tx.broker_name,
             "account_type": tx.account_type,
             "is_opening_position": bool(tx.is_opening_position),
-            "shares": tx.quantity,
-            "price": tx.price,
             "trade_date": str(tx.transaction_date)[:10] if tx.transaction_date else None,
             "user_transaction_id": tx.id,
+            # NOTE: shares / price / amount intentionally NOT stored in feed metadata.
+            # They live on UserTransaction (visible to owner only via /transactions).
         })
 
     feed_event = FeedEvent(

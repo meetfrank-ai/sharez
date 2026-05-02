@@ -248,22 +248,7 @@ export default function Transactions() {
               className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none mb-3"
               style={{ backgroundColor: 'var(--bg-page)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
 
-            <div className="mb-4">
-              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Who can see this?</label>
-              <div className="flex gap-2">
-                {['public', 'vault'].map(v => (
-                  <button key={v} onClick={() => setVisibility(v)}
-                    className="flex-1 py-1.5 rounded-lg text-xs font-medium border-none cursor-pointer capitalize"
-                    style={{
-                      backgroundColor: visibility === v ? 'var(--accent-light)' : 'var(--bg-page)',
-                      color: visibility === v ? 'var(--accent)' : 'var(--text-muted)',
-                      border: `1px solid ${visibility === v ? '#C7D2FE' : 'var(--border)'}`,
-                    }}>
-                    {v === 'vault' ? 'Vault' : 'Free'}
-                  </button>
-                ))}
-              </div>
-            </div>
+{/* Visibility selector hidden — Vault tier is paused per D-4. All shares default to public. */}
 
             <button onClick={handleShare} disabled={sharing}
               className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold border-none cursor-pointer disabled:opacity-50"

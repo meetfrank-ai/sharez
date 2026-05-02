@@ -38,8 +38,7 @@ const OPTION_GROUPS = [
 ];
 
 const TIERS = [
-  { key: 'public_shows', label: 'Free', desc: 'Anyone on the platform', icon: Eye, color: 'var(--text-muted)', bg: '#F3F4F6' },
-  { key: 'vault_shows', label: 'Vault', desc: 'Paid subscribers or invited VIPs', icon: Lock, color: 'var(--tier-vault)', bg: '#FFFBEB' },
+  { key: 'public_shows', label: 'Public', desc: 'What everyone on Sharez sees', icon: Eye, color: 'var(--text-muted)', bg: '#F3F4F6' },
 ];
 
 export default function TierSettings() {
@@ -209,17 +208,6 @@ export default function TierSettings() {
                   </div>
                 )}
 
-                {tier.key === 'vault_shows' && (
-                  <div className="mt-4 pt-3 space-y-3" style={{ borderTop: '1px solid var(--border)' }}>
-                    <div>
-                      <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Vault price (ZAR/month)</label>
-                      <input type="number" value={vaultPrice} onChange={(e) => setVaultPrice(e.target.value)} placeholder="0 = invite-only"
-                        className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
-                        style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-                      <p className="text-xs mt-1 m-0" style={{ color: 'var(--text-muted)' }}>Set to 0 for invite-only (you manually grant VIP access)</p>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
