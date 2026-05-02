@@ -106,6 +106,91 @@ def get_scraped_prices(
     } for p in prices]
 
 
+@router.get("/{symbol:path}/sparkline")
+def get_sparkline(
+    symbol: str,
+    days: int = Query(30, ge=2, le=365),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Return daily close prices for the last N days, used for the trade-card
+    sparkline. Reads from HistoricalPrice (already populated by the daily
+    scraper) and falls back to a single live fetch if the cache is empty.
+
+    Path param 'symbol' is the EODHD-style symbol e.g. PRX.JSE / AAPL.US.
+    Path uses ':path' so it accepts the dot in the symbol.
+    """
+    from datetime import datetime, timedelta, timezone
+    from models import HistoricalPrice
+    from sqlalchemy import desc
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days + 5)
+    rows = (
+        db.query(HistoricalPrice)
+        .filter(HistoricalPrice.symbol == symbol)
+        .filter(HistoricalPrice.price_date >= cutoff)
+        .order_by(HistoricalPrice.price_date.asc())
+        .all()
+    )
+
+    # If we have nothing cached, do a one-off EODHD pull to seed the cache
+    # (best-effort; if it fails we just return empty).
+    if not rows:
+        try:
+            import httpx
+            api_key = os.getenv("EODHD_API_KEY")
+            if api_key:
+                start = (datetime.now(timezone.utc) - timedelta(days=days + 5)).strftime("%Y-%m-%d")
+                resp = httpx.get(
+                    f"https://eodhd.com/api/eod/{symbol}",
+                    params={"api_token": api_key, "fmt": "json", "from": start},
+                    timeout=8,
+                )
+                if resp.status_code == 200:
+                    for d in resp.json() or []:
+                        try:
+                            close = float(d.get("close")) if d.get("close") is not None else None
+                            if close is None:
+                                continue
+                            dt = datetime.strptime(d.get("date"), "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                            db.add(HistoricalPrice(
+                                symbol=symbol, price_date=dt, close_price=close,
+                                source="eodhd", currency="ZAR" if symbol.endswith(".JSE") else "USD",
+                            ))
+                        except Exception:
+                            continue
+                    db.commit()
+                    rows = (
+                        db.query(HistoricalPrice)
+                        .filter(HistoricalPrice.symbol == symbol)
+                        .filter(HistoricalPrice.price_date >= cutoff)
+                        .order_by(HistoricalPrice.price_date.asc())
+                        .all()
+                    )
+        except Exception as e:
+            logger.warning("Sparkline backfill failed for %s: %s", symbol, e)
+
+    points = [
+        {"date": r.price_date.strftime("%Y-%m-%d"), "close": r.close_price}
+        for r in rows[-days:]
+    ]
+    if not points:
+        return {"symbol": symbol, "days": days, "points": [], "first": None, "last": None, "change_pct": None}
+
+    first = points[0]["close"]
+    last = points[-1]["close"]
+    change_pct = round(((last - first) / first) * 100, 2) if first else None
+    return {
+        "symbol": symbol,
+        "days": days,
+        "points": points,
+        "first": first,
+        "last": last,
+        "change_pct": change_pct,
+    }
+
+
 @router.get("/resolve")
 def resolve_stock(
     name: str = Query(""),
