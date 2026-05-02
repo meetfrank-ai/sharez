@@ -216,6 +216,26 @@ except Exception as e:
 
 app = FastAPI(title="Sharez", description="Social investing for friends")
 
+
+# Catch-all exception handler so DB outages and other unexpected errors
+# return JSON with a useful message instead of plain-text 500s that the
+# frontend can't parse. Logs the full traceback for debugging.
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request, exc):
+    import logging, traceback
+    from fastapi.responses import JSONResponse
+    log = logging.getLogger(__name__)
+    log.error("Unhandled exception on %s %s: %s", request.method, request.url.path, exc)
+    log.error(traceback.format_exc())
+    msg = str(exc)
+    if "tenant/user" in msg or "ENOTFOUND" in msg or "could not connect" in msg.lower():
+        # Surfaces a clear actionable message in the UI instead of a stack trace.
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Database temporarily unavailable. If this persists, the Supabase project may be paused."},
+        )
+    return JSONResponse(status_code=500, content={"detail": f"Server error: {type(exc).__name__}"})
+
 # CORS — allow the React frontend in dev
 app.add_middleware(
     CORSMiddleware,
