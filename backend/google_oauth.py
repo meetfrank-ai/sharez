@@ -46,10 +46,20 @@ def _client_secret() -> str:
 
 
 def _redirect_uri() -> str:
+    """
+    Where Google sends users back after consent. Must match an Authorised
+    redirect URI in the OAuth client config. Hardcoded production fallback
+    here so a stale Render dashboard env var doesn't block the link flow —
+    same fallback pattern as GOOGLE_CLIENT_ID.
+    """
     uri = os.getenv("GOOGLE_REDIRECT_URI")
-    if not uri:
-        raise RuntimeError("GOOGLE_REDIRECT_URI not set (e.g. https://sharez.onrender.com/api/gmail/callback)")
-    return uri
+    if uri:
+        return uri
+    # Use the FRONTEND_URL host if available (handles local dev too); otherwise prod.
+    frontend = os.getenv("FRONTEND_URL", "https://sharez.onrender.com").rstrip("/")
+    if frontend.startswith("http://localhost") or frontend.startswith("http://127."):
+        return "http://localhost:8000/api/gmail/callback"
+    return "https://sharez.onrender.com/api/gmail/callback"
 
 
 def _fernet() -> Fernet:
