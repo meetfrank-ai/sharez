@@ -55,6 +55,9 @@ SUBJECT_HINTS = (
 )
 
 
+BROKER_NAME = "EasyEquities"
+
+
 @dataclass
 class ParsedTrade:
     """A single parsed buy/sell event from an EE confirmation email."""
@@ -68,8 +71,9 @@ class ParsedTrade:
     trade_value: float | None      # gross trade value (quantity * price)
     total_cost: float | None       # buy: incl. fees; sell: net proceeds
     account_type: str              # ZAR / TFSA / USD / RA / etc.
-    invoice_number: str | None
-    raw_text_snippet: str          # for debugging / verification only
+    broker_name: str = BROKER_NAME  # source broker — always EasyEquities for this parser
+    invoice_number: str | None = None
+    raw_text_snippet: str = ""     # for debugging / verification only
 
     def import_hash(self) -> str:
         """Stable dedup key. The Gmail message_id alone uniquely identifies the email."""

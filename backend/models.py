@@ -210,10 +210,12 @@ class UserTransaction(Base):
     stock_name = Column(String, nullable=False)
     contract_code = Column(String, nullable=True)
     account_type = Column(String, nullable=False, default="ZAR")
+    broker_name = Column(String, nullable=True)  # "EasyEquities" / future: "Outlook-EE", etc.
     quantity = Column(Float, nullable=False)
     price = Column(Float, nullable=True)  # per share
     amount = Column(Float, nullable=True)  # total cost (private)
     transaction_date = Column(DateTime, nullable=True)
+    is_opening_position = Column(Boolean, default=False)  # first trade for this user+stock
     import_hash = Column(String, nullable=True)  # for dedup on re-import
     shared_count = Column(Integer, default=0)  # how many times shared to feed
     created_at = Column(DateTime, default=utcnow)

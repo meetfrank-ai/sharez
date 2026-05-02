@@ -93,13 +93,28 @@ async def sync_user_trades(db: Session, user: User) -> dict:
             skipped_duplicates += 1
             continue
 
+        # Position state: first trade ever for this user+stock = opening position.
+        # Counted across both already-persisted rows and rows added earlier in this
+        # same sync (which haven't been committed yet).
+        contract_code = _contract_code_for(parsed.instrument_name)
+        prior_count = (
+            db.query(UserTransaction)
+            .filter(
+                UserTransaction.user_id == user.id,
+                UserTransaction.contract_code == contract_code,
+            )
+            .count()
+        )
+        is_opening = prior_count == 0
+
         db.add(
             UserTransaction(
                 user_id=user.id,
                 action=parsed.action,
                 stock_name=parsed.instrument_name,
-                contract_code=_contract_code_for(parsed.instrument_name),
+                contract_code=contract_code,
                 account_type=parsed.account_type,
+                broker_name=parsed.broker_name,
                 quantity=parsed.quantity,
                 price=parsed.trade_price,
                 # Prefer total_cost (incl. fees / net of fees on sells) for P&L accuracy;
@@ -114,9 +129,12 @@ async def sync_user_trades(db: Session, user: User) -> dict:
                     else None
                 ),
                 transaction_date=parsed.submission_date or parsed.received_at,
+                is_opening_position=is_opening,
                 import_hash=parsed.import_hash(),
             )
         )
+        # Flush so the next iteration's count() sees this row.
+        db.flush()
         new_trades += 1
 
     db.flush()
