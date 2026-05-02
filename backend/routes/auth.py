@@ -120,21 +120,45 @@ def google_auth(
     db: Session = Depends(get_db),
 ):
     """Authenticate with Google. Creates account if new user."""
-    import os, requests as req
+    import os, logging
+    import httpx
 
-    client_id = os.getenv("GOOGLE_CLIENT_ID")
-    if not client_id:
+    log = logging.getLogger(__name__)
+
+    # Accept multiple comma-separated client IDs so we can rotate without an
+    # immediate dashboard env-var update locking users out (and to make the
+    # active client a runtime decision, not a redeploy decision).
+    client_id_env = os.getenv("GOOGLE_CLIENT_ID", "")
+    accepted_client_ids = {c.strip() for c in client_id_env.split(",") if c.strip()}
+    if not accepted_client_ids:
         raise HTTPException(status_code=500, detail="Google auth not configured")
 
     # Verify the Google ID token
     try:
-        resp = req.get(f"https://oauth2.googleapis.com/tokeninfo?id_token={data.credential}", timeout=10)
+        with httpx.Client(timeout=10) as client:
+            resp = client.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"id_token": data.credential},
+            )
         if resp.status_code != 200:
+            log.warning("Google tokeninfo failed: %s %s", resp.status_code, resp.text[:200])
             raise HTTPException(status_code=401, detail="Invalid Google token")
         google_data = resp.json()
 
-        if google_data.get("aud") != client_id:
-            raise HTTPException(status_code=401, detail="Token not for this app")
+        token_aud = google_data.get("aud")
+        if token_aud not in accepted_client_ids:
+            log.warning(
+                "Google audience mismatch: token aud=%s, accepted=%s",
+                token_aud,
+                ", ".join(sorted(accepted_client_ids)),
+            )
+            raise HTTPException(
+                status_code=401,
+                detail=(
+                    "Token not for this app. Check GOOGLE_CLIENT_ID env var matches the "
+                    f"client that issued the token (token aud={token_aud})."
+                ),
+            )
 
         email = google_data.get("email")
         name = google_data.get("name", "")
@@ -143,7 +167,8 @@ def google_auth(
 
     except HTTPException:
         raise
-    except Exception:
+    except Exception as e:
+        log.exception("Google verify error: %s", e)
         raise HTTPException(status_code=401, detail="Failed to verify Google token")
 
     # Check if user exists
