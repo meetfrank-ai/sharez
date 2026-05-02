@@ -173,10 +173,18 @@ export default function Login() {
                     const me = await api.get('/auth/me');
                     setUser(me.data);
                   } catch (err) {
-                    setError(err.response?.data?.detail || 'Google sign-in failed');
+                    const detail = err.response?.data?.detail;
+                    setError(detail || 'Google sign-in failed (backend rejected the token)');
+                    // Log full error to console for inspection.
+                    // eslint-disable-next-line no-console
+                    console.error('Google sign-in: backend responded', err.response?.status, err.response?.data);
                   }
                 }}
-                onError={() => setError('Google sign-in failed')}
+                onError={(err) => {
+                  // eslint-disable-next-line no-console
+                  console.error('Google sign-in: client-side error', err);
+                  setError('Google sign-in failed at the Google step. Check that JavaScript origins on the OAuth client include this URL, and that you are signed in with a test-user email.');
+                }}
                 size="large"
                 width="100%"
                 text={isRegister ? 'signup_with' : 'signin_with'}

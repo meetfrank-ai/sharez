@@ -76,6 +76,24 @@ def get_me(user: User = Depends(get_current_user)):
     return user
 
 
+@router.get("/google/debug")
+def google_debug():
+    """Public diagnostic — lists which Google client IDs the backend will
+    accept on the /auth/google ID-token check. Client IDs are public; this
+    endpoint never returns the client secret. Useful for verifying that the
+    Render dashboard env var matches what the frontend bundle is sending."""
+    import os
+    client_id_env = os.getenv("GOOGLE_CLIENT_ID", "")
+    from_env = [c.strip() for c in client_id_env.split(",") if c.strip()]
+    return {
+        "accepted_from_env": from_env,
+        "accepted_from_fallback": [
+            "516297867321-uaqq3njka2p2is1ulrdg47m6g1lfbsg5.apps.googleusercontent.com",
+        ],
+        "redirect_uri": os.getenv("GOOGLE_REDIRECT_URI"),
+    }
+
+
 @router.post("/complete-onboarding")
 def complete_onboarding(
     user: User = Depends(get_current_user),
@@ -240,12 +258,16 @@ def google_auth(
     log = logging.getLogger(__name__)
 
     # Accept multiple comma-separated client IDs so we can rotate without an
-    # immediate dashboard env-var update locking users out (and to make the
-    # active client a runtime decision, not a redeploy decision).
+    # immediate dashboard env-var update locking users out. Plus a hardcoded
+    # known-good fallback for the active client so a stale dashboard value
+    # never blocks login. Client IDs are public (not secrets), so this is
+    # safe — verifying secrets happens via the OAuth callback flow elsewhere.
+    KNOWN_GOOD = {
+        "516297867321-uaqq3njka2p2is1ulrdg47m6g1lfbsg5.apps.googleusercontent.com",
+    }
     client_id_env = os.getenv("GOOGLE_CLIENT_ID", "")
     accepted_client_ids = {c.strip() for c in client_id_env.split(",") if c.strip()}
-    if not accepted_client_ids:
-        raise HTTPException(status_code=500, detail="Google auth not configured")
+    accepted_client_ids.update(KNOWN_GOOD)
 
     # Verify the Google ID token
     try:
