@@ -434,6 +434,23 @@ class StockSummaryCache(Base):
     generated_at = Column(DateTime, default=utcnow)
 
 
+class PriceAlert(Base):
+    """User-set crossing alerts on a stock's price."""
+    __tablename__ = "price_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    contract_code = Column(String, nullable=True)
+    eodhd_symbol = Column(String, nullable=True, index=True)
+    stock_name = Column(String, nullable=False)
+    direction = Column(String, nullable=False)  # "above" | "below"
+    threshold_price = Column(Float, nullable=False)
+    currency = Column(String, default="ZAR")
+    last_triggered_at = Column(DateTime, nullable=True)
+    active = Column(Boolean, default=True, index=True)
+    created_at = Column(DateTime, default=utcnow)
+
+
 class Notification(Base):
     """
     In-app notifications surfaced in the bell dropdown. Polymorphic via

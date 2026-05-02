@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from database import engine, Base
-from routes import auth, portfolio, follow, theses, comments, feed, notes, discover, trades, stocks, contact, gmail, notifications as notifications_route
+from routes import auth, portfolio, follow, theses, comments, feed, notes, discover, trades, stocks, contact, gmail, notifications as notifications_route, alerts as alerts_route
 
 # Create all tables. During the landing-only phase the database may be
 # unreachable; don't let that crash the app so the static site still serves.
@@ -109,6 +109,8 @@ try:
         "CREATE INDEX IF NOT EXISTS ix_onboarding_steps_user ON onboarding_steps (user_id)",
         "CREATE INDEX IF NOT EXISTS ix_notifications_user_unread ON notifications (user_id, read_at)",
         "CREATE INDEX IF NOT EXISTS ix_notifications_user_created ON notifications (user_id, created_at)",
+        "CREATE INDEX IF NOT EXISTS ix_price_alerts_user ON price_alerts (user_id)",
+        "CREATE INDEX IF NOT EXISTS ix_price_alerts_active ON price_alerts (active)",
     ]
     with engine.connect() as conn:
         for idx_sql in indexes:
@@ -220,6 +222,7 @@ app.include_router(stocks.router)
 app.include_router(contact.router)
 app.include_router(gmail.router)
 app.include_router(notifications_route.router)
+app.include_router(alerts_route.router)
 
 # Serve built React frontend in production
 STATIC_DIR = Path(__file__).parent / "static"

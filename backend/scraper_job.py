@@ -95,6 +95,14 @@ if __name__ == "__main__":
                 except Exception as e:
                     logger.warning(f"Price refresh failed for user {user.id}: {e}")
 
+        # 5. Evaluate price alerts (fires Notifications on crossing).
+        try:
+            from routes.alerts import evaluate_alerts
+            alert_result = evaluate_alerts(db)
+            logger.info(f"Alert evaluation: {alert_result}")
+        except Exception as e:
+            logger.warning(f"Alert evaluation failed: {e}")
+
         logger.info("Daily cron complete.")
     except Exception as e:
         logger.error(f"Cron job failed: {e}", exc_info=True)
