@@ -429,3 +429,23 @@ class StockSummaryCache(Base):
     contract_code = Column(String, primary_key=True)
     summary_text = Column(Text, nullable=False)
     generated_at = Column(DateTime, default=utcnow)
+
+
+class TradeReaction(Base):
+    """
+    Bull/Bear reactions on a feed-event-shaped trade. Polymorphic via target_kind
+    so we can react on either a FeedEvent (shared transaction) or a Trade
+    (verified screenshot trade) without two parallel tables.
+    """
+    __tablename__ = "trade_reactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    target_kind = Column(String, nullable=False)  # "feed_event" | "trade"
+    target_id = Column(Integer, nullable=False, index=True)
+    sentiment = Column(String, nullable=False)  # "bull" | "bear"
+    created_at = Column(DateTime, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "target_kind", "target_id", name="uq_trade_reaction"),
+    )

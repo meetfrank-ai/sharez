@@ -214,3 +214,140 @@ def _trade_to_out(trade: Trade, trade_user: User, db: Session) -> TradeOut:
         note_id=trade.note_id,
         created_at=trade.created_at,
     )
+
+
+# ----- Bull/Bear reactions (Phase 2) -----
+
+from pydantic import BaseModel as _BM
+from models import TradeReaction
+
+
+class ReactionRequest(_BM):
+    sentiment: str  # "bull" or "bear"
+    target_kind: str = "feed_event"  # "feed_event" | "trade"
+
+
+@router.post("/{target_id}/react")
+def react_to_trade(
+    target_id: int,
+    data: ReactionRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Toggle/switch a Bull/Bear reaction on a trade-shaped feed item.
+    POSTing the same sentiment again removes it; POSTing the opposite flips it.
+    """
+    sentiment = (data.sentiment or "").lower()
+    if sentiment not in ("bull", "bear"):
+        raise HTTPException(status_code=400, detail="sentiment must be 'bull' or 'bear'")
+    target_kind = (data.target_kind or "feed_event").lower()
+    if target_kind not in ("feed_event", "trade"):
+        raise HTTPException(status_code=400, detail="target_kind must be 'feed_event' or 'trade'")
+
+    existing = (
+        db.query(TradeReaction)
+        .filter(
+            TradeReaction.user_id == user.id,
+            TradeReaction.target_kind == target_kind,
+            TradeReaction.target_id == target_id,
+        )
+        .first()
+    )
+
+    if existing and existing.sentiment == sentiment:
+        # Same vote again = unvote
+        db.delete(existing)
+        db.commit()
+        return _reaction_summary(db, target_kind, target_id, my_sentiment=None)
+
+    if existing:
+        existing.sentiment = sentiment
+        db.commit()
+    else:
+        db.add(TradeReaction(
+            user_id=user.id,
+            target_kind=target_kind,
+            target_id=target_id,
+            sentiment=sentiment,
+        ))
+        db.commit()
+
+    return _reaction_summary(db, target_kind, target_id, my_sentiment=sentiment)
+
+
+@router.delete("/{target_id}/react")
+def remove_reaction(
+    target_id: int,
+    target_kind: str = "feed_event",
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    db.query(TradeReaction).filter(
+        TradeReaction.user_id == user.id,
+        TradeReaction.target_kind == target_kind,
+        TradeReaction.target_id == target_id,
+    ).delete()
+    db.commit()
+    return _reaction_summary(db, target_kind, target_id, my_sentiment=None)
+
+
+def _reaction_summary(db: Session, target_kind: str, target_id: int, my_sentiment: str | None) -> dict:
+    from sqlalchemy import func as _f
+    rows = (
+        db.query(TradeReaction.sentiment, _f.count())
+        .filter(TradeReaction.target_kind == target_kind, TradeReaction.target_id == target_id)
+        .group_by(TradeReaction.sentiment)
+        .all()
+    )
+    counts = {s: c for s, c in rows}
+    return {
+        "target_kind": target_kind,
+        "target_id": target_id,
+        "bull_count": counts.get("bull", 0),
+        "bear_count": counts.get("bear", 0),
+        "my_sentiment": my_sentiment,
+    }
+
+
+@router.get("/reactions")
+def get_reactions(
+    target_ids: str = "",
+    target_kind: str = "feed_event",
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Batch fetch reaction summaries for a list of target IDs (used by feed)."""
+    from sqlalchemy import func as _f
+    if not target_ids:
+        return {}
+    try:
+        ids = [int(x) for x in target_ids.split(",") if x.strip().isdigit()]
+    except ValueError:
+        return {}
+    if not ids:
+        return {}
+
+    rows = (
+        db.query(TradeReaction.target_id, TradeReaction.sentiment, _f.count())
+        .filter(TradeReaction.target_kind == target_kind, TradeReaction.target_id.in_(ids))
+        .group_by(TradeReaction.target_id, TradeReaction.sentiment)
+        .all()
+    )
+    out: dict[int, dict] = {i: {"bull_count": 0, "bear_count": 0, "my_sentiment": None} for i in ids}
+    for tid, sent, cnt in rows:
+        out[tid][f"{sent}_count"] = cnt
+
+    mine = (
+        db.query(TradeReaction.target_id, TradeReaction.sentiment)
+        .filter(
+            TradeReaction.user_id == user.id,
+            TradeReaction.target_kind == target_kind,
+            TradeReaction.target_id.in_(ids),
+        )
+        .all()
+    )
+    for tid, sent in mine:
+        out[tid]["my_sentiment"] = sent
+
+    return out
