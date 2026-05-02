@@ -24,7 +24,11 @@ except Exception as _e:
     _DB_AVAILABLE = False
     print(f"[startup] DB unreachable, skipping schema init: {_e}")
 
-# Migrate: add new columns to existing tables
+# Migrate: add new columns to existing tables.
+# IMPORTANT: this runs on every startup. If the DB was unreachable at boot,
+# Render's app might be serving with stale schema knowledge until the next
+# redeploy — we log clearly so this is visible in Render's logs.
+print("[startup] Running schema migrations…")
 try:
     from sqlalchemy import text, inspect
     inspector = inspect(engine)
@@ -136,8 +140,9 @@ try:
                 conn.commit()
             except Exception:
                 conn.rollback()
+    print("[startup] Schema migrations complete.")
 except Exception as e:
-    print(f"Migration check: {e}")
+    print(f"[startup] Migration check failed: {e}")
 
 # Seed database if empty (runs once on first deploy)
 try:

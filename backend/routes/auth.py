@@ -76,6 +76,89 @@ def get_me(user: User = Depends(get_current_user)):
     return user
 
 
+@router.post("/debug/run-migrations")
+def debug_run_migrations(db: Session = Depends(get_db)):
+    """One-shot migration runner. If Render's app started while the DB was
+    offline, the startup migration block silently skipped. Hit this once
+    DB is back to add any missing columns + create new tables without a
+    full redeploy. Returns a summary of what ran."""
+    from sqlalchemy import text, inspect
+    from database import engine, Base
+    out = {"created_tables": [], "migrations_ran": [], "migrations_skipped": []}
+
+    # Ensure all model-declared tables exist
+    try:
+        before = set(inspect(engine).get_table_names())
+        Base.metadata.create_all(bind=engine)
+        after = set(inspect(engine).get_table_names())
+        out["created_tables"] = sorted(after - before)
+    except Exception as e:
+        out["create_all_error"] = f"{type(e).__name__}: {e}"
+
+    # Re-run the column migrations (mirror of main.py block — kept here so
+    # post-boot recovery doesn't depend on a redeploy).
+    migrations = {
+        "users": [
+            ("google_email", "ALTER TABLE users ADD COLUMN google_email VARCHAR"),
+            ("gmail_refresh_token_enc", "ALTER TABLE users ADD COLUMN gmail_refresh_token_enc TEXT"),
+            ("gmail_last_synced_at", "ALTER TABLE users ADD COLUMN gmail_last_synced_at TIMESTAMP"),
+            ("gmail_history_id", "ALTER TABLE users ADD COLUMN gmail_history_id VARCHAR"),
+            ("portfolio_imported_at", "ALTER TABLE users ADD COLUMN portfolio_imported_at TIMESTAMP"),
+            ("handle", "ALTER TABLE users ADD COLUMN handle VARCHAR"),
+            ("password_reset_token", "ALTER TABLE users ADD COLUMN password_reset_token VARCHAR"),
+            ("password_reset_expires", "ALTER TABLE users ADD COLUMN password_reset_expires TIMESTAMP"),
+        ],
+        "user_transactions": [
+            ("broker_name", "ALTER TABLE user_transactions ADD COLUMN broker_name VARCHAR"),
+            ("is_opening_position", "ALTER TABLE user_transactions ADD COLUMN is_opening_position BOOLEAN DEFAULT FALSE"),
+            ("display_mode", "ALTER TABLE user_transactions ADD COLUMN display_mode VARCHAR"),
+        ],
+        "user_tier_configs": [
+            ("show_on_rank", "ALTER TABLE user_tier_configs ADD COLUMN show_on_rank BOOLEAN DEFAULT TRUE"),
+        ],
+        "theses": [
+            ("title", "ALTER TABLE theses ADD COLUMN title VARCHAR"),
+            ("challenge_id", "ALTER TABLE theses ADD COLUMN challenge_id INTEGER"),
+            ("is_locked", "ALTER TABLE theses ADD COLUMN is_locked BOOLEAN DEFAULT FALSE"),
+            ("locked_at", "ALTER TABLE theses ADD COLUMN locked_at TIMESTAMP"),
+        ],
+        "notes": [
+            ("transaction_ids", "ALTER TABLE notes ADD COLUMN transaction_ids JSONB"),
+            ("image_url", "ALTER TABLE notes ADD COLUMN image_url VARCHAR"),
+            ("reshare_count", "ALTER TABLE notes ADD COLUMN reshare_count INTEGER DEFAULT 0"),
+            ("restacked_note_id", "ALTER TABLE notes ADD COLUMN restacked_note_id INTEGER"),
+            ("trade_linked", "ALTER TABLE notes ADD COLUMN trade_linked BOOLEAN DEFAULT FALSE"),
+        ],
+        "holdings": [
+            ("external_avg_buy_price", "ALTER TABLE holdings ADD COLUMN external_avg_buy_price FLOAT"),
+            ("price_source", "ALTER TABLE holdings ADD COLUMN price_source VARCHAR"),
+        ],
+        "instrument_map": [
+            ("fundsdata_code", "ALTER TABLE instrument_map ADD COLUMN fundsdata_code VARCHAR"),
+        ],
+    }
+
+    with engine.connect() as conn:
+        for table, cols in migrations.items():
+            try:
+                existing = {c["name"] for c in inspect(engine).get_columns(table)}
+            except Exception:
+                existing = set()
+            for col_name, sql in cols:
+                if col_name in existing:
+                    out["migrations_skipped"].append(f"{table}.{col_name}")
+                    continue
+                try:
+                    conn.execute(text(sql))
+                    conn.commit()
+                    out["migrations_ran"].append(f"{table}.{col_name}")
+                except Exception as e:
+                    conn.rollback()
+                    out["migrations_skipped"].append(f"{table}.{col_name} (err: {type(e).__name__})")
+
+    return out
+
+
 @router.get("/debug/db-test")
 def debug_db_test(db: Session = Depends(get_db)):
     """Temporary diagnostic — runs the same operations register does and
