@@ -435,6 +435,34 @@ class StockSummaryCache(Base):
     generated_at = Column(DateTime, default=utcnow)
 
 
+class Pod(Base):
+    """A user-created group with a shared feed."""
+    __tablename__ = "pods"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    slug = Column(String, unique=True, nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    is_private = Column(Boolean, default=False)
+    member_limit = Column(Integer, default=50)
+    created_at = Column(DateTime, default=utcnow)
+
+
+class PodMember(Base):
+    __tablename__ = "pod_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    pod_id = Column(Integer, ForeignKey("pods.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    role = Column(String, default="member")  # admin | member
+    joined_at = Column(DateTime, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("pod_id", "user_id", name="uq_pod_member"),
+    )
+
+
 class UserReturnsSnapshot(Base):
     """
     Daily snapshot of a user's portfolio returns (% only, never amounts).

@@ -26,6 +26,8 @@ const NoteThread = lazy(() => import('./app/pages/NoteThread'));
 const Settings = lazy(() => import('./app/pages/Settings'));
 const LinkAccount = lazy(() => import('./app/pages/LinkAccount'));
 const Rank = lazy(() => import('./app/pages/Rank'));
+const Pods = lazy(() => import('./app/pages/Pods'));
+const PodDetail = lazy(() => import('./app/pages/PodDetail'));
 
 function PageLoader() {
   return (
@@ -103,6 +105,8 @@ function AppRoutes() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/link-account" element={<LinkAccount />} />
           <Route path="/rank" element={<Rank />} />
+          <Route path="/pods" element={<Pods />} />
+          <Route path="/pods/:slug" element={<PodDetail />} />
           <Route path="/followers" element={<Followers />} />
           <Route path="/note/:noteId" element={<NoteThread />} />
         </Route>

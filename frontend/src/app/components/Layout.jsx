@@ -11,6 +11,7 @@ const navItems = [
   { path: '/watchlist', label: 'Watchlist', icon: Bookmark },
   { path: '/discover', label: 'Discover', icon: Compass },
   { path: '/rank', label: 'Rank', icon: Trophy },
+  { path: '/pods', label: 'Pods', icon: Layers },
   { path: '/saved', label: 'Saved', icon: Bookmark },
   { path: '/followers', label: 'Connections', icon: Bell },
   { path: '/profile', label: 'Profile', icon: Settings },
