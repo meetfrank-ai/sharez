@@ -4,32 +4,11 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User, Holding, Tier, InvestmentReason, FeedEvent, EventType, Note, StockFollow
-from schemas import HoldingOut, EECredentials, TierConfigUpdate, TierConfigOut, InvestmentReasonCreate, InvestmentReasonOut, ShareTransactionRequest, StockFollowOut
+from schemas import HoldingOut, TierConfigUpdate, TierConfigOut, InvestmentReasonCreate, InvestmentReasonOut, ShareTransactionRequest, StockFollowOut
 from auth import get_current_user
-from ee_sync import store_ee_credentials, sync_portfolio
 from tier_access import get_access_tier
 
 router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
-
-
-@router.post("/connect-ee")
-async def connect_easy_equities(
-    creds: EECredentials,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    store_ee_credentials(db, user, creds.ee_username, creds.ee_password)
-    result = await sync_portfolio(db, user)
-    return {"message": "EasyEquities connected and portfolio synced", "added_stocks": result.get("added_stocks", [])}
-
-
-@router.post("/sync")
-async def trigger_sync(
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    result = await sync_portfolio(db, user)
-    return {"message": "Portfolio synced", "added_stocks": result.get("added_stocks", [])}
 
 
 @router.get("/me", response_model=list[HoldingOut])

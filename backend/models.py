@@ -69,10 +69,7 @@ class User(Base):
     twitter_url = Column(String, nullable=True)
     website_url = Column(String, nullable=True)
 
-    ee_username_enc = Column(String, nullable=True)
-    ee_password_enc = Column(String, nullable=True)
-
-    # Gmail integration — replaces EE credential scrape
+    # Gmail integration — replaces the old EE credential scrape (removed 2026-05).
     google_email = Column(String, nullable=True, index=True)
     gmail_refresh_token_enc = Column(Text, nullable=True)
     gmail_last_synced_at = Column(DateTime, nullable=True)

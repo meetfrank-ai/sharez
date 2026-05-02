@@ -56,6 +56,15 @@ try:
         ],
     }
 
+    # One-shot teardown SQL — drops dead columns from the EE-credentials era.
+    # Idempotent (IF EXISTS / WHERE-guarded), so it's safe to keep across deploys.
+    teardown_sqls = [
+        "UPDATE users SET ee_username_enc = NULL, ee_password_enc = NULL "
+        "WHERE ee_username_enc IS NOT NULL OR ee_password_enc IS NOT NULL",
+        "ALTER TABLE users DROP COLUMN IF EXISTS ee_username_enc",
+        "ALTER TABLE users DROP COLUMN IF EXISTS ee_password_enc",
+    ]
+
     with engine.connect() as conn:
         for table_name, columns in migrations.items():
             try:
@@ -72,6 +81,16 @@ try:
                     except Exception as e:
                         conn.rollback()
                         print(f"Migration skip {col_name}: {e}")
+
+        for sql in teardown_sqls:
+            try:
+                conn.execute(text(sql))
+                conn.commit()
+                print(f"Teardown: {sql[:60]}…")
+            except Exception as e:
+                conn.rollback()
+                print(f"Teardown skip: {e}")
+
     # Create indexes on frequently queried columns
     indexes = [
         "CREATE INDEX IF NOT EXISTS ix_follows_follower_id ON follows (follower_id)",

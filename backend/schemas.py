@@ -74,13 +74,6 @@ class UserProfile(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# --- EasyEquities ---
-
-class EECredentials(BaseModel):
-    ee_username: str
-    ee_password: str
-
-
 # --- Holdings ---
 
 class HoldingOut(BaseModel):
