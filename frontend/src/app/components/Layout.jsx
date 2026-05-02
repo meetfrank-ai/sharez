@@ -1,6 +1,8 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Home, BarChart3, Compass, Bookmark, Bell, Settings, LogOut, ArrowLeftRight, Layers } from 'lucide-react';
+import NotificationsBell from './NotificationsBell';
+import FriendsPanel from './FriendsPanel';
 
 const navItems = [
   { path: '/app', label: 'Feed', icon: Home },
@@ -90,9 +92,16 @@ export default function Layout() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 pb-28 md:pb-6 md:ml-[304px] min-w-0 overflow-x-hidden">
+      <main className="flex-1 pb-28 md:pb-6 md:ml-[304px] xl:mr-[320px] min-w-0 overflow-x-hidden">
+        {/* Top bar with bell */}
+        <div className="flex justify-end items-center gap-2 px-4 md:px-6 pt-4">
+          <NotificationsBell />
+        </div>
         <Outlet />
       </main>
+
+      {/* Right rail (xl+) */}
+      <FriendsPanel />
 
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 flex justify-around items-center z-50"

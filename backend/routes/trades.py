@@ -273,6 +273,34 @@ def react_to_trade(
         ))
         db.commit()
 
+    # Notify the trade owner of the reaction.
+    try:
+        from routes.notifications import emit as emit_notif
+        from models import FeedEvent
+        owner_id = None
+        if target_kind == "feed_event":
+            ev = db.query(FeedEvent).filter(FeedEvent.id == target_id).first()
+            if ev:
+                owner_id = ev.user_id
+        elif target_kind == "trade":
+            tr = db.query(Trade).filter(Trade.id == target_id).first()
+            if tr:
+                owner_id = tr.user_id
+        if owner_id:
+            emit_notif(
+                db,
+                user_id=owner_id,
+                actor_user_id=user.id,
+                kind="trade_react",
+                target_kind=target_kind,
+                target_id=target_id,
+                metadata={"sentiment": sentiment},
+                dedupe_within_minutes=60,
+            )
+            db.commit()
+    except Exception:
+        db.rollback()
+
     return _reaction_summary(db, target_kind, target_id, my_sentiment=sentiment)
 
 

@@ -50,6 +50,22 @@ def follow_user(
     except Exception:
         pass
 
+    # Notify the target that someone followed (or requested to follow).
+    try:
+        from routes.notifications import emit as emit_notif
+        emit_notif(
+            db,
+            user_id=user_id,
+            actor_user_id=current_user.id,
+            kind="follow_request" if not auto_accept else "follow",
+            target_kind="user",
+            target_id=current_user.id,
+            dedupe_within_minutes=60 * 24,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+
     result = FollowOut.model_validate(follow)
     result.display_name = target.display_name
     result.avatar_url = target.avatar_url

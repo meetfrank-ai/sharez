@@ -434,6 +434,25 @@ class StockSummaryCache(Base):
     generated_at = Column(DateTime, default=utcnow)
 
 
+class Notification(Base):
+    """
+    In-app notifications surfaced in the bell dropdown. Polymorphic via
+    target_kind + target_id so we can notify on any object type without
+    foreign-key sprawl.
+    """
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    actor_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    kind = Column(String, nullable=False)  # follow / follow_request / note_like / note_reply / trade_react / gmail_synced
+    target_kind = Column(String, nullable=True)  # note / thesis / feed_event / trade / user
+    target_id = Column(Integer, nullable=True)
+    metadata_ = Column("metadata", JSON, nullable=True)
+    read_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utcnow, index=True)
+
+
 class OnboardingStep(Base):
     """
     Tracks per-user completion of the activation steps shown on the Feed

@@ -115,6 +115,23 @@ def create_note(
 
     db.commit()
     db.refresh(note)
+
+    if data.parent_note_id and parent:
+        try:
+            from routes.notifications import emit as emit_notif
+            emit_notif(
+                db,
+                user_id=parent.user_id,
+                actor_user_id=user.id,
+                kind="note_reply",
+                target_kind="note",
+                target_id=parent.id,
+                metadata={"reply_id": note.id},
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+
     return _note_to_out(note, user.id, db)
 
 
@@ -240,6 +257,22 @@ def like_note(
     db.add(NoteLike(note_id=note_id, user_id=user.id))
     note.like_count = (note.like_count or 0) + 1
     db.commit()
+
+    try:
+        from routes.notifications import emit as emit_notif
+        emit_notif(
+            db,
+            user_id=note.user_id,
+            actor_user_id=user.id,
+            kind="note_like",
+            target_kind="note",
+            target_id=note.id,
+            dedupe_within_minutes=60 * 24,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+
     return {"message": "Liked", "like_count": note.like_count}
 
 
