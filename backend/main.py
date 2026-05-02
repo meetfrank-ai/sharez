@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from database import engine, Base
-from routes import auth, portfolio, follow, theses, comments, feed, notes, discover, trades, stocks, contact, gmail, notifications as notifications_route, alerts as alerts_route
+from routes import auth, portfolio, follow, theses, comments, feed, notes, discover, trades, stocks, contact, gmail, notifications as notifications_route, alerts as alerts_route, rank as rank_route
 
 # Create all tables. During the landing-only phase the database may be
 # unreachable; don't let that crash the app so the static site still serves.
@@ -58,6 +58,9 @@ try:
             ("broker_name", "ALTER TABLE user_transactions ADD COLUMN broker_name VARCHAR"),
             ("is_opening_position", "ALTER TABLE user_transactions ADD COLUMN is_opening_position BOOLEAN DEFAULT FALSE"),
             ("display_mode", "ALTER TABLE user_transactions ADD COLUMN display_mode VARCHAR"),
+        ],
+        "user_tier_configs": [
+            ("show_on_rank", "ALTER TABLE user_tier_configs ADD COLUMN show_on_rank BOOLEAN DEFAULT TRUE"),
         ],
     }
 
@@ -111,6 +114,8 @@ try:
         "CREATE INDEX IF NOT EXISTS ix_notifications_user_created ON notifications (user_id, created_at)",
         "CREATE INDEX IF NOT EXISTS ix_price_alerts_user ON price_alerts (user_id)",
         "CREATE INDEX IF NOT EXISTS ix_price_alerts_active ON price_alerts (active)",
+        "CREATE INDEX IF NOT EXISTS ix_user_returns_date ON user_returns_snapshots (snapshot_date)",
+        "CREATE INDEX IF NOT EXISTS ix_user_returns_user ON user_returns_snapshots (user_id)",
     ]
     with engine.connect() as conn:
         for idx_sql in indexes:
@@ -223,6 +228,7 @@ app.include_router(contact.router)
 app.include_router(gmail.router)
 app.include_router(notifications_route.router)
 app.include_router(alerts_route.router)
+app.include_router(rank_route.router)
 
 # Serve built React frontend in production
 STATIC_DIR = Path(__file__).parent / "static"

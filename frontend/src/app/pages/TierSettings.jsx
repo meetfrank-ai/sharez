@@ -45,6 +45,7 @@ export default function TierSettings() {
   const [config, setConfig] = useState(null);
   const [vaultPrice, setVaultPrice] = useState('');
   const [autoAccept, setAutoAccept] = useState(true);
+  const [showOnRank, setShowOnRank] = useState(true);
   const [openTier, setOpenTier] = useState(null);
   const [previewTier, setPreviewTier] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -55,6 +56,7 @@ export default function TierSettings() {
       setConfig(res.data);
       setVaultPrice(String(res.data.vault_price_cents / 100));
       setAutoAccept(res.data.auto_accept_followers);
+      setShowOnRank(res.data.show_on_rank ?? true);
     }).catch(() => {});
   }, []);
 
@@ -78,6 +80,7 @@ export default function TierSettings() {
         vault_shows: config.vault_shows,
         vault_price_cents: Math.round(parseFloat(vaultPrice || '0') * 100),
         auto_accept_followers: autoAccept,
+        show_on_rank: showOnRank,
       });
       setMessage('Settings saved!');
       setTimeout(() => setMessage(''), 3000);
@@ -196,13 +199,21 @@ export default function TierSettings() {
 
                 {/* Per-tier settings */}
                 {tier.key === 'public_shows' && (
-                  <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+                  <div className="mt-4 pt-3 space-y-3" style={{ borderTop: '1px solid var(--border)' }}>
                     <label className="flex items-center gap-2.5 cursor-pointer">
                       <input type="checkbox" checked={autoAccept} onChange={(e) => setAutoAccept(e.target.checked)}
                         className="w-4 h-4 rounded" style={{ accentColor: 'var(--accent)' }} />
                       <div>
                         <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Auto-accept followers</span>
                         <p className="text-xs m-0" style={{ color: 'var(--text-muted)' }}>New followers are automatically approved</p>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-2.5 cursor-pointer">
+                      <input type="checkbox" checked={showOnRank} onChange={(e) => setShowOnRank(e.target.checked)}
+                        className="w-4 h-4 rounded" style={{ accentColor: 'var(--accent)' }} />
+                      <div>
+                        <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Appear on the public Rank leaderboard</span>
+                        <p className="text-xs m-0" style={{ color: 'var(--text-muted)' }}>Returns shown as % only — never rand amounts</p>
                       </div>
                     </label>
                   </div>

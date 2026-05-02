@@ -103,6 +103,14 @@ if __name__ == "__main__":
         except Exception as e:
             logger.warning(f"Alert evaluation failed: {e}")
 
+        # 6. Daily user-returns snapshot for the public Rank page.
+        try:
+            from services.returns import refresh_all
+            returns_result = refresh_all(db)
+            logger.info(f"Returns snapshot: {returns_result}")
+        except Exception as e:
+            logger.warning(f"Returns snapshot failed: {e}")
+
         logger.info("Daily cron complete.")
     except Exception as e:
         logger.error(f"Cron job failed: {e}", exc_info=True)

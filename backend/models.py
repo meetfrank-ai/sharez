@@ -102,6 +102,7 @@ class UserTierConfig(Base):
 
     vault_price_cents = Column(Integer, default=0)
     auto_accept_followers = Column(Boolean, default=True)
+    show_on_rank = Column(Boolean, default=True)  # opt-out of public leaderboard (D-6)
 
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
@@ -432,6 +433,28 @@ class StockSummaryCache(Base):
     contract_code = Column(String, primary_key=True)
     summary_text = Column(Text, nullable=False)
     generated_at = Column(DateTime, default=utcnow)
+
+
+class UserReturnsSnapshot(Base):
+    """
+    Daily snapshot of a user's portfolio returns (% only, never amounts).
+    Refreshed by scraper_job. Used for the public Rank/leaderboard.
+    """
+    __tablename__ = "user_returns_snapshots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    snapshot_date = Column(DateTime, nullable=False, index=True)
+    return_7d_pct = Column(Float, nullable=True)
+    return_30d_pct = Column(Float, nullable=True)
+    return_all_pct = Column(Float, nullable=True)
+    holding_count = Column(Integer, nullable=True)
+    top_contract_code = Column(String, nullable=True)
+    top_stock_name = Column(String, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "snapshot_date", name="uq_user_returns_day"),
+    )
 
 
 class PriceAlert(Base):

@@ -25,6 +25,7 @@ const Saved = lazy(() => import('./app/pages/Saved'));
 const NoteThread = lazy(() => import('./app/pages/NoteThread'));
 const Settings = lazy(() => import('./app/pages/Settings'));
 const LinkAccount = lazy(() => import('./app/pages/LinkAccount'));
+const Rank = lazy(() => import('./app/pages/Rank'));
 
 function PageLoader() {
   return (
@@ -101,6 +102,7 @@ function AppRoutes() {
           <Route path="/tier-settings" element={<TierSettings />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/link-account" element={<LinkAccount />} />
+          <Route path="/rank" element={<Rank />} />
           <Route path="/followers" element={<Followers />} />
           <Route path="/note/:noteId" element={<NoteThread />} />
         </Route>

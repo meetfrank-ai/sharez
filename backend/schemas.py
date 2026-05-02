@@ -102,6 +102,7 @@ class TierConfigUpdate(BaseModel):
     vault_shows: Optional[list[str]] = None
     vault_price_cents: Optional[int] = None
     auto_accept_followers: Optional[bool] = None
+    show_on_rank: Optional[bool] = None
 
 
 class TierConfigOut(BaseModel):
@@ -110,6 +111,7 @@ class TierConfigOut(BaseModel):
     vault_shows: list[str]
     vault_price_cents: int
     auto_accept_followers: bool
+    show_on_rank: bool = True
 
     model_config = {"from_attributes": True}
 

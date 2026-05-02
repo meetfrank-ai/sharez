@@ -144,6 +144,8 @@ def update_tier_config(
         config.vault_price_cents = data.vault_price_cents
     if data.auto_accept_followers is not None:
         config.auto_accept_followers = data.auto_accept_followers
+    if data.show_on_rank is not None:
+        config.show_on_rank = data.show_on_rank
 
     db.commit()
     db.refresh(config)

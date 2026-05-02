@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Home, BarChart3, Compass, Bookmark, Bell, Settings, LogOut, ArrowLeftRight, Layers } from 'lucide-react';
+import { Home, BarChart3, Compass, Bookmark, Bell, Settings, LogOut, ArrowLeftRight, Layers, Trophy } from 'lucide-react';
 import NotificationsBell from './NotificationsBell';
 import FriendsPanel from './FriendsPanel';
 
@@ -10,6 +10,7 @@ const navItems = [
   { path: '/transactions', label: 'Transactions', icon: Layers },
   { path: '/watchlist', label: 'Watchlist', icon: Bookmark },
   { path: '/discover', label: 'Discover', icon: Compass },
+  { path: '/rank', label: 'Rank', icon: Trophy },
   { path: '/saved', label: 'Saved', icon: Bookmark },
   { path: '/followers', label: 'Connections', icon: Bell },
   { path: '/profile', label: 'Profile', icon: Settings },
