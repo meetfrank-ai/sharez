@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, TrendingDown, MoreHorizontal } from 'lucide-react';
+import { TrendingUp, TrendingDown, MoreHorizontal, MessageSquare } from 'lucide-react';
 import Sparkline from './Sparkline';
+import api from '../utils/api';
 
 const AVATAR_COLORS = ['#7F77DD', '#D85A30', '#1D9E75', '#378ADD', '#D4537E', '#639922', '#BA7517', '#534AB7'];
 const getColor = (id) =>
@@ -147,18 +149,94 @@ export default function TradeCard({ trade }) {
         </p>
       )}
 
-      {/* Footer — reactions placeholder; wired in P2.2 */}
-      <div className="flex items-center gap-1 px-5 py-2.5" style={{ borderTop: '1px solid var(--border)' }}>
-        <FooterButton icon={TrendingUp} label="Bull" disabled />
-        <FooterButton icon={TrendingDown} label="Bear" disabled />
-        <Link
-          to={`/stock/${ticker || trade.stock_tag || ''}?name=${encodeURIComponent(trade.stock_name || '')}`}
-          className="ml-auto text-xs font-medium no-underline px-3 py-1.5 rounded-md"
-          style={{ color: 'var(--accent)' }}
-        >
-          View stock →
-        </Link>
-      </div>
+      {/* Footer — Bull/Bear/Comment */}
+      <ReactionFooter
+        targetId={trade.id}
+        targetKind={trade.item_type === 'trade' ? 'trade' : 'feed_event'}
+        initial={{
+          bull_count: meta.bull_count ?? 0,
+          bear_count: meta.bear_count ?? 0,
+          my_sentiment: meta.my_sentiment ?? null,
+        }}
+        viewStockHref={`/stock/${ticker || trade.stock_tag || ''}?name=${encodeURIComponent(trade.stock_name || '')}`}
+        replyHref={`/note/${trade.note_id || trade.id}`}
+      />
+    </div>
+  );
+}
+
+function ReactionFooter({ targetId, targetKind, initial, viewStockHref, replyHref }) {
+  const [state, setState] = useState(initial);
+  const [busy, setBusy] = useState(false);
+
+  // Fetch fresh counts on mount in case the feed payload didn't include them.
+  useEffect(() => {
+    if (initial.bull_count > 0 || initial.bear_count > 0 || initial.my_sentiment) return;
+    let cancelled = false;
+    api.get('/trades/reactions', { params: { target_ids: String(targetId), target_kind: targetKind } })
+      .then(({ data }) => {
+        if (!cancelled && data && data[targetId]) setState(data[targetId]);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [targetId, targetKind]);
+
+  const vote = async (sentiment) => {
+    if (busy) return;
+    // Optimistic update — we know the toggle rules
+    const prev = state;
+    const same = state.my_sentiment === sentiment;
+    const next = { ...state };
+    if (same) {
+      next.my_sentiment = null;
+      next[`${sentiment}_count`] = Math.max(0, next[`${sentiment}_count`] - 1);
+    } else {
+      if (state.my_sentiment) {
+        next[`${state.my_sentiment}_count`] = Math.max(0, next[`${state.my_sentiment}_count`] - 1);
+      }
+      next.my_sentiment = sentiment;
+      next[`${sentiment}_count`] = next[`${sentiment}_count`] + 1;
+    }
+    setState(next);
+    setBusy(true);
+    try {
+      const { data } = await api.post(`/trades/${targetId}/react`, { sentiment, target_kind: targetKind });
+      setState(data);
+    } catch (e) {
+      setState(prev);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1 px-5 py-2.5" style={{ borderTop: '1px solid var(--border)' }}>
+      <FooterButton
+        icon={TrendingUp}
+        label="Bull"
+        count={state.bull_count}
+        active={state.my_sentiment === 'bull'}
+        activeColor="#16A34A"
+        onClick={() => vote('bull')}
+      />
+      <FooterButton
+        icon={TrendingDown}
+        label="Bear"
+        count={state.bear_count}
+        active={state.my_sentiment === 'bear'}
+        activeColor="#DC2626"
+        onClick={() => vote('bear')}
+      />
+      <Link to={replyHref} className="no-underline">
+        <FooterButton icon={MessageSquare} label="Comment" />
+      </Link>
+      <Link
+        to={viewStockHref}
+        className="ml-auto text-xs font-medium no-underline px-3 py-1.5 rounded-md"
+        style={{ color: 'var(--accent)' }}
+      >
+        View stock →
+      </Link>
     </div>
   );
 }
@@ -176,14 +254,18 @@ function Stat({ label, value }) {
   );
 }
 
-function FooterButton({ icon: Icon, label, count, disabled }) {
+function FooterButton({ icon: Icon, label, count, active, activeColor, onClick, disabled }) {
   return (
     <button
+      onClick={onClick}
       disabled={disabled}
-      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-transparent border-none cursor-pointer disabled:opacity-50"
-      style={{ color: 'var(--text-muted)' }}
+      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-transparent border-none cursor-pointer disabled:opacity-50 transition-colors"
+      style={{
+        color: active ? (activeColor || 'var(--accent)') : 'var(--text-muted)',
+        fontWeight: active ? 600 : 500,
+      }}
     >
-      <Icon size={14} />
+      <Icon size={14} strokeWidth={active ? 2.25 : 1.75} />
       <span>{label}</span>
       {count != null && count > 0 && <span>· {count}</span>}
     </button>
