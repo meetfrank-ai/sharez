@@ -334,30 +334,35 @@ export default function Feed() {
         )}
       </div>
 
-      {/* Scope + Filter pills */}
-      <div className="flex items-center gap-1.5 mb-5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-        {/* Scope toggle */}
+      {/* Source segmented toggle (Sirius pattern: For You / Friends) */}
+      <div
+        className="flex p-1 rounded-xl mb-4"
+        style={{ backgroundColor: 'var(--bg-page)', border: '1px solid var(--border)' }}
+      >
         {[
-          { key: 'blend', label: 'For you' },
-          { key: 'community', label: 'My community' },
-        ].map((s) => (
-          <button
-            key={s.key}
-            onClick={() => handleScopeChange(s.key)}
-            className="px-3.5 py-2.5 rounded-full text-xs font-medium whitespace-nowrap border-none cursor-pointer min-h-[44px]"
-            style={{
-              backgroundColor: scope === s.key ? 'var(--accent-light)' : 'transparent',
-              color: scope === s.key ? 'var(--accent)' : 'var(--text-muted)',
-              border: scope === s.key ? '1px solid #C7D2FE' : '1px solid var(--border)',
-            }}
-          >
-            {s.label}
-          </button>
-        ))}
+          { key: 'blend', label: 'For You' },
+          { key: 'community', label: 'Friends' },
+        ].map((s) => {
+          const active = scope === s.key;
+          return (
+            <button
+              key={s.key}
+              onClick={() => handleScopeChange(s.key)}
+              className="flex-1 py-2 rounded-lg text-sm font-semibold whitespace-nowrap border-none cursor-pointer transition-colors"
+              style={{
+                backgroundColor: active ? 'var(--bg-card)' : 'transparent',
+                color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+                boxShadow: active ? 'var(--shadow)' : 'none',
+              }}
+            >
+              {s.label}
+            </button>
+          );
+        })}
+      </div>
 
-        <div className="w-px h-4 shrink-0" style={{ backgroundColor: 'var(--border)' }} />
-
-        {/* Content filter */}
+      {/* Content type pills (Notes / Transactions) */}
+      <div className="flex items-center gap-1.5 mb-5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
         {FILTERS.filter(f => f.key !== 'all').map((f) => (
           <button
             key={f.key}
